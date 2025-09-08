@@ -1,0 +1,6 @@
+- name: Print hello world
+  ansible.builtin.debug:
+    msg:
+    - "Hello World"
+  run_once: true
+  delegate_to: localhost

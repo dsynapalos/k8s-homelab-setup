@@ -1,0 +1,20 @@
+- include_role:
+    name: install_repo
+  vars:
+    REPO: kubelet
+    REPO_KEY_URL: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/Release.key"
+    REPO_KEY_PATH: "/etc/apt/keyrings/kubernetes-apt-keyring.asc"
+    REPO_STRING: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/ /"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/kubernetes"
+
+- name: apt install kubectl
+  ansible.builtin.apt:
+    pkg:
+    - kubectl
+    state: present
+    update_cache: yes
+
+- name: apt-mark hold kubectl
+  ansible.builtin.dpkg_selections:
+    name: kubectl
+    selection: hold

@@ -1,0 +1,48 @@
+- import_role:
+    name: setup_kubectl
+  delegate_to: localhost
+  run_once: true
+
+# - import_role:
+#     name: install_helm
+#   delegate_to: localhost
+#   become: false
+
+- name: Install Cilium CLI
+  block:
+    - name: Fetch latest Cilium CLI version
+      ansible.builtin.uri:
+        url: https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt
+        return_content: yes
+      register: cilium_cli_version
+
+    - name: Install cilium-cli
+      ansible.builtin.unarchive:
+        src: "https://github.com/cilium/cilium-cli/releases/download/{{ cilium_cli_version.content | trim }}/cilium-linux-amd64.tar.gz"
+        dest: /usr/local/bin
+        remote_src: yes
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      become: true
+  delegate_to: localhost
+
+- name: Install Hubble CLI
+  block:
+    - name: Fetch latest Hubble CLI version
+      ansible.builtin.uri:
+        url: https://raw.githubusercontent.com/cilium/hubble/master/stable.txt
+        return_content: yes
+      register: hubble_cli_version
+      delegate_to: localhost
+
+    - name: Install hubble-cli
+      ansible.builtin.unarchive:
+        src: "https://github.com/cilium/hubble/releases/download/{{ hubble_cli_version.content | trim }}/hubble-linux-amd64.tar.gz"
+        dest: /usr/local/bin
+        remote_src: yes
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      become: true
+  delegate_to: localhost

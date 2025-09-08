@@ -1,0 +1,23 @@
+- include_role:
+    name: install_repo
+  vars:
+    REPO: kubeadm
+    REPO_KEY_URL: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/Release.key"
+    REPO_KEY_PATH: "/etc/apt/keyrings/kubernetes-apt-keyring.asc"
+    REPO_STRING: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/ /"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/kubernetes"
+
+- include_role:
+    name: install_repo
+  vars:
+    REPO: kubelet
+    REPO_KEY_URL: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/Release.key"
+    REPO_KEY_PATH: "/etc/apt/keyrings/kubernetes-apt-keyring.asc"
+    REPO_STRING: "https://pkgs.k8s.io/core:/stable:/v{{K8S_VERSION}}/deb/ /"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/kubernetes"
+
+- name: start and enable kubelet
+  ansible.builtin.systemd_service:
+    name: kubelet.service
+    state: started
+    enabled: true

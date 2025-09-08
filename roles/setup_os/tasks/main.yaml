@@ -1,0 +1,14 @@
+- include_role:
+    name: disable_swap
+
+- include_role:
+    name: prepare_apt
+
+- include_role:
+    name: install_kubeadm_kubelet
+
+- include_role:
+    name: install_crio
+
+- include_role:
+    name: os_network_config

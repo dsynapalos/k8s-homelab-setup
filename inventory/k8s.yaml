@@ -1,0 +1,18 @@
+k8s:
+  hosts:
+    k8s-control:
+      ansible_host: '{{ lookup("env", "K8S_CONTROL_IP") }}'
+  children:
+    k8s-nodes:
+      hosts:
+        k8s-node1:
+          ansible_host: '{{ lookup("env", "K8S_NODE1_IP") }}'
+  vars:
+    K8S_VERSION: '{{ lookup("env", "K8S_VERSION") }}'
+    CRIO_VERSION: '{{ lookup("env", "CRIO_VERSION") }}'
+    CILIUM_VERSION: '{{ lookup("env", "CILIUM_VERSION") }}'
+    CILIUM_LOADBALANCER_IPPOOL: '{{ lookup("env", "CILIUM_LOADBALANCER_IPPOOL") }}'
+    ansible_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+    ansible_ssh_private_key_file: '{{ lookup("env", "K8S_SSH_KEY") }}'
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_connection: ssh

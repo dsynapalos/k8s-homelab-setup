@@ -1,0 +1,13 @@
+- include_role:
+    name: install_repo
+  vars:
+    REPO: helm
+    REPO_KEY_URL: "https://baltocdn.com/helm/signing.asc"
+    REPO_KEY_PATH: "/etc/apt/keyrings/helm-apt-keyring.asc"
+    REPO_STRING: "https://baltocdn.com/helm/stable/debian/ all main"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/helm-stable-debian"
+
+- name: install Helm diff
+  kubernetes.core.helm_plugin:
+    plugin_path: https://github.com/databus23/helm-diff
+    kubeconfig: /etc/kubernetes/admin.conf

@@ -1,0 +1,24 @@
+- name: download {{ REPO }} gpg key
+  ansible.builtin.get_url:
+    url: "{{ REPO_KEY_URL}}"
+    dest: "{{ REPO_KEY_PATH }}"
+    mode: '0644'
+    force: true
+
+- name: add {{ REPO }} repo
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ REPO_KEY_PATH }}] {{ REPO_STRING }}"
+    filename: "{{ REPO_FILE_PATH }}"
+    state: present
+
+- name: apt install {{ REPO }}
+  ansible.builtin.apt:
+    pkg:
+    - "{{ REPO }}"
+    state: present
+    update_cache: yes
+
+- name: apt-mark hold {{ REPO }}
+  ansible.builtin.dpkg_selections:
+    name: "{{ REPO }}"
+    selection: hold

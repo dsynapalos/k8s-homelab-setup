@@ -1,0 +1,14 @@
+- name: Extract kubeadm join command
+  ansible.builtin.shell: |
+    kubeadm token create --print-join-command
+  register: kubeadm_join_output
+  delegate_to: k8s-control
+  become: true
+  no_log: true
+
+- name: Run join command if not already in cluster
+  ansible.builtin.command:
+    cmd: "{{ kubeadm_join_output.stdout }}"
+    creates:  /etc/kubernetes/kubelet.conf
+  become: true
+  no_log: true

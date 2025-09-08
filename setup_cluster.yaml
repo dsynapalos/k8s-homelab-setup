@@ -1,0 +1,25 @@
+- name: test ansible runner
+  hosts: localhost
+  roles:
+    - test_ansible_runner
+
+- name: setup k8s cluster master node
+  hosts: k8s-control
+  gather_facts: false
+  become: true
+  roles:
+    - setup_cluster_master
+
+- name: setup k8s cluster worker nodes
+  hosts: k8s-nodes
+  gather_facts: true
+  become: true
+  roles:
+    - setup_cluster_node
+
+- name: setup cillium networking
+  hosts: k8s
+  gather_facts: false
+  become: true
+  roles:
+    - bootstrap_cillium

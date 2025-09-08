@@ -1,0 +1,28 @@
+- name: ensure /etc/kubernetes exists
+  ansible.builtin.file:
+    path: /etc/kubernetes
+    state: directory
+    mode: '0700'
+    owner: "{{ ansible_user }}"
+    group: root
+  delegate_to: localhost
+  run_once: true
+
+- name: fetch KUBECONFIG
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: /etc/kubernetes/admin.conf
+    flat: yes
+  run_once: true
+
+- name: overwrite KUBECONFIG in user environment
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: ~/.kube/config
+    mode: '0500'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  delegate_to: localhost
+  become: false
+  when: OVERWRITE_KUBECONFIG | default(true)
+  run_once: true

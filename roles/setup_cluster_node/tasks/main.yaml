@@ -1,0 +1,5 @@
+- include_role:
+    name: setup_os
+
+- include_role:
+    name: join_node

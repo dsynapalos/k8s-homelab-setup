@@ -1,0 +1,8 @@
+- include_role:
+    name: setup_os
+
+- include_role:
+    name: bootstrap_kubeadm
+
+- include_role:
+    name: fetch_kubeconfig

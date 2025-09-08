@@ -1,0 +1,14 @@
+- name: calculate swap
+  shell : free -m | grep Swap | awk '{print $2}'
+  register: swap_used
+
+- name: disabling SWAP
+  shell: "swapoff --all"
+  when: (swap_used.stdout_lines[0] | int) > 0
+
+- name: disable SWAP permanently
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  when: (swap_used.stdout_lines[0] | int) > 0

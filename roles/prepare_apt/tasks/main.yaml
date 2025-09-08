@@ -1,0 +1,11 @@
+- name: apt install prerequisites
+  ansible.builtin.apt:
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+    state: latest
+    update_cache: yes
+
+

@@ -1,0 +1,6 @@
+- name: initialize the Kubernetes cluster
+  ansible.builtin.command:
+    cmd: "kubeadm init --skip-phases=addon/kube-proxy"
+    creates: /etc/kubernetes/admin.conf
+  no_log: true
+

@@ -1,0 +1,14 @@
+- include_role:
+    name: install_repo
+  vars:
+    REPO: cri-o
+    REPO_KEY_URL: "https://download.opensuse.org/repositories/isv:/cri-o:/stable:/v{{CRIO_VERSION}}/deb/Release.key"
+    REPO_KEY_PATH: "/etc/apt/keyrings/cri-o-apt-keyring.asc"
+    REPO_STRING: "https://download.opensuse.org/repositories/isv:/cri-o:/stable:/v{{CRIO_VERSION}}/deb/ /"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/cri-o"
+
+- name: start and enable crio
+  ansible.builtin.systemd_service:
+    name: crio.service
+    state: started
+    enabled: true
