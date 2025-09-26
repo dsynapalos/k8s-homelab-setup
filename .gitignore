@@ -1,5 +1,8 @@
-venv/
+*venv*
 artifacts/
 env/
 project/
+pulumi/
+pulumi_infra/__*
 .env
+*.iso*

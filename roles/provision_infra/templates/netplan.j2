@@ -1,0 +1,14 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ interface_name | default(ansible_facts.default_ipv4.interface | default('ens18')) }}:
+      dhcp4: false
+      dhcp6: false
+      accept-ra: no
+      addresses:
+        - {{ hostvars[inventory_hostname].vm_provision.ip }}/24
+      gateway4: {{ gateway | default(ansible_facts.default_ipv4.gateway | default('')) }}
+      nameservers:
+        addresses: ["{{ gateway | default(ansible_facts.default_ipv4.gateway | default('')) }}"]
+      # If you'd like a DHCP fallback, set dhcp4: true and include static addresses under 'addresses'

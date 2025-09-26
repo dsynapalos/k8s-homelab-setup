@@ -20,7 +20,7 @@
     - 10250
     - 10257
     - 10259
-  when: inventory_hostname == 'k8s-control'
+  when: inventory_hostname == 'k8s-control-1'
 
 
 - name: allow k8s node ports

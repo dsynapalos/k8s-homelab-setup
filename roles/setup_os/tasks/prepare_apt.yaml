@@ -1,3 +1,9 @@
+- name: upgrade all packages
+  ansible.builtin.apt:
+    name: '*'
+    state: latest
+    update_cache: yes
+
 - name: apt install prerequisites
   ansible.builtin.apt:
     pkg:
@@ -7,5 +13,3 @@
       - gpg
     state: latest
     update_cache: yes
-
-

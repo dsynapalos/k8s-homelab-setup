@@ -1,5 +1,4 @@
 - include_role:
     name: setup_os
 
-- include_role:
-    name: join_node
+- include_tasks: join_node.yaml

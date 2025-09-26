@@ -1,0 +1,38 @@
+- name: gather facts
+  ansible.builtin.setup:
+    gather_subset:
+      - 'all'
+
+- name: Update apt package index
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Setup hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Setup ansible ssh user
+  ansible.builtin.user:
+    name: "{{ hostvars[inventory_hostname].vm_provision.ssh_user }}"
+    groups: sudo
+    append: yes
+    shell: /bin/bash
+    password: "!"
+    create_home: yes
+
+- name: Validate the sudoers file before saving
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    line: "{{ hostvars[inventory_hostname].vm_provision.ssh_user }} ALL=(ALL) NOPASSWD: ALL"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Setup authorized keys for ansible user
+  ansible.builtin.authorized_key:
+    user: "{{ hostvars[inventory_hostname].vm_provision.ssh_user }}"
+    state: present
+    key: "{{ lookup('file', ansible_ssh_public_key_file) }}"
+
+- name: set ansible_user fact
+  set_fact:
+    ansible_user: "{{ hostvars[inventory_hostname].vm_provision.ssh_user }}"

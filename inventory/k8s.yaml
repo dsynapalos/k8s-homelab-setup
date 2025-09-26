@@ -1,18 +1,53 @@
-k8s:
+
+proxmox:
   hosts:
-    k8s-control:
-      ansible_host: '{{ lookup("env", "K8S_CONTROL_IP") }}'
+    k8s-control-1:
+      ansible_host: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_CONTROL_1_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_CONTROL_1_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_CONTROL_1_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+    k8s-node-1:
+      ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_NODE_1_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_NODE_1_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_NODE_1_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_NODE_1_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+  vars:
+    ubuntu_release_version: '{{ lookup("env", "UBUNTU_RELEASE_VERSION") | default("24.04.3") }}'
+    proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
+    proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
+    proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST") }}'
+    proxmox_node: '{{ lookup("env", "PROXMOX_NODE") }}'
+    proxmox_local_storage: '{{ lookup("env", "PROXMOX_LOCAL_STORAGE") }}'
+    proxmox_storage: '{{ lookup("env", "PROXMOX_STORAGE") | default("local-lvm") }}'
+    vm_gateway: '{{ lookup("env", "VM_GATEWAY") }}'
+    vm_nameserver: '{{ lookup("env", "VM_NAMESERVER") }}'
+bare-metal:
+k8s:
   children:
+    k8s-control:
+      hosts:
+        k8s-control-1:
+          ansible_host: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
     k8s-nodes:
       hosts:
-        k8s-node1:
-          ansible_host: '{{ lookup("env", "K8S_NODE1_IP") }}'
+        k8s-node-1:
+          ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
   vars:
-    K8S_VERSION: '{{ lookup("env", "K8S_VERSION") }}'
-    CRIO_VERSION: '{{ lookup("env", "CRIO_VERSION") }}'
-    CILIUM_VERSION: '{{ lookup("env", "CILIUM_VERSION") }}'
+    K8S_VERSION: '{{ lookup("env", "K8S_VERSION") | default("1.34") }}'
+    CRIO_VERSION: '{{ lookup("env", "CRIO_VERSION") | default("1.33") }}'
+    CILIUM_VERSION: '{{ lookup("env", "CILIUM_VERSION") | default("1.18.1") }}'
     CILIUM_LOADBALANCER_IPPOOL: '{{ lookup("env", "CILIUM_LOADBALANCER_IPPOOL") }}'
     ansible_user: '{{ lookup("env", "K8S_SSH_USER") }}'
-    ansible_ssh_private_key_file: '{{ lookup("env", "K8S_SSH_KEY") }}'
+    ansible_ssh_private_key_file: '{{ lookup("env", "K8S_SSH_KEY") | default("~/.ssh/id_rsa") }}'
+    ansible_ssh_public_key_file: '{{ lookup("env", "K8S_SSH_PUB_KEY") | default("~/.ssh/id_rsa.pub") }}'
     ansible_python_interpreter: /usr/bin/python3
     ansible_connection: ssh
+

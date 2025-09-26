@@ -1,0 +1,20 @@
+version: 1
+locale: en_US.UTF-8
+keyboard:
+  layout: us
+  variant: ''
+ssh:
+  install-server: true
+  allow-pw: true
+shutdown: reboot
+updates: security
+identity:
+  hostname: "ubuntu"
+  password: "$1$3Pga9EsA$QRPZxVsxdt86fooni/RQG1"
+  username: "ubuntu"
+packages:
+  - qemu-guest-agent
+storage:
+  layout:
+    name: lvm
+    sizing-policy: all

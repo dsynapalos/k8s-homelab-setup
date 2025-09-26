@@ -2,7 +2,7 @@
   ansible.builtin.shell: |
     kubeadm token create --print-join-command
   register: kubeadm_join_output
-  delegate_to: k8s-control
+  delegate_to: k8s-control-1
   become: true
   no_log: true
 

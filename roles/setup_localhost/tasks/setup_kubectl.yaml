@@ -1,3 +1,6 @@
+- debug:
+    msg: "{{ hostvars['localhost'] }}"
+
 - include_role:
     name: install_repo
   vars:
@@ -13,8 +16,10 @@
     - kubectl
     state: present
     update_cache: yes
+  become: true
 
 - name: apt-mark hold kubectl
   ansible.builtin.dpkg_selections:
     name: kubectl
     selection: hold
+  become: true

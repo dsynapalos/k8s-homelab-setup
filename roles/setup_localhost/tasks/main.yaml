@@ -1,12 +1,6 @@
-- import_role:
-    name: setup_kubectl
-  delegate_to: localhost
-  run_once: true
+- include_tasks: setup_kubectl.yaml
 
-# - import_role:
-#     name: install_helm
-#   delegate_to: localhost
-#   become: false
+- include_tasks: install_helm.yaml
 
 - name: Install Cilium CLI
   block:
@@ -22,10 +16,9 @@
         dest: /usr/local/bin
         remote_src: yes
         mode: '0755'
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ ansible_facts.user_id }}"
+        group: "{{ ansible_facts.user_id }}"
       become: true
-  delegate_to: localhost
 
 - name: Install Hubble CLI
   block:
@@ -34,7 +27,6 @@
         url: https://raw.githubusercontent.com/cilium/hubble/master/stable.txt
         return_content: yes
       register: hubble_cli_version
-      delegate_to: localhost
 
     - name: Install hubble-cli
       ansible.builtin.unarchive:
@@ -42,7 +34,6 @@
         dest: /usr/local/bin
         remote_src: yes
         mode: '0755'
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ ansible_facts.user_id }}"
+        group: "{{ ansible_facts.user_id }}"
       become: true
-  delegate_to: localhost

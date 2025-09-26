@@ -1,14 +1,9 @@
-- include_role:
-    name: disable_swap
+- include_tasks: disable_swap.yaml
 
-- include_role:
-    name: prepare_apt
+- include_tasks: prepare_apt.yaml
 
-- include_role:
-    name: install_kubeadm_kubelet
+- include_tasks: install_kubeadm_kubelet.yaml
 
-- include_role:
-    name: install_crio
+- include_tasks: install_crio.yaml
 
-- include_role:
-    name: os_network_config
+- include_tasks: os_network_config.yaml

@@ -1,0 +1,18 @@
+- name: migrate ubuntu from dhcp ip to static
+  ansible.builtin.template:
+    src: netplan.j2
+    dest: /etc/netplan/01-netcfg.yaml
+    mode: '0600'
+
+- name: apply netplan configuration
+  ansible.builtin.command:
+    cmd: netplan apply
+  async: 45
+  poll: 0
+
+- name: set ansible_host fact
+  set_fact:
+    ansible_host: "{{ hostvars[inventory_hostname].vm_provision.ip }}"
+
+- name: wait for the host to come back
+  ansible.builtin.wait_for_connection:

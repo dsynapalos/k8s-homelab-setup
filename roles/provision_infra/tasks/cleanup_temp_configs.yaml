@@ -1,0 +1,49 @@
+- name: disable dhcp
+  ansible.builtin.lineinfile:
+    path: /etc/netplan/50-cloud-init.yaml
+    regexp: '^(\s*)dhcp4:\s*true\s*$'
+    line: '\1dhcp4: false'
+    backrefs: yes
+
+- name: apply netplan configuration
+  ansible.builtin.command:
+    cmd: netplan apply
+
+- name: terminate ubuntu user systemd session (if any)
+  ansible.builtin.command:
+    cmd: loginctl kill-user ubuntu
+  ignore_errors: true
+
+- name: give user services time to stop
+  ansible.builtin.pause:
+    seconds: 2
+
+- name: kill remaining processes owned by ubuntu
+  ansible.builtin.shell: |
+    pkill -TERM -u ubuntu || true
+    sleep 1
+    pkill -KILL -u ubuntu || true
+
+- name: remove ubuntu user
+  ansible.builtin.user:
+    name: ubuntu
+    state: absent
+    remove: yes
+
+- name: remove password authentication in sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^.*PasswordAuthentication\s*yes.*$'
+    line: 'PasswordAuthentication no'
+  register: sshd_config_result
+
+- name: restart sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  when: sshd_config_result.changed
+  async: 30
+  poll: 0
+
+- name: wait for sshd to restart
+  ansible.builtin.wait_for_connection:

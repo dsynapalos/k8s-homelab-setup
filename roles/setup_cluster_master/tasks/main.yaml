@@ -1,8 +1,6 @@
 - include_role:
     name: setup_os
 
-- include_role:
-    name: bootstrap_kubeadm
+- include_tasks: bootstrap_kubeadm.yaml
 
-- include_role:
-    name: fetch_kubeconfig
+- include_tasks: fetch_kubeconfig.yaml

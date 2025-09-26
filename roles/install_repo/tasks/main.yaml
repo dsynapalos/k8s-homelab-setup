@@ -4,12 +4,14 @@
     dest: "{{ REPO_KEY_PATH }}"
     mode: '0644'
     force: true
+  become: true
 
 - name: add {{ REPO }} repo
   ansible.builtin.apt_repository:
     repo: "deb [signed-by={{ REPO_KEY_PATH }}] {{ REPO_STRING }}"
     filename: "{{ REPO_FILE_PATH }}"
     state: present
+  become: true
 
 - name: apt install {{ REPO }}
   ansible.builtin.apt:
@@ -17,8 +19,10 @@
     - "{{ REPO }}"
     state: present
     update_cache: yes
+  become: true
 
 - name: apt-mark hold {{ REPO }}
   ansible.builtin.dpkg_selections:
     name: "{{ REPO }}"
     selection: hold
+  become: true

@@ -1,7 +1,18 @@
 - name: test ansible runner
   hosts: localhost
+  become: false
+  gather_facts: true
   roles:
     - test_ansible_runner
+    - setup_localhost
+
+- name: provision infrastructure
+  hosts: proxmox
+  gather_facts: false
+  become: true
+  roles:
+    - provision_infra
+  serial: 1
 
 - name: setup k8s cluster master node
   hosts: k8s-control

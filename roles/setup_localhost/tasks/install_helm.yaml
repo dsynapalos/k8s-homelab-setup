@@ -1,0 +1,8 @@
+- include_role:
+    name: install_repo
+  vars:
+    REPO: helm
+    REPO_KEY_URL: "https://packages.buildkite.com/helm-linux/helm-debian/gpgkey"
+    REPO_KEY_PATH: "/usr/share/keyrings/helm.asc"
+    REPO_STRING: "https://packages.buildkite.com/helm-linux/helm-debian/any/ any main"
+    REPO_FILE_PATH: "/etc/apt/sources.list.d/helm-stable-debian"
