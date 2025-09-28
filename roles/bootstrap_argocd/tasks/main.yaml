@@ -1,0 +1,22 @@
+- name: create argocd namespace
+  ansible.builtin.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: argocd
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: install argocd
+  ansible.builtin.k8s:
+    state: present
+    src: https://raw.githubusercontent.com/argoproj/argo-cd/v{{ ARGOCD_VERSION }}/manifests/install.yaml
+    namespace: argocd
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: install argocd cli
+  ansible.builtin.get_url:
+    url: "https://github.com/argoproj/argo-cd/releases/download/v{{ ARGOCD_VERSION }}/argocd-linux-amd64"
+    dest: /usr/local/bin/argocd
+    mode: '0555'

@@ -34,3 +34,11 @@
   become: true
   roles:
     - bootstrap_cillium
+
+- name: setup argo cd
+  hosts: localhost
+  gather_facts: false
+  become: true
+  roles:
+    - bootstrap_argocd
+  

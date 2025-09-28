@@ -2,7 +2,7 @@
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: "https://helm.cilium.io/"
-    kubeconfig: /etc/kubernetes/admin.conf
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   when: inventory_hostname == 'k8s-control-1'
   delegate_to: localhost  
   become: false
@@ -13,7 +13,7 @@
     chart_ref: cilium/cilium
     release_namespace: kube-system
     chart_version: "{{ CILIUM_VERSION }}"
-    kubeconfig: /etc/kubernetes/admin.conf
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
     values:
       replicas: 1
     set_values:
@@ -65,31 +65,11 @@
   delegate_to: localhost
   become: false
 
-- name: create cilium L7 policy for dns capture
+- name: install gateway api from url
   kubernetes.core.k8s:
     state: present
-    definition:
-      apiVersion: "cilium.io/v2"
-      kind: CiliumClusterwideNetworkPolicy
-      metadata:
-        name: "cilium-dns-l7-policy"
-      spec:
-        endpointSelector: {}
-        egress:
-        - toFQDNs:
-          - matchName: "api.github.com"
-        - toEndpoints:
-          - matchLabels:
-              "k8s:io.kubernetes.pod.namespace": kube-system
-              "k8s:k8s-app": kube-dns
-          toPorts:
-          - ports:
-            - port: "53"
-              protocol: ANY
-            rules:
-              dns:
-              - matchPattern: "*"
-  when: inventory_hostname == 'k8s-control-1'
+    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+  when: inventory_hostname == 'k8s-control-1' and cilium_installed.changed
   delegate_to: localhost
   become: false
 
