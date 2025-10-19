@@ -1,4 +1,4 @@
-- name: endforce iso images exist on proxmox
+- name: enforce iso images exist on proxmox
   ansible.builtin.import_role:
     name: provision_infra
     tasks_from: handle_iso

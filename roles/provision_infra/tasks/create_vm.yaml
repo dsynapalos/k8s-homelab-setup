@@ -1,5 +1,15 @@
 - name: create vm {{ inventory_hostname }}
   block:
+  - name: Calculate stagger delay for host {{ inventory_hostname }}
+    ansible.builtin.set_fact:
+      stagger_delay: "{{ (groups['proxmox'].index(inventory_hostname) * 15) | int }}"
+      
+  - name: Stagger VM creation to avoid Proxmox serial assignment conflicts
+    ansible.builtin.wait_for:
+      timeout: "{{ stagger_delay }}"
+    delegate_to: localhost
+    when: stagger_delay | int > 0
+
   - name: run python script to create vm
     ansible.builtin.script: create_vm.py
     args:

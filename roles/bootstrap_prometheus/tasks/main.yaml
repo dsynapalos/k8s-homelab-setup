@@ -1,0 +1,4 @@
+- name: upload promethus argocd manifest
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', '{{ role_path }}/files/prometheus_manifest.yaml') }}"

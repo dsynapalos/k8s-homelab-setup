@@ -155,6 +155,8 @@ def main():
 
     # Default to starting the VM so the playbook's changed_when matches
     start_vm = getenv_bool("START_VM", True)
+    # Auto-start VM at boot: enabled by default, can be disabled via ONBOOT=0/false
+    onboot = getenv_bool("ONBOOT", True)
     # QEMU guest agent: enabled by default, can be disabled via QEMU_GUEST_AGENT=0/false
     qga = getenv_bool("QEMU_GUEST_AGENT", True)
     pool = getenv("POOL")
@@ -173,6 +175,8 @@ def main():
         "net0": net0,
         # enable or disable the QEMU guest agent
         "agent": 1 if qga else 0,
+        # auto-start VM at boot
+        "onboot": 1 if onboot else 0,
     }
 
     # Disk parameter: mirror UI by using scsi0 on local-lvm with size in GiB

@@ -15,8 +15,9 @@
   ignore_errors: true
 
 - name: give user services time to stop
-  ansible.builtin.pause:
-    seconds: 2
+  ansible.builtin.wait_for:
+    timeout: 5
+  delegate_to: localhost
 
 - name: kill remaining processes owned by ubuntu
   ansible.builtin.shell: |

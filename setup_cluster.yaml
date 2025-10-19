@@ -10,11 +10,11 @@
   hosts: proxmox
   gather_facts: false
   become: true
+  strategy: free
   roles:
     - provision_infra
-  serial: 1
 
-- name: setup k8s cluster master node
+- name: setup k8s cluster master nodes
   hosts: k8s-control
   gather_facts: false
   become: true

@@ -1,3 +1,11 @@
+- name: install gateway api from url
+  kubernetes.core.k8s:
+    state: present
+    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+  when: inventory_hostname == 'k8s-control-1' and ENABLE_GATEWAY_API | bool
+  delegate_to: localhost
+  become: false
+
 - name: Add cillium chart repo
   kubernetes.core.helm_repository:
     name: cilium
@@ -7,7 +15,42 @@
   delegate_to: localhost  
   become: false
 
-- name: Deploy cilium with helm
+- name: Deploy cilium with helm (Gateway API mode)
+  kubernetes.core.helm:
+    name: cilium
+    chart_ref: cilium/cilium
+    release_namespace: kube-system
+    chart_version: "{{ CILIUM_VERSION }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    values:
+      replicas: 1
+    set_values:
+      - value: "kubeProxyReplacement=true"
+      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"
+      - value: "k8sServicePort=6443"
+      - value: "operator.replicas=1"
+      - value: "hubble.ui.enabled=true"
+      - value: "hubble.ui.replicas=1"
+      - value: "hubble.relay.enabled=true"
+      - value: "hubble.relay.replicas=1"
+      - value: "hubble.tls.auto.enabled=true"
+      - value: "hubble.tls.auto.method=cronJob"
+      - value: "hubble.tls.auto.certValidityDuration=1095"
+      - value: "hubble.tls.auto.schedule=\"0 0 1 */4 *\""
+      - value: "l2announcements.enabled=true"
+      - value: "encryption.enabled=true"
+      - value: "encryption.type=wireguard"
+      - value: "gatewayAPI.enabled=true"
+      - value: "envoy.enabled=true"
+      - value: "envoy.rollOutPods=true"
+    update_repo_cache: true
+  changed_when: "'has been upgraded' in cilium_installed.stdout or 'You have successfully installed' in cilium_installed.stdout"
+  register: cilium_installed
+  when: inventory_hostname == 'k8s-control-1' and ENABLE_GATEWAY_API | bool
+  delegate_to: localhost
+  become: false
+
+- name: Deploy cilium with helm (Ingress Controller mode)
   kubernetes.core.helm:
     name: cilium
     chart_ref: cilium/cilium
@@ -35,11 +78,10 @@
       - value: "ingressController.enabled=true"
       - value: "ingressController.loadbalancerMode=shared"
       - value: "ingressController.default=true"
-      # - value: "ingressController.enforceHttps=true"
     update_repo_cache: true
   changed_when: "'has been upgraded' in cilium_installed.stdout or 'You have successfully installed' in cilium_installed.stdout"
   register: cilium_installed
-  when: inventory_hostname == 'k8s-control-1'
+  when: inventory_hostname == 'k8s-control-1' and not (ENABLE_GATEWAY_API | bool)
   delegate_to: localhost
   become: false
 
@@ -62,14 +104,6 @@
         blocks:
         - cidr: "{{ CILIUM_LOADBALANCER_IPPOOL }}"
   when: inventory_hostname == 'k8s-control-1'
-  delegate_to: localhost
-  become: false
-
-- name: install gateway api from url
-  kubernetes.core.k8s:
-    state: present
-    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
-  when: inventory_hostname == 'k8s-control-1' and cilium_installed.changed
   delegate_to: localhost
   become: false
 

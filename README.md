@@ -35,13 +35,14 @@ First steps:
     K8S_NODE_1_CPU={{ cpu count for node }}
     ```
 - run `python3 setup-clusters.py`
-- use kubectl, helm, cilium and hubnle cli to connect to the cluster
+- use kubectl, helm, cilium and hubble cli to connect to the cluster
 - ???
 - profit
 
 What this repo expects:
 - A functional proxmox cluster, or standalone ubuntu os instances.
 - A control environment. I use ubuntu WSL.
+- The user of the control environment will be used to leverage any CLI interface.
 
 What this repo will do:
 - Download and modify the ubuntu server ISO for autoinstall.
@@ -49,7 +50,9 @@ What this repo will do:
 - Assign static IPs and user/hostname.
 - Install kubernetes-adjacent packages (crio,kubectl,kubeadm,etc)
 - Install kubernetes with Cilium proxy
+- Copy the generated kubeconfig to /home/{local_user}/.kube/config.
 - Create Cilium l7 dns policy, assign a subnetspace to LB instances and advertise their adresses in l4.
+- Install ArgoCD manifests.
 
 Runtime duration:
 Will download ~3GB ubuntu image in first run modify it and upload to proxmox.
