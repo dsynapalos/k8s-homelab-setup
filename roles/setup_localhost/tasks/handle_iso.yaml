@@ -1,0 +1,231 @@
+# Workspace Setup - prepare directories and Python environment for ISO operations
+- name: create iso directory
+  ansible.builtin.file:
+    path: "{{ role_path }}/files/iso"
+    state: directory
+  register: iso_dir
+
+# Isolated Python environment to avoid dependency conflicts with system packages
+- name: create .venv_proxmox/bin/python
+  command: python3 -m venv {{ playbook_dir }}/library/.venv_proxmox
+  args:
+    creates: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"  # Idempotent - only create if missing
+  register: venv
+
+- name: wait 5 sec
+  ansible.builtin.wait_for:
+    timeout: 5
+  when: venv is changed
+
+# Install Proxmox API client (proxmoxer) for programmatic ISO management
+- name: install requirements to venv
+  ansible.builtin.pip:
+    virtualenv: "{{ playbook_dir }}/library/.venv_proxmox"
+    state: present
+    requirements: "{{ role_path }}/files/requirements.txt"  # Contains proxmoxer, requests, etc.
+
+# Check if autoinstall ISO already exists on Proxmox to avoid unnecessary reprocessing
+- name: check images present on proxmox
+  ansible.builtin.script: evaluate_proxmox.py  # Python script queries Proxmox storage API
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  loop:
+    - "ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Custom autoinstall ISO
+  loop_control:
+    loop_var: image
+  environment:
+    PROXMOX_HOST: "{{ proxmox_api_host }}"
+    PROXMOX_USER: "{{ proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ proxmox_node }}"
+    PROXMOX_STORAGE: "{{ proxmox_local_storage }}"
+    IMAGE: "{{ image }}"
+  register: image_check
+  failed_when: image_check.rc not in [0,2]  # rc=0: exists, rc=2: missing (expected states)
+
+# Create lookup map for conditional ISO creation (skip if already uploaded)
+- name: build image_result_map
+  set_fact:
+    image_result_map: "{{ (image_result_map | default({})) | combine({ (item.item | default(item.image | default(item))): item.rc }) }}"  # Map filename -> return code
+  loop: "{{ image_check.results }}"
+
+# ISO Remastering Block - only runs if autoinstall ISO is missing from Proxmox
+- name: upload ubuntu iso to proxmox
+  block:
+
+  # Download official Ubuntu Server ISO from canonical releases
+  - name: download ubuntu iso
+    ansible.builtin.get_url:
+      url: "https://releases.ubuntu.com/{{ ubuntu_release_version }}/ubuntu-{{ ubuntu_release_version }}-live-server-amd64.iso"
+      dest: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64.iso"
+      mode: '0644'
+      timeout: 36000
+      force: no  # Skip download if already present locally (saves bandwidth)
+
+  # Install ISO manipulation tools required for adding autoinstall configuration
+  - name: install remastering tools on controller
+    become: true
+    ansible.builtin.package:
+      name:
+        - xorriso  # ISO creation/modification tool (mkisofs alternative)
+        - p7zip-full  # Extract ISO contents (7z command)
+      state: present
+
+  # Temporary workspace for extracting and modifying ISO contents
+  - name: create iso working directory on controller
+    ansible.builtin.file:
+      path: "{{ role_path }}/files/{{ item }}"
+      state: directory
+    loop:
+      - .iso_workdir  # Working directory for ISO modification
+
+  # Stage autoinstall configuration for embedding into ISO
+  - name: copy autoinstall user-data to nocloud
+    ansible.builtin.copy:
+      src: "{{ role_path }}/files/{{ item }}"
+      dest: "{{ role_path }}/files/.iso_workdir/{{ item }}"
+      mode: '0644'
+    loop:
+      - autoinstall.yaml  # Ubuntu autoinstall cloud-init configuration
+    
+  # Extract original ISO filesystem to manipulate boot configuration
+  - name: extract ubuntu iso contents
+    ansible.builtin.command:
+      cmd: >
+        7z x -y "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64.iso" -o"{{ role_path }}/files/.iso_workdir"
+      # Extracts all files preserving directory structure for modification
+
+  # Inject autoinstall boot option into GRUB menu (enables unattended installation)
+  - name: insert autoinstall menuentry before first menuentry
+    ansible.builtin.lineinfile:
+      path: "{{ role_path }}/files/.iso_workdir/boot/grub/{{ item }}.cfg"
+      insertbefore: '^menuentry'  # Prioritize autoinstall as first boot option
+      line: |
+        menuentry 'AutoInstall Ubuntu {{ ubuntu_release_version }}' {
+          set gfxpayload=keep
+          linux   /casper/vmlinuz autoinstall ---
+          initrd  /casper/initrd
+        }
+      create: no
+      firstmatch: yes
+    loop:
+      - grub  # BIOS/UEFI boot configuration
+      - loopback  # Used for ISO boot from disk
+
+  # Reduce boot delay for faster automated deployments
+  - name: change the grub timeout to 1 second
+    ansible.builtin.replace:
+      path: "{{ role_path }}/files/.iso_workdir/boot/grub/grub.cfg"
+      regexp: '^set timeout=.*'
+      replace: 'set timeout=1'  # Default is 30s - reduce to 1s for automation
+
+  # Update integrity checksums after modifying GRUB configs (prevents boot verification failures)
+  - name: Calculate the new MD5 hashes
+    stat:
+      path: "{{ item }}"
+      checksum_algorithm: md5
+    with_items:
+      - "{{ role_path }}/files/.iso_workdir/boot/grub/grub.cfg"
+      - "{{ role_path }}/files/.iso_workdir/boot/grub/loopback.cfg"
+    register: md5sums
+
+  # Update md5sum.txt with new checksums for modified grub.cfg
+  - name: Write the new MD5 hash (grub.cfg)
+    lineinfile:
+      line: "{{ md5sums.results[0].stat.checksum }}  {{ role_path }}/files/.iso_workdir/boot/grub/grub.cfg"
+      search_string: /boot/grub/grub.cfg  # Replace existing checksum line
+      path: "{{ role_path }}/files/.iso_workdir/md5sum.txt"
+
+  # Update md5sum.txt with new checksums for modified loopback.cfg
+  - name: Write the new MD5 hash (loopback.cfg)
+    lineinfile:
+      line: "{{ md5sums.results[1].stat.checksum }}  {{ role_path }}/files/.iso_workdir/boot/grub/loopback.cfg"
+      search_string: loopback.cfg  # Replace existing checksum line
+      path: "{{ role_path }}/files/.iso_workdir/md5sum.txt"
+
+  # Extract boot images needed for ISO remastering (UEFI/BIOS boot support)
+  - name: move [BOOT] files to top level
+    ansible.builtin.copy:
+      src: "{{ role_path }}/files/.iso_workdir/[BOOT]"  # Contains EFI boot images
+      dest: "{{ role_path }}/files/"  # Move to parent for xorriso access
+      
+  # Rebuild ISO with hybrid boot support (BIOS + UEFI) and modified configs
+  - name: remaster ubuntu iso
+    ansible.builtin.command:
+      argv:
+        - xorriso  # ISO creation tool
+        - -as
+        - mkisofs  # Compatibility mode
+        - -f  # Follow symlinks
+        - -V
+        - "Ubuntu {{ ubuntu_release_version }} LTS AUTOINSTALL"  # Volume label
+        - -o
+        - "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Output file
+        # BIOS boot configuration
+        - --grub2-mbr
+        - "../[BOOT]/1-Boot-NoEmul.img"  # GRUB MBR bootloader
+        - -partition_offset
+        - "16"  # Align partitions correctly
+        - --mbr-force-bootable  # Mark MBR as bootable
+        # UEFI boot configuration
+        - -append_partition
+        - "2"  # Partition number
+        - "28732ac11ff8d211ba4b00a0c93ec93b"  # EFI System Partition GUID
+        - "../[BOOT]/2-Boot-NoEmul.img"  # EFI boot image
+        - -appended_part_as_gpt  # Use GPT partition table
+        - -iso_mbr_part_type
+        - "a2a0d0ebe5b9334487c068b6b72699c7"  # Protective MBR type for GPT
+        # Boot catalog configuration
+        - -c
+        - '/boot.catalog'  # El Torito boot catalog location
+        - -b
+        - '/boot/grub/i386-pc/eltorito.img'  # BIOS boot image
+        - -no-emul-boot  # No floppy emulation
+        - -boot-load-size
+        - "4"  # Load 4 sectors (2048 bytes)
+        - -boot-info-table  # Include boot information table
+        - --grub2-boot-info  # GRUB2-specific boot info
+        - -eltorito-alt-boot  # Alternative boot entry
+        - -e
+        - "--interval:appended_partition_2:::"  # Reference EFI partition
+        - -no-emul-boot  # No emulation for UEFI
+        - .  # Source directory (current workdir)
+    become: true
+    args:
+      chdir: "{{ role_path }}/files/.iso_workdir"  # Work from extracted ISO location
+      creates: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Idempotent
+
+  # Remove temporary files after ISO creation (disk space cleanup)
+  - name: cleanup iso workdir
+    ansible.builtin.file:
+      path: "{{ role_path }}/files/{{ item }}"
+      state: absent
+    loop:
+      - .iso_workdir  # ~3GB extracted ISO contents
+      - "[BOOT]"  # Boot image files
+
+  # Transfer remastered ISO to Proxmox storage for VM provisioning
+  - name: upload ubuntu iso to proxmox
+    ansible.builtin.script: upload_to_proxmox.py  # Python script uses Proxmox API for ISO upload
+    args:
+      executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+    environment:
+      PROXMOX_HOST: "{{ proxmox_api_host }}"
+      PROXMOX_USER: "{{ proxmox_api_user }}"
+      PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+      PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+      PROXMOX_NODE: "{{ proxmox_node }}"
+      PROXMOX_STORAGE: "{{ proxmox_local_storage }}"  # Typically 'local' storage for ISOs
+      IMAGE: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+    register: upload_ubuntu_iso_result
+    failed_when: upload_ubuntu_iso_result.rc != 0
+
+  # Remove local ISO copy after successful upload (cleanup, typically ~1-2GB)
+  - name: cleanup modified ubuntu iso
+    ansible.builtin.file:
+      path: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+      state: absent
+
+  # Conditional: Only run this entire block if the ISO is missing from Proxmox (rc=2 from check)
+  when: image_result_map['ubuntu-' + ubuntu_release_version + '-live-server-amd64-autoinstall.iso'] == 2

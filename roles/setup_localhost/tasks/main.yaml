@@ -37,3 +37,9 @@
         owner: "{{ ansible_facts.user_id }}"
         group: "{{ ansible_facts.user_id }}"
       become: true
+
+- name: Fetch/build autoinstall iso 
+  block:
+    - include_tasks: handle_iso.yaml
+  run_once: true
+  delegate_to: localhost

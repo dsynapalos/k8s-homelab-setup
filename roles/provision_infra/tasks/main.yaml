@@ -1,11 +1,88 @@
-- name: enforce iso images exist on proxmox
-  ansible.builtin.import_role:
-    name: provision_infra
-    tasks_from: handle_iso
-  delegate_to: localhost
-  run_once: true
+- name: create vm {{ inventory_hostname }}
+  block:
+  - name: Calculate stagger delay for host {{ inventory_hostname }}
+    ansible.builtin.set_fact:
+      stagger_delay: "{{ ( (groups['proxmox'].index(inventory_hostname) + 3) * 5) | int }}"
+      
+  - name: Stagger VM creation to avoid Proxmox serial assignment conflicts
+    ansible.builtin.wait_for:
+      timeout: "{{ stagger_delay }}"
+    delegate_to: localhost
+    when: stagger_delay | int > 0
 
-- name: create proxmox vms
-  ansible.builtin.import_role:
-    name: provision_infra
-    tasks_from: create_vm
+  - name: run python script to create vm
+    ansible.builtin.script: create_vm.py
+    args:
+      executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+    environment:
+      PROXMOX_HOST: "{{ proxmox_api_host }}"
+      PROXMOX_USER: "{{ proxmox_api_user }}"
+      PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+      PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+      PROXMOX_NODE: "{{ proxmox_node }}"
+      PROXMOX_STORAGE: "{{ proxmox_local_storage }}"
+      VM_NAME: "{{ inventory_hostname }}"
+      VM_MEMORY: "{{ vm_provision.memory_mb }}"
+      VM_CORES: "{{ vm_provision.cpu }}"
+      VM_NET_BRIDGE: "{{ vm_provision.vm_net_bridge | default('vmbr0') }}"
+      VM_NET_MODEL: "{{ vm_provision.vm_net_model | default('virtio') }}"
+      VM_DISK_SIZE: "{{ vm_provision.disk_gb }}"
+      VM_ISO_IMAGE: "ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+      VM_IP_ADDRESS: "{{ ansible_host }}"
+      VM_GATEWAY: "{{ vm_gateway }}"
+      VM_NAMESERVER: "{{ vm_nameserver | default('1.1.1.1') }}"
+    delegate_to: localhost
+    register: create_vm_result
+    changed_when: "'Starting VM' in create_vm_result.stdout"
+    failed_when: create_vm_result.rc not in [0]
+
+  - name: set vm_id fact
+    set_fact:
+      vm_id: "{{ (create_vm_result.stdout | regex_findall('[Starting|Existing] VM\\s+(\\d+)') | first) | default('') }}"
+    when: create_vm_result.rc == 0
+
+  - name: run python script to poll for IP assignment
+    ansible.builtin.script: poll_for_ip.py
+    args:
+      executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+    environment:
+      PROXMOX_HOST: "{{ proxmox_api_host }}"
+      PROXMOX_USER: "{{ proxmox_api_user }}"
+      PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+      PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+      PROXMOX_NODE: "{{ proxmox_node }}"
+      VM_ID: "{{ vm_id }}"
+    delegate_to: localhost
+    register: poll_for_ip_result
+
+  - name: set ansible_host fact
+    set_fact:
+      ansible_host: "{{ poll_for_ip_result.stdout_lines[0] }}"
+    when: poll_for_ip_result.stdout_lines[0] != hostvars[inventory_hostname].vm_provision.ssh_user
+
+  - name: set ansible_user fact
+    set_fact:
+      ansible_user: ubuntu
+    when: "'Starting' in create_vm_result.stdout"
+
+  - name: configure host
+    block:
+
+    - name: include configure host os tasks
+      include_tasks: configure_host_os.yaml
+      vars:
+        ansible_ssh_pass: ubuntu
+        ansible_sudo_pass: ubuntu
+      when: ansible_user != hostvars[inventory_hostname].vm_provision.ssh_user
+      register: configure_host_os_result
+
+    - name: include configure host net tasks
+      include_tasks: configure_host_net.yaml
+      register: configure_host_net_result
+      when: ansible_host != hostvars[inventory_hostname].vm_provision.ip
+
+    - name: cleanup temp configs
+      include_tasks: cleanup_temp_configs.yaml
+      when: not (configure_host_os_result is skipped or configure_host_net_result is skipped)
+
+    become: true

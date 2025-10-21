@@ -1,9 +1,11 @@
+# Kernel Network Configuration - enable packet forwarding for pod-to-pod routing
 - name: enable IP forwarding
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
-    value: '1'
-    sysctl_set: true
+    value: '1'  # Required for Kubernetes networking (pods route through node)
+    sysctl_set: true  # Apply immediately and persist across reboots
 
+# Control Plane Firewall Rules - TCP ports for K8s API and control plane components
 - name: allow k8s control ports
   community.general.ufw:
     rule: allow
@@ -11,17 +13,18 @@
     proto: tcp
     state: enabled
   loop:
-    - 22
-    - 4240
-    - 4244:4245
-    - 4250
-    - 6443
-    - 2379:2380
-    - 10250
-    - 10257
-    - 10259
+    - 22          # SSH access for management
+    - 4240        # Cilium health checks
+    - 4244:4245   # Cilium Hubble server and relay
+    - 4250        # Cilium metrics
+    - 6443        # Kubernetes API server (primary cluster access)
+    - 2379:2380   # etcd server and peer communication (cluster state storage)
+    - 10250       # kubelet API (node communication)
+    - 10257       # kube-controller-manager
+    - 10259       # kube-scheduler
   when: inventory_hostname == 'k8s-control-1'
 
+# Cilium Networking - UDP ports for encrypted pod-to-pod communication
 - name: allow cilium vxlan and wireguard on control plane
   community.general.ufw:
     rule: allow
@@ -29,32 +32,34 @@
     proto: udp
     state: enabled
   loop:
-    - 8472     # VXLAN tunnel
-    - 51871    # WireGuard
+    - 8472   # VXLAN tunnel encapsulation (overlay network between nodes)
+    - 51871  # WireGuard encrypted tunnel (pod-to-pod traffic encryption)
 
+# Worker Node Firewall Rules - TCP ports for workload and cluster services
 - name: allow k8s node ports
   community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
   loop:
-    - 22
-    - 80
-    - 443
-    - 4240
-    - 4244:4245
-    - 4250
-    - 10250
-    - 10256
+    - 22          # SSH access for management
+    - 80          # HTTP ingress traffic (LoadBalancer/Ingress services)
+    - 443         # HTTPS ingress traffic (LoadBalancer/Ingress services)
+    - 4240        # Cilium health checks
+    - 4244:4245   # Cilium Hubble server and relay
+    - 4250        # Cilium metrics
+    - 10250       # kubelet API (node communication with control plane)
+    - 10256       # kube-proxy health checks (when not using Cilium replacement)
   when: inventory_hostname in groups['k8s-nodes']
 
+# NodePort Service Range - allow external access to NodePort services
 - name: allow k8s node tcp/udp ports
   community.general.ufw:
     rule: allow
-    port: 30000:32767
+    port: 30000:32767  # Standard Kubernetes NodePort range (Service.spec.type=NodePort)
     proto: "{{ item }}"
     state: enabled
   loop:
-    - tcp
-    - udp
+    - tcp  # NodePort TCP services
+    - udp  # NodePort UDP services
   when: inventory_hostname in groups['k8s-nodes']

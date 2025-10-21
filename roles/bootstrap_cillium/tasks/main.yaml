@@ -1,7 +1,8 @@
+# Gateway API CRDs - next-generation ingress routing (more flexible than traditional Ingress)
 - name: install gateway api from url
   kubernetes.core.k8s:
     state: present
-    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml  # Install Gateway, HTTPRoute, etc. CRDs
   when: inventory_hostname == 'k8s-control-1' and ENABLE_GATEWAY_API | bool
   delegate_to: localhost
   become: false
@@ -23,26 +24,44 @@
     chart_version: "{{ CILIUM_VERSION }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
     values:
-      replicas: 1
+      replicas: 1  # Single control plane - only need 1 Cilium agent replica
     set_values:
-      - value: "kubeProxyReplacement=true"
-      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"
-      - value: "k8sServicePort=6443"
-      - value: "operator.replicas=1"
-      - value: "hubble.ui.enabled=true"
-      - value: "hubble.ui.replicas=1"
-      - value: "hubble.relay.enabled=true"
-      - value: "hubble.relay.replicas=1"
-      - value: "hubble.tls.auto.enabled=true"
-      - value: "hubble.tls.auto.method=cronJob"
-      - value: "hubble.tls.auto.certValidityDuration=1095"
-      - value: "hubble.tls.auto.schedule=\"0 0 1 */4 *\""
-      - value: "l2announcements.enabled=true"
-      - value: "encryption.enabled=true"
-      - value: "encryption.type=wireguard"
-      - value: "gatewayAPI.enabled=true"
-      - value: "envoy.enabled=true"
-      - value: "envoy.rollOutPods=true"
+      # Core Networking - kube-proxy replacement
+      - value: "kubeProxyReplacement=true"  # Replace kube-proxy with eBPF for better performance and lower latency
+      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"  # API server endpoint for Cilium agents
+      - value: "k8sServicePort=6443"  # Standard K8s API server port
+      
+      # Operator Configuration
+      - value: "operator.replicas=1"  # Single operator instance sufficient for small cluster
+      
+      # Observability - Hubble for network visibility
+      - value: "hubble.ui.enabled=true"  # Web UI for visualizing network flows and policies
+      - value: "hubble.ui.replicas=1"  # Single UI instance for dev/test environment
+      - value: "hubble.relay.enabled=true"  # Aggregates Hubble data from all nodes for cluster-wide visibility
+      - value: "hubble.relay.replicas=1"  # Single relay sufficient for small cluster
+      - value: "hubble.tls.auto.enabled=true"  # Automatic TLS certificate management for Hubble components
+      - value: "hubble.tls.auto.method=cronJob"  # Use CronJob for automated cert rotation
+      - value: "hubble.tls.auto.certValidityDuration=1095"  # 3-year cert validity reduces rotation frequency
+      - value: "hubble.tls.auto.schedule=\"0 0 1 */4 *\""  # Rotate certs quarterly (1st day of every 4th month)
+      
+      # Load Balancing
+      - value: "l2announcements.enabled=true"  # Enable L2 network announcements for LoadBalancer services (ARP/NDP)
+      
+      # Security - Encryption
+      - value: "encryption.enabled=true"  # Encrypt pod-to-pod traffic for security compliance
+      - value: "encryption.type=wireguard"  # Use WireGuard for fast, kernel-level encryption (requires UDP 51871)
+      
+      # Ingress - Gateway API (modern alternative to Ingress)
+      - value: "gatewayAPI.enabled=true"  # Enable Kubernetes Gateway API support for advanced routing
+      - value: "envoy.enabled=true"  # Envoy proxy for L7 load balancing and advanced traffic management
+      - value: "envoy.rollOutPods=true"  # Automatically restart pods when Envoy config changes
+      
+      # DNS Configuration
+      - value: "dns.enableIPv4=true"  # Enable DNS proxy for FQDN-based policies and visibility
+      - value: "dns.enableIPv6=false"  # Disable IPv6 DNS - cluster is IPv4-only
+      
+      # NAT Configuration
+      - value: "bpf.masquerade=true"  # Use eBPF for masquerading/SNAT instead of iptables (better performance)
     update_repo_cache: true
   changed_when: "'has been upgraded' in cilium_installed.stdout or 'You have successfully installed' in cilium_installed.stdout"
   register: cilium_installed
@@ -58,26 +77,44 @@
     chart_version: "{{ CILIUM_VERSION }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
     values:
-      replicas: 1
+      replicas: 1  # Single control plane - only need 1 Cilium agent replica
     set_values:
-      - value: "kubeProxyReplacement=true"
-      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"
-      - value: "k8sServicePort=6443"
-      - value: "operator.replicas=1"
-      - value: "hubble.ui.enabled=true"
-      - value: "hubble.ui.replicas=1"
-      - value: "hubble.relay.enabled=true"
-      - value: "hubble.relay.replicas=1"
-      - value: "hubble.tls.auto.enabled=true"
-      - value: "hubble.tls.auto.method=cronJob"
-      - value: "hubble.tls.auto.certValidityDuration=1095"
-      - value: "hubble.tls.auto.schedule=\"0 0 1 */4 *\""
-      - value: "l2announcements.enabled=true"
-      - value: "encryption.enabled=true"
-      - value: "encryption.type=wireguard"
-      - value: "ingressController.enabled=true"
-      - value: "ingressController.loadbalancerMode=shared"
-      - value: "ingressController.default=true"
+      # Core Networking - kube-proxy replacement
+      - value: "kubeProxyReplacement=true"  # Replace kube-proxy with eBPF for better performance and lower latency
+      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"  # API server endpoint for Cilium agents
+      - value: "k8sServicePort=6443"  # Standard K8s API server port
+      
+      # Operator Configuration
+      - value: "operator.replicas=1"  # Single operator instance sufficient for small cluster
+      
+      # Observability - Hubble for network visibility
+      - value: "hubble.ui.enabled=true"  # Web UI for visualizing network flows and policies
+      - value: "hubble.ui.replicas=1"  # Single UI instance for dev/test environment
+      - value: "hubble.relay.enabled=true"  # Aggregates Hubble data from all nodes for cluster-wide visibility
+      - value: "hubble.relay.replicas=1"  # Single relay sufficient for small cluster
+      - value: "hubble.tls.auto.enabled=true"  # Automatic TLS certificate management for Hubble components
+      - value: "hubble.tls.auto.method=cronJob"  # Use CronJob for automated cert rotation
+      - value: "hubble.tls.auto.certValidityDuration=1095"  # 3-year cert validity reduces rotation frequency
+      - value: "hubble.tls.auto.schedule=\"0 0 1 */4 *\""  # Rotate certs quarterly (1st day of every 4th month)
+      
+      # Load Balancing
+      - value: "l2announcements.enabled=true"  # Enable L2 network announcements for LoadBalancer services (ARP/NDP)
+      
+      # Security - Encryption
+      - value: "encryption.enabled=true"  # Encrypt pod-to-pod traffic for security compliance
+      - value: "encryption.type=wireguard"  # Use WireGuard for fast, kernel-level encryption (requires UDP 51871)
+      
+      # Ingress - Traditional Ingress Controller (vs Gateway API)
+      - value: "ingressController.enabled=true"  # Enable built-in Ingress controller for HTTP/HTTPS routing
+      - value: "ingressController.loadbalancerMode=shared"  # Single LoadBalancer IP shared across all Ingress resources
+      - value: "ingressController.default=true"  # Set as default IngressClass for the cluster
+      
+      # DNS Configuration
+      - value: "dns.enableIPv4=true"  # Enable DNS proxy for FQDN-based policies and visibility
+      - value: "dns.enableIPv6=false"  # Disable IPv6 DNS - cluster is IPv4-only
+      
+      # NAT Configuration
+      - value: "bpf.masquerade=true"  # Use eBPF for masquerading/SNAT instead of iptables (better performance)
     update_repo_cache: true
   changed_when: "'has been upgraded' in cilium_installed.stdout or 'You have successfully installed' in cilium_installed.stdout"
   register: cilium_installed
@@ -85,13 +122,17 @@
   delegate_to: localhost
   become: false
 
+# Post-installation: Restart pods to apply Cilium networking
 - name: restart cilium unmanaged pods
   ansible.builtin.shell: |
+    # Restart all non-hostNetwork pods so they get Cilium CNI networking
+    # Excludes system pods using hostNetwork (e.g., kube-apiserver)
     kubectl get pods --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTNETWORK:.spec.hostNetwork --no-headers=true | grep '<none>' | awk '{print "-n "$1" "$2}' | xargs -L 1 -r kubectl delete pod
   when: cilium_installed.changed and inventory_hostname == 'k8s-control-1'
   delegate_to: localhost
   become: false
 
+# LoadBalancer IP Pool Configuration
 - name: create CiliumLoadBalancerIPPool
   kubernetes.core.k8s:
     state: present
@@ -102,11 +143,12 @@
         name: "cilium-loadbalancer-ippool"
       spec:
         blocks:
-        - cidr: "{{ CILIUM_LOADBALANCER_IPPOOL }}"
+        - cidr: "{{ CILIUM_LOADBALANCER_IPPOOL }}"  # IP range for LoadBalancer service allocation
   when: inventory_hostname == 'k8s-control-1'
   delegate_to: localhost
   become: false
 
+# L2 Network Announcement - enables LoadBalancer IPs to be reachable on the LAN
 - name: create L2announcement policy
   kubernetes.core.k8s:
     state: present
@@ -117,18 +159,19 @@
         name: "cilium-{{ inventory_hostname }}-l2announcement-policy"
       spec:
         interfaces:
-        - "{{ ansible_facts.default_ipv4.interface }}"
-        externalIPs: true
-        loadBalancerIPs: true
+        - "{{ ansible_facts.default_ipv4.interface }}"  # Announce on primary network interface
+        externalIPs: true  # Announce IPs from Service.spec.externalIPs
+        loadBalancerIPs: true  # Announce LoadBalancer service IPs via ARP/NDP
   when: inventory_hostname in groups['k8s-nodes']
   delegate_to: localhost
   become: false
 
+# CRI-O Integration - restart to ensure proper integration with Cilium CNI
 # https://docs.cilium.io/en/latest/network/kubernetes/configuration/#crio
 - name: restart crio service
   ansible.builtin.systemd:
     name: crio.service
     state: restarted
     enabled: true
-  when: cilium_installed.changed 
+  when: cilium_installed.changed  # Only restart when Cilium was installed/upgraded
   become: true

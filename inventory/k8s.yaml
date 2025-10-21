@@ -20,7 +20,6 @@ proxmox:
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
   vars:
-    ubuntu_release_version: '{{ lookup("env", "UBUNTU_RELEASE_VERSION") | default("24.04.3") }}'
     proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
     proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
     proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST") }}'

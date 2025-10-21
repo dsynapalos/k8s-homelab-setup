@@ -1,0 +1,16 @@
+
+
+- name: run cis benchmarks
+  hosts: k8s-control-1
+  gather_facts: false
+  tasks:
+    - name: Run CIS benchmark tests
+      command: >
+        kube-bench --config-dir /etc/kube-bench/cfg --config cis-1.21 --version 1.21 --check node,master --json
+      register: kube_bench_result
+      changed_when: false
+      failed_when: "'FAIL' in kube_bench_result.stdout"
+
+    - name: Display CIS benchmark results
+      debug:
+        var: kube_bench_result.stdout
