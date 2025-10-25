@@ -1,0 +1,65 @@
+---
+- name: generate new ssh key pair for argocd
+  community.crypto.openssh_keypair:
+    path: "/tmp/argocd"
+    type: rsa
+    size: 4096
+    comment: "argocd-deploy-key"
+    force: false
+
+- name: read generated argocd public key
+  ansible.builtin.slurp:
+    src: "/tmp/argocd.pub"
+  register: argocd_public_key_new
+
+- name: read generated argocd private key
+  ansible.builtin.slurp:
+    src: "/tmp/argocd"
+  register: argocd_private_key_new
+  no_log: true
+
+- name: set public and private key content
+  ansible.builtin.set_fact:
+    argocd_public_key_content: "{{ argocd_public_key_new['content'] | b64decode }}"
+    argocd_private_key_content: "{{ argocd_private_key_new['content'] | b64decode }}"
+  no_log: true
+
+- name: store public key in kubernetes configmap for idempotency
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-ssh-public-key
+        namespace: argocd
+      data:
+        publicKey: "{{ argocd_public_key_content }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: create kubernetes secret with argocd ssh private key
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: argocd-repo-ssh-key
+        namespace: argocd
+        labels:
+          argocd.argoproj.io/secret-type: repository
+      type: Opaque
+      stringData:
+        type: git
+        url: "{{ REPOSITORY_SSH_URL }}"
+        sshPrivateKey: "{{ argocd_private_key_content }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    no_log: true
+
+- name: delete temporary ssh key files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: 
+    - "/tmp/argocd"
+    - "/tmp/argocd.pub"

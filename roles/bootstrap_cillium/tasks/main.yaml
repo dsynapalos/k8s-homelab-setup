@@ -175,3 +175,31 @@
     enabled: true
   when: cilium_installed.changed  # Only restart when Cilium was installed/upgraded
   become: true
+
+- name: create Hubble Ingress
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: hubble-ui-ingress
+        namespace: kube-system
+        annotations:
+          kubernetes.io/ingress.class: cilium
+      spec:
+        rules:
+        - host: hubble.k8s.local
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: hubble-ui
+                  port:
+                    number: 80
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: inventory_hostname == 'k8s-control-1' and not (ENABLE_GATEWAY_API | bool)
+  delegate_to: localhost
+  become: false

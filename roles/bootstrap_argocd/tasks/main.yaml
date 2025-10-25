@@ -15,8 +15,153 @@
     namespace: argocd
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
 
-- name: install argocd cli
-  ansible.builtin.get_url:
-    url: "https://github.com/argoproj/argo-cd/releases/download/v{{ ARGOCD_VERSION }}/argocd-linux-amd64"
-    dest: /usr/local/bin/argocd
-    mode: '0555'
+- name: create argocd Ingress for HTTP
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: argocd-server-http
+        namespace: argocd
+      spec:
+        ingressClassName: cilium
+        rules:
+        - host: argocd.k8s.local
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: argocd-server
+                  port:
+                    number: 80
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: create argocd Ingress for HTTPS with TLS passthrough
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: argocd-server-https
+        namespace: argocd
+        annotations:
+          ingress.cilium.io/tls-passthrough: "enabled"
+      spec:
+        ingressClassName: cilium
+        rules:
+        - host: argocd.k8s.local
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: argocd-server
+                  port:
+                    number: 443
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: check if argocd ssh public key configmap exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    name: argocd-ssh-public-key
+    namespace: argocd
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: public_key_configmap
+  ignore_errors: true
+
+- name: read existing public key from configmap
+  ansible.builtin.set_fact:
+    argocd_public_key_content: "{{ public_key_configmap.resources[0].data.publicKey | trim }}"
+  when: public_key_configmap.resources | default([]) | length > 0
+
+- name: manage ssh keys for repository access
+  ansible.builtin.include_tasks: manage_ssh_keys.yaml
+  when: 
+    - public_key_configmap.resources | default([]) | length == 0
+
+- name: extract repository host and project path from repository url
+  ansible.builtin.set_fact:
+    repository_host: "{{ REPOSITORY_SSH_URL | regex_search('git@([^:/]+)', '\\1') | first }}"
+    repository_project_path: "{{ REPOSITORY_SSH_URL | regex_search('git@[^:/]+[:/](.+?)(\\.git)?$', '\\1') | first }}"
+    repository_project_path_encoded: "{{ (REPOSITORY_SSH_URL | regex_search('git@[^:/]+[:/](.+?)(\\.git)?$', '\\1') | first) | replace('/', '%2F') }}"
+  when: 
+    - REPOSITORY_SSH_URL is match('^git@')
+
+- name: check if deploy key already exists in repository
+  ansible.builtin.uri:
+    url: "https://{{ repository_host }}/api/v4/projects/{{ repository_project_path_encoded }}/deploy_keys"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ REPOSITORY_TOKEN }}"
+    status_code: [200]
+    validate_certs: true
+  register: existing_deploy_keys
+  when: 
+    - "'gitlab' in repository_host"
+  ignore_errors: true
+
+- name: check if our key is already registered
+  ansible.builtin.set_fact:
+    deploy_key_already_registered: >-
+      {{
+        existing_deploy_keys.json | 
+        selectattr('key', 'search', (argocd_public_key_content)) | 
+        list | 
+        length > 0
+      }}
+  when:
+    - existing_deploy_keys is not skipped
+    - existing_deploy_keys is succeeded
+    - existing_deploy_keys.json is iterable
+    - existing_deploy_keys.json is not string
+
+- name: register deploy key with repository
+  ansible.builtin.uri:
+    url: "https://{{ repository_host }}/api/v4/projects/{{ repository_project_path_encoded }}/deploy_keys"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ REPOSITORY_TOKEN }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      title: "ArgoCD Deploy Key - {{ ansible_date_time.iso8601 }}"
+      key: "{{ argocd_public_key_content | trim }}"
+      can_push: false
+    status_code: [201, 400]
+    validate_certs: true
+  register: deploy_key_result
+  when: 
+    - "'gitlab' in repository_host"
+    - not (deploy_key_already_registered | default(false))
+
+- name: create argocd homelab project
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: argoproj.io/v1alpha1
+      kind: AppProject
+      metadata:
+        name: homelab
+        namespace: argocd
+      spec:
+        description: Homelab applications and services
+        sourceRepos:
+          - '*'
+        destinations:
+          - namespace: '*'
+            server: https://kubernetes.default.svc
+        clusterResourceWhitelist:
+          - group: '*'
+            kind: '*'
+        namespaceResourceWhitelist:
+          - group: '*'
+            kind: '*'
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+

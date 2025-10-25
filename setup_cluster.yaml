@@ -37,8 +37,15 @@
 
 - name: setup argo cd
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
   become: true
   roles:
     - bootstrap_argocd
+
+- name: setup applications
+  hosts: localhost
+  gather_facts: false
+  become: true
+  roles:
+    - bootstrap_applications
   

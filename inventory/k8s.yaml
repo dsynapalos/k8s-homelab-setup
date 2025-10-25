@@ -19,15 +19,6 @@ proxmox:
         ip: '{{ lookup("env", "K8S_NODE_1_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
-  vars:
-    proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
-    proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
-    proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST") }}'
-    proxmox_node: '{{ lookup("env", "PROXMOX_NODE") }}'
-    proxmox_local_storage: '{{ lookup("env", "PROXMOX_LOCAL_STORAGE") }}'
-    proxmox_storage: '{{ lookup("env", "PROXMOX_STORAGE") | default("local-lvm") }}'
-    vm_gateway: '{{ lookup("env", "VM_GATEWAY") }}'
-    vm_nameserver: '{{ lookup("env", "VM_NAMESERVER") }}'
 bare-metal:
 k8s:
   children:
