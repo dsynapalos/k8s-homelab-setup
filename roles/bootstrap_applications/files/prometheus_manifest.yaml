@@ -10,7 +10,7 @@ spec:
   source:
     path: argocd_applications/prometheus
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
-    targetRevision: 12-decide-on-argocd-automation
+    targetRevision: master
   sources: []
   project: homelab
   syncPolicy:
