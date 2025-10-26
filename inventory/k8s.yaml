@@ -10,6 +10,8 @@ proxmox:
         ip: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+      labels:
+        role: main-control
     k8s-node-1:
       ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
       vm_provision:
@@ -19,7 +21,16 @@ proxmox:
         ip: '{{ lookup("env", "K8S_NODE_1_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+      labels:
+        role: main-node
+  vars:
+    labels:
+      infra: proxmox
 bare-metal:
+  hosts: {}
+  vars:
+    labels:
+      infra: baremetal
 k8s:
   children:
     k8s-control:

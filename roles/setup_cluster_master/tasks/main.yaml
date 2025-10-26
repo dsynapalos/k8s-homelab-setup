@@ -4,3 +4,5 @@
 - include_tasks: bootstrap_kubeadm.yaml
 
 - include_tasks: fetch_kubeconfig.yaml
+
+- include_tasks: label_node.yaml

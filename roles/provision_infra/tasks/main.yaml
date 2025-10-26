@@ -1,3 +1,5 @@
+- include_tasks: aggregate_labels.yaml
+
 - name: create vm {{ inventory_hostname }}
   block:
   - name: Calculate stagger delay for host {{ inventory_hostname }}

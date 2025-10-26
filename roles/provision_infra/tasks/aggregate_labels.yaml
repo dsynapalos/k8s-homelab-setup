@@ -1,0 +1,35 @@
+---
+# Ansible's default hash_behaviour=replace means host-level dict vars completely
+# replace group-level dict vars instead of merging them. Since Ansible provides
+# no way to access raw group vars after merging, we read the inventory YAML
+# directly and dynamically extract labels from all groups this host belongs to.
+
+- name: Read inventory file to access raw group vars
+  ansible.builtin.set_fact:
+    inventory_data: "{{ lookup('file', playbook_dir + '/inventory/k8s.yaml') | from_yaml }}"
+  run_once: true
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Initialize accumulated labels with empty dict
+  ansible.builtin.set_fact:
+    node_labels: {}
+
+- name: Merge labels from each group this host belongs to
+  ansible.builtin.set_fact:
+    node_labels: "{{ node_labels | combine(hostvars['localhost']['inventory_data'][item].vars.labels | default({})) }}"
+  loop: "{{ group_names }}"
+  when:
+    - hostvars['localhost']['inventory_data'][item] is defined
+    - hostvars['localhost']['inventory_data'][item].vars is defined
+    - hostvars['localhost']['inventory_data'][item].vars.labels is defined
+
+- name: Apply host-specific labels (highest precedence, overrides group labels)
+  ansible.builtin.set_fact:
+    node_labels: "{{ node_labels | combine(hostvars[inventory_hostname].get('labels', {})) }}"
+    cacheable: yes
+
+- name: Debug aggregated labels for host
+  ansible.builtin.debug:
+    msg: "Node {{ inventory_hostname }} will have labels: {{ node_labels }}"
+  when: node_labels | default({}) | length > 0

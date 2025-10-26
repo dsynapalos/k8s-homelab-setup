@@ -8,6 +8,8 @@ all:
       REPOSITORY_SSH_URL: '{{ lookup("env", "REPOSITORY_SSH_URL") }}'
       REPOSITORY_TOKEN: '{{ lookup("env", "REPOSITORY_TOKEN") }}'
   vars:
+    labels:
+      cluster: homelab
     ubuntu_release_version: '{{ lookup("env", "UBUNTU_RELEASE_VERSION") | default("24.04.3") }}'
     proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
     proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'

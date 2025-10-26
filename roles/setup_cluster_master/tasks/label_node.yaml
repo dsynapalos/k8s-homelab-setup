@@ -1,18 +1,4 @@
-- name: Extract kubeadm join command
-  ansible.builtin.shell: |
-    kubeadm token create --print-join-command
-  register: kubeadm_join_output
-  delegate_to: k8s-control-1
-  become: true
-  no_log: true
-
-- name: Run join command if not already in cluster
-  ansible.builtin.command:
-    cmd: "{{ kubeadm_join_output.stdout }}"
-    creates:  /etc/kubernetes/kubelet.conf
-  become: true
-  no_log: true
-
+---
 - name: Wait for node to be ready
   ansible.builtin.command:
     cmd: "kubectl get node {{ inventory_hostname }}"
@@ -63,7 +49,7 @@
   become: false
   when: labels_to_remove | length > 0
 
-- name: Apply labels to node (only if missing or different)
+- name: Apply labels to control plane node (only if missing or different)
   ansible.builtin.command:
     cmd: "kubectl label node {{ inventory_hostname }} {{ item.key }}={{ item.value }} --overwrite"
   loop: "{{ node_labels | dict2items }}"
