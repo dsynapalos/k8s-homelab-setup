@@ -10,9 +10,9 @@ spec:
   source:
     path: argocd_applications/grafana
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
-    targetRevision: 18-add-grafana-chart
+    targetRevision: main
   sources: []
-  project: main
+  project: homelab
   syncPolicy:
     automated:
       prune: true
