@@ -43,6 +43,7 @@
     IMAGE: "{{ image }}"
   register: image_check
   failed_when: image_check.rc not in [0,2]  # rc=0: exists, rc=2: missing (expected states)
+  changed_when: image_check.rc == 2  # Only mark as changed when image is NOT found
 
 # Create lookup map for conditional ISO creation (skip if already uploaded)
 - name: build image_result_map

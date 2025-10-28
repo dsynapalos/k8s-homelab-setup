@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: grafana-dashboard-provider
+    files:
+      - dashboard-provider.yaml
+    options:
+      disableNameSuffixHash: false
+  - name: grafana-k8s-dashboard
+    files:
+      - k8s-cluster-dashboard.json
+    options:
+      disableNameSuffixHash: false
+  - name: grafana-prometheus-datasource
+    files:
+      - prometheus-datasource.yaml
+    options:
+      disableNameSuffixHash: false

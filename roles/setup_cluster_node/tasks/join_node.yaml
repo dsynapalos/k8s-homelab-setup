@@ -5,6 +5,7 @@
   delegate_to: k8s-control-1
   become: true
   no_log: true
+  changed_when: false
 
 - name: Run join command if not already in cluster
   ansible.builtin.command:

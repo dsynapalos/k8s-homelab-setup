@@ -56,6 +56,7 @@
       VM_ID: "{{ vm_id }}"
     delegate_to: localhost
     register: poll_for_ip_result
+    changed_when: poll_for_ip_result.rc != 0  # Only changed when IP not found
 
   - name: set ansible_host fact
     set_fact:

@@ -1,6 +1,7 @@
 - name: calculate swap
   shell : free -m | grep Swap | awk '{print $2}'
   register: swap_used
+  changed_when: false
 
 - name: disabling SWAP
   shell: "swapoff --all"
