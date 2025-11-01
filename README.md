@@ -10,6 +10,7 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
 - **Container Runtime**: CRI-O runtime with version matching
 - **CNI**: Cilium with eBPF data path, WireGuard encryption, and L2 load balancer announcements
 - **Ingress**: Gateway API or Ingress Controller modes
+- **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
 - **Observability**: Hubble for network flow visualization
 - **GitOps**: ArgoCD for declarative cluster management
 - **Developer Tools**: kubectl, helm, cilium-cli, hubble-cli auto-installed
@@ -76,18 +77,50 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
    ARGOCD_VERSION={{ ArgoCD version to install (e.g., 3.1.7) }}
    REPOSITORY_SSH_URL={{ git repository SSH URL (e.g., git@gitlab.com:username/repo.git) }}
    REPOSITORY_TOKEN={{ Repository Personal Access Token with API scope }}
+   
+   # CephFS Storage Configuration (Optional)
+   ENABLE_CEPH={{ enable CephFS dynamic storage provisioning (true/false) }}
+   CEPH_CSI_VERSION={{ Ceph CSI driver version (e.g., 3.9.0) }}
+   CEPH_CLUSTER_ID={{ Ceph cluster FSID from 'ceph fsid' }}
+   CEPH_MON_HOST={{ Ceph monitor address (e.g., 192.168.1.100:6789) }}
+   CEPH_K8S_USER={{ Ceph client username for Kubernetes (plain text) }}
+   CEPH_K8S_KEY={{ Ceph client key for Kubernetes (base64-encoded) }}
+   CEPH_ADMIN_KEY={{ Ceph admin key (base64-encoded) }}
    ```
    
    **GitLab/Repository Integration** (optional for ArgoCD GitOps):
    1. Create a Personal Access Token in your Git hosting provider:
       - **GitLab**: Settings → Access Tokens → Create token with `api` scope
-      - **GitHub**: Settings → Developer settings → Personal access tokens → Generate with `repo` scope (W)
+      - **GitHub**: Settings → Developer settings → Personal access tokens → Generate with `repo` scope
    2. Add `REPOSITORY_SSH_URL` and `REPOSITORY_TOKEN` to your `.env` file
    3. The automation will automatically:
       - Generate a 4096-bit RSA SSH key pair for ArgoCD
       - Store the public key in a Kubernetes ConfigMap for idempotency
       - Register the public key as a read-only deploy key (GitLab only - auto-detects from URL)
       - Create an ArgoCD repository secret with the private key
+   
+   **CephFS Storage Integration** (optional for dynamic persistent volumes):
+   1. Ensure you have an existing Ceph cluster (e.g., Proxmox built-in Ceph)
+   2. Create a CephFS filesystem with data and metadata pools
+   3. Create a Kubernetes client user:
+      ```bash
+      ceph auth get-or-create client.kubernetes \
+        mon 'allow r' \
+        osd 'allow rw pool=cephfs_data' \
+        mds 'allow rw' \
+        -o /etc/ceph/ceph.client.kubernetes.keyring
+      ```
+   4. Gather required information:
+      - Cluster FSID: `ceph fsid`
+      - Monitor address: `ceph mon dump` (look for mon addresses)
+      - Client key: `ceph auth get client.kubernetes` (already base64-encoded)
+      - Admin key: `ceph auth get client.admin` (already base64-encoded)
+   5. Set `ENABLE_CEPH=true` and configure Ceph variables in `.env`
+   6. The automation will:
+      - Install `ceph-common` package on all nodes
+      - Load and persist the ceph kernel module
+      - Deploy Ceph CSI driver via Helm
+      - Create two StorageClasses: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
 
 3. **Run automation**
    
@@ -123,6 +156,12 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
   - WireGuard pod-to-pod encryption
   - L2 LoadBalancer announcements
   - Hubble observability suite
+
+### Storage (Optional)
+- CephFS dynamic provisioning via Ceph CSI driver
+- Kernel-based CephFS mounts for high performance
+- Two StorageClasses: `cephfs` (Delete) and `cephfs-retain` (Retain)
+- Dynamic replica scaling based on cluster size
 
 ### GitOps & Tools
 - ArgoCD for application management
@@ -195,6 +234,11 @@ The automation is organized into modular Ansible roles, each responsible for a s
   - Worker nodes: HTTP/HTTPS ingress (80/443), NodePort range (30000-32767)
   - **Cilium networking**: VXLAN (8472/udp), WireGuard (51871/udp)
 - Enables IP forwarding for pod routing
+- **CephFS support** (optional, when `ENABLE_CEPH=true`):
+  - Installs `ceph-common` package (provides mount.ceph and ceph CLI)
+  - Loads ceph kernel module immediately via `modprobe`
+  - Persists module loading via `/etc/modules-load.d/ceph.conf`
+  - Validates configuration with grep check
 
 #### Cluster Initialization
 **`setup_cluster_master`** - Initializes Kubernetes control plane
@@ -245,6 +289,22 @@ The automation is organized into modular Ansible roles, each responsible for a s
 - Example: `argocd_applications/prometheus/` contains Prometheus deployment manifests
 - Applications are GitOps-managed after initial upload
 - **Workflow**: Developer creates manifests → `setup-applications.py` uploads → ArgoCD syncs from Git
+
+**`bootstrap_cephfs_storage_class`** - CephFS dynamic storage provisioning (optional, enabled via `ENABLE_CEPH=true`)
+- Installs Ceph CSI driver via Helm chart from ceph.github.io/csi-charts
+- Creates Secret with Ceph authentication keys:
+  - Uses Ansible `b64encode` filter for userID/adminID (plain text → base64)
+  - Passes through pre-encoded Ceph keys (already base64)
+- Configures Helm values:
+  - `csiConfig`: Ceph monitor addresses and cluster ID
+  - `cephconf`: Injects `mon_host` configuration into ceph.conf
+  - `provisioner.replicaCount`: Dynamic scaling (1 for single-node, 2+ for multi-node clusters)
+  - `nodeplugin`: DaemonSet for mounting volumes on all nodes
+- Creates two StorageClasses:
+  - `cephfs` (default): Delete reclaim policy for dynamic cleanup
+  - `cephfs-retain`: Retain policy for persistent data
+- **Prerequisites**: Requires ceph kernel module (configured by `setup_os` role)
+- **Version**: Uses v3.9.0 by default (compatible with older x86-64 CPUs)
 
 **`bootstrap_prometheus`** - Monitoring stack deployment (optional, deprecated)
 - Legacy role for direct Prometheus deployment

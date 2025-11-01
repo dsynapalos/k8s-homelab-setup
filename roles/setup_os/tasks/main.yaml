@@ -7,3 +7,6 @@
 - include_tasks: install_crio.yaml
 
 - include_tasks: os_network_config.yaml
+
+- include_tasks: configure_ceph_kernel.yaml
+  when: ENABLE_CEPH | bool

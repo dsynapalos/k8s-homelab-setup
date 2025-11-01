@@ -1,0 +1,21 @@
+# Configure Ceph kernel module for CephFS support
+# This ensures the ceph kernel module is loaded and persists across reboots
+- name: install ceph-common for cephfs support
+  ansible.builtin.apt:
+    pkg:
+      - ceph-common  # Provides mount.ceph and ceph CLI tools
+    state: present
+    update_cache: yes
+
+- name: load ceph kernel module immediately
+  community.general.modprobe:
+    name: ceph
+    state: present
+
+- name: ensure ceph module loads on boot
+  ansible.builtin.lineinfile:
+    path: /etc/modules-load.d/ceph.conf
+    line: ceph
+    create: true
+    mode: '0644'
+    validate: 'grep -q "^ceph$" %s'

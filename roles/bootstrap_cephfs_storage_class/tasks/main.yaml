@@ -1,0 +1,2 @@
+- include_tasks: install_cephfs.yaml
+  when: ENABLE_CEPH | bool

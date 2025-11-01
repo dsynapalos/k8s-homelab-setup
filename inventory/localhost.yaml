@@ -7,6 +7,15 @@ all:
       ARGOCD_VERSION: '{{ lookup("env", "ARGOCD_VERSION") | default("3.1.7") }}'
       REPOSITORY_SSH_URL: '{{ lookup("env", "REPOSITORY_SSH_URL") }}'
       REPOSITORY_TOKEN: '{{ lookup("env", "REPOSITORY_TOKEN") }}'
+      ENABLE_CEPH: '{{ lookup("env", "ENABLE_CEPH") | default("false") }}'
+      CEPH_CSI_VERSION: '{{ lookup("env", "CEPH_CSI_VERSION") | default("3.12.2") }}'
+      CEPH_MONITOR: '{{ lookup("env", "CEPH_MONITOR") | default("") }}'
+      CEPH_FSID: '{{ lookup("env", "CEPH_FSID") | default("") }}'
+      CEPH_FS_NAME: '{{ lookup("env", "CEPH_FS_NAME") | default("cephfs") }}'
+      CEPH_FS_POOL: '{{ lookup("env", "CEPH_FS_POOL") | default("cephfs_data") }}'
+      CEPH_K8S_USER: '{{ lookup("env", "CEPH_K8S_USER") | default("kubernetes") }}'
+      CEPH_K8S_KEY: '{{ lookup("env", "CEPH_K8S_KEY") | default("") }}'
+      CEPH_ADMIN_KEY: '{{ lookup("env", "CEPH_ADMIN_KEY") | default("") }}'
   vars:
     labels:
       cluster: homelab

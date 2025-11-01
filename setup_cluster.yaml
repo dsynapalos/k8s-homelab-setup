@@ -35,6 +35,13 @@
   roles:
     - bootstrap_cillium
 
+- name: setup storage classes
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - bootstrap_cephfs_storage_class
+
 - name: setup argo cd
   hosts: localhost
   gather_facts: true

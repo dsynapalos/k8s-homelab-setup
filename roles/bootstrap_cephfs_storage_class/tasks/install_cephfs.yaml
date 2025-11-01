@@ -1,0 +1,163 @@
+# CephFS CSI Driver Installation and StorageClass Configuration
+# This role deploys the Ceph CSI driver and configures CephFS storage for dynamic PV provisioning
+# Prerequisites: 
+#   - Ceph cluster with CephFS enabled
+#   - Network connectivity from K8s nodes to Ceph monitors
+#   - Ceph kernel module loaded on worker nodes (handled by setup_os role)
+
+- name: add ceph-csi chart repo
+  kubernetes.core.helm_repository:
+    name: ceph-csi
+    repo_url: "https://ceph.github.io/csi-charts"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+# Create namespace for Ceph CSI components
+- name: create ceph-csi-cephfs namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ceph-csi-cephfs
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+# Secret containing Ceph user credentials for CSI operations
+# Created outside of Helm so it's not managed by Helm releases
+# NOTE: Kubernetes Secret 'data' field requires base64-encoded values
+#   - userID/adminID: Plain text env vars encoded here with b64encode filter
+#   - userKey/adminKey: Already base64-encoded in .env file, passed through directly
+# This avoids double-encoding that would occur if using 'stringData' with pre-encoded values
+- name: create ceph csi secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: csi-cephfs-secret
+        namespace: ceph-csi-cephfs
+      type: Opaque
+      data:
+        # CEPH_K8S_USER is plain text "kubernetes" in .env, encode it here
+        userID: "{{ CEPH_K8S_USER | b64encode }}"
+        # CEPH_K8S_KEY is already base64-encoded in .env, use directly
+        userKey: "{{ CEPH_K8S_KEY }}"
+        # adminID is always "admin", encode it here
+        adminID: "{{ 'admin' | b64encode }}"
+        # CEPH_ADMIN_KEY is already base64-encoded in .env, use directly
+        adminKey: "{{ CEPH_ADMIN_KEY }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  no_log: true  # Hide sensitive data in logs
+
+# Deploy Ceph CSI CephFS driver using Helm
+# Helm manages all components except the Secret (created separately for security)
+- name: deploy ceph-csi-cephfs with helm
+  kubernetes.core.helm:
+    name: ceph-csi-cephfs
+    chart_ref: ceph-csi/ceph-csi-cephfs
+    release_namespace: ceph-csi-cephfs
+    chart_version: "{{ CEPH_CSI_VERSION }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    values:
+      # Ceph cluster configuration
+      csiConfig:
+        - clusterID: "{{ CEPH_FSID }}"
+          monitors:
+            - "{{ CEPH_MONITOR }}"
+      
+      # Ceph configuration file with monitor host
+      cephconf: |
+        [global]
+        auth_cluster_required = cephx
+        auth_service_required = cephx
+        auth_client_required = cephx
+        fuse_big_writes = true
+        mon_host = {{ CEPH_MONITOR }}
+      
+      # Provisioner configuration
+      # Set replicas based on number of worker nodes (2+ nodes = 2 replicas for HA, 1 node = 1 replica)
+      provisioner:
+        name: provisioner
+        replicaCount: "{{ 2 if groups['k8s-nodes'] | length >= 2 else 1 }}"
+        timeout: 60s
+        
+      # Node plugin configuration
+      nodeplugin:
+        name: nodeplugin
+        updateStrategy: RollingUpdate
+        
+      # Let Helm create default StorageClass
+      storageClass:
+        create: true
+        name: cephfs
+        annotations:
+          storageclass.kubernetes.io/is-default-class: "true"
+        clusterID: "{{ CEPH_FSID }}"
+        fsName: "{{ CEPH_FS_NAME }}"
+        pool: "{{ CEPH_FS_POOL }}"
+        reclaimPolicy: Delete
+        allowVolumeExpansion: true
+        mountOptions:
+          - recover_session=clean
+        mounter: kernel
+        provisionerSecret: csi-cephfs-secret
+        provisionerSecretNamespace: ceph-csi-cephfs
+        controllerExpandSecret: csi-cephfs-secret
+        controllerExpandSecretNamespace: ceph-csi-cephfs
+        nodeStageSecret: csi-cephfs-secret
+        nodeStageSecretNamespace: ceph-csi-cephfs
+        
+      # Use pre-created secret
+      secret:
+        create: false
+        
+    update_repo_cache: true
+  changed_when: "'has been upgraded' in ceph_csi_installed.stdout or 'You have successfully installed' in ceph_csi_installed.stdout"
+  register: ceph_csi_installed
+
+# Wait for CSI provisioner to be ready
+- name: wait for ceph-csi-cephfs provisioner to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: ceph-csi-cephfs
+    label_selectors:
+      - app=ceph-csi-cephfs
+      - component=provisioner
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: provisioner_pods
+  until:
+    - provisioner_pods.resources | length > 0
+    - provisioner_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
+  retries: 30
+  delay: 10
+
+# Create additional StorageClass with Retain policy for important data
+- name: create cephfs-retain storageclass
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      metadata:
+        name: cephfs-retain
+      provisioner: cephfs.csi.ceph.com
+      parameters:
+        clusterID: "{{ CEPH_FSID }}"
+        fsName: "{{ CEPH_FS_NAME }}"
+        pool: "{{ CEPH_FS_POOL }}"
+        csi.storage.k8s.io/provisioner-secret-name: csi-cephfs-secret
+        csi.storage.k8s.io/provisioner-secret-namespace: ceph-csi-cephfs
+        csi.storage.k8s.io/controller-expand-secret-name: csi-cephfs-secret
+        csi.storage.k8s.io/controller-expand-secret-namespace: ceph-csi-cephfs
+        csi.storage.k8s.io/node-stage-secret-name: csi-cephfs-secret
+        csi.storage.k8s.io/node-stage-secret-namespace: ceph-csi-cephfs
+        mounter: kernel
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      volumeBindingMode: Immediate
+      mountOptions:
+        - cache_size=33554432
+        - recover_session=clean
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf

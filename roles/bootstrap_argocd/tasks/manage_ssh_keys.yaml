@@ -54,7 +54,7 @@
         url: "{{ REPOSITORY_SSH_URL }}"
         sshPrivateKey: "{{ argocd_private_key_content }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
-    no_log: true
+  no_log: true
 
 - name: delete temporary ssh key files
   ansible.builtin.file:

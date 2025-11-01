@@ -11,6 +11,7 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 - **Infrastructure**: Proxmox VM provisioning with Ubuntu autoinstall ISO modification
 - **K8s Stack**: kubeadm + CRI-O runtime + Cilium CNI + ArgoCD GitOps
 - **Networking**: Cilium with WireGuard encryption, L2 load balancer announcements
+- **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
 
 ## Key Components
 
@@ -38,10 +39,13 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 roles/
 ├── provision_infra/        # Proxmox VM creation, ISO handling
 ├── setup_localhost/        # CLI tools installation (kubectl, helm, cilium-cli, hubble-cli)
-├── setup_os/              # OS preparation (packages, firewall, CRI-O)
+├── setup_os/              # OS preparation (packages, firewall, CRI-O, Ceph kernel module)
 ├── setup_cluster_master/  # kubeadm init, kubeconfig generation
 ├── setup_cluster_node/    # kubeadm join workers
 ├── bootstrap_cillium/     # Helm-based Cilium deployment, L2 announcements
+├── bootstrap_cephfs_storage_class/ # CephFS CSI driver deployment, StorageClass creation
+│   ├── tasks/
+│   │   └── install_cephfs.yaml    # Helm deployment, Secret creation, dynamic scaling
 ├── bootstrap_argocd/      # ArgoCD + SSH key management + deploy key registration
 │   ├── tasks/
 │   │   ├── main.yaml           # Orchestration, key detection, deploy key logic
@@ -55,9 +59,10 @@ roles/
 
 ### Environment Configuration
 - **Required**: Copy `example.env` to `.env` with actual values
-- **Critical vars**: IP addresses, SSH keys, Proxmox credentials, version specifications, repository URLs
+- **Critical vars**: IP addresses, SSH keys, Proxmox credentials, version specifications, repository URLs, Ceph configuration
 - **Pattern**: All inventory uses `{{ lookup("env", "VAR_NAME") }}` for configuration
 - **Git Integration**: `REPOSITORY_SSH_URL` and `REPOSITORY_TOKEN` for ArgoCD deploy key automation
+- **Storage Integration**: `ENABLE_CEPH` flag enables optional CephFS dynamic provisioning
 
 ## Development Workflows
 
@@ -101,6 +106,15 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Encryption**: WireGuard enabled by default
 - **Post-install**: Automatic unmanaged pod restart after Cilium deployment
 
+### CephFS Storage (Optional)
+- **Feature flag**: Controlled by `ENABLE_CEPH` (default: false)
+- **Driver version**: CSI driver v3.9.0 (CPU-compatible, supports older x86-64)
+- **Authentication**: Uses Ansible `b64encode` filter for userID/adminID, passes through pre-encoded Ceph keys
+- **Dynamic scaling**: Provisioner replicas based on `groups['k8s-nodes'] | length` (1 for single-node, 2+ for multi-node)
+- **Kernel module**: Automatically installed and loaded by `setup_os` role
+- **StorageClasses**: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
+- **Configuration**: Requires Ceph cluster FSID, monitor address, client credentials
+
 ## Critical Conventions
 
 ### Inventory Patterns
@@ -123,6 +137,16 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Task separation**: `main.yaml` (orchestration) + `manage_ssh_keys.yaml` (generation)
 - **Conditional execution**: Only include `manage_ssh_keys.yaml` when ConfigMap missing
 
+### CephFS Configuration (bootstrap_cephfs_storage_class)
+- **Secret encoding**: `data` field with Ansible b64encode filter, not `stringData`
+  - `userID`: Plain text (e.g., "kubernetes") encoded with `{{ CEPH_K8S_USER | b64encode }}`
+  - `adminID`: Literal "admin" encoded with `{{ 'admin' | b64encode }}`
+  - `userKey`/`adminKey`: Pre-encoded Ceph keys passed through without encoding
+- **Helm values**: `cephconf` parameter injects `mon_host` into ceph.conf
+- **Dynamic replicas**: `{{ 2 if groups['k8s-nodes'] | length >= 2 else 1 }}`
+- **OS prerequisites**: Ceph kernel module must be loaded (handled by `setup_os/configure_ceph_kernel.yaml`)
+- **Idempotency**: All tasks safe to re-run (apt state: present, modprobe state: present, lineinfile checks existence)
+
 ### File Organization
 - **Templates**: Jinja2 templates in `roles/*/templates/` (e.g., `netplan.j2`)
 - **Static files**: `roles/*/files/` for artifacts like ISO images
@@ -141,6 +165,9 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Cilium deployment**: Monitor pod readiness before proceeding with restarts
 - **GitLab API**: Verify `REPOSITORY_TOKEN` has `api` scope, check project path encoding
 - **SSH key conflicts**: Delete ConfigMap to force regeneration if keys become invalid
+- **CephFS mounting**: Ensure ceph kernel module is loaded (`lsmod | grep ceph`)
+- **Ceph authentication**: Verify Secret encoding - userID/adminID must be base64, keys already are
+- **CSI version**: Use v3.9.0 for older CPUs (v3.12+ requires x86-64-v2 instructions)
 
 ### Best Practices for Modifications
 - **Avoid `is defined` checks**: Ansible handles undefined variables in `when` clauses
@@ -149,5 +176,8 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Secrets for private data**: Use Secrets with `no_log: true` for sensitive information
 - **Include patterns**: Use `include_tasks` with conditionals for optional task sets
 - **URL encoding**: Use `replace('/', '%2F')` for GitLab API paths, not `urlencode`
+- **Secret encoding**: Use `data` field with `b64encode` filter when source is plain text, not `stringData`
+- **Dynamic scaling**: Use Jinja2 conditionals with `groups[]` for cluster-size-aware configuration
+- **Kernel modules**: Load with `modprobe` (state: present) and persist in `/etc/modules-load.d/`
 
 When modifying roles, maintain the delegation patterns for K8s operations and preserve environment variable templating for flexibility across deployments.
