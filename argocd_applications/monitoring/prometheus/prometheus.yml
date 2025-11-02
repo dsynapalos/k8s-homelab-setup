@@ -130,3 +130,11 @@ scrape_configs:
         regex: '^/system\.slice/(.+)\.service$'
         target_label: systemd_service_name
         replacement: '${1}'
+
+  - job_name: 'node-exporter'
+    kubernetes_sd_configs:
+      - role: endpointslice
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_endpointslice_name]
+      regex: 'node-exporter'
+      action: keep

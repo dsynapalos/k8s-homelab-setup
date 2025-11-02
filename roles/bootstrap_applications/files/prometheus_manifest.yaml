@@ -8,7 +8,7 @@ spec:
     namespace: monitoring
     server:  https://kubernetes.default.svc
   source:
-    path: argocd_applications/prometheus
+    path: argocd_applications/monitoring/prometheus
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
     targetRevision: main
   sources: []

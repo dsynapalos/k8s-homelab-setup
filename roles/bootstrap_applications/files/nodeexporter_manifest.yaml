@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: grafana
+  name: node-exporter
   namespace: argocd
 spec:
   destination:
     namespace: monitoring
     server:  https://kubernetes.default.svc
   source:
-    path: argocd_applications/monitoring/grafana
+    path: argocd_applications/monitoring/node-exporter
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
     targetRevision: main
   sources: []

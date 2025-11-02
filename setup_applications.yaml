@@ -1,7 +1,7 @@
 - name: setup applications
   hosts: localhost
   gather_facts: false
-  become: true
+  become: false
   roles:
     - bootstrap_applications
   
