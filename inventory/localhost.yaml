@@ -16,6 +16,8 @@ all:
       CEPH_K8S_USER: '{{ lookup("env", "CEPH_K8S_USER") | default("kubernetes") }}'
       CEPH_K8S_KEY: '{{ lookup("env", "CEPH_K8S_KEY") | default("") }}'
       CEPH_ADMIN_KEY: '{{ lookup("env", "CEPH_ADMIN_KEY") | default("") }}'
+      ENABLE_CUDA: '{{ lookup("env", "ENABLE_CUDA") | default("false") }}'
+      NVIDIA_DEVICE_PLUGIN_VERSION: '{{ lookup("env", "NVIDIA_DEVICE_PLUGIN_VERSION") | default("v0.14.5") }}'
   vars:
     labels:
       cluster: homelab

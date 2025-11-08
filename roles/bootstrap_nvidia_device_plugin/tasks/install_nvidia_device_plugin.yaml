@@ -1,0 +1,124 @@
+# NVIDIA Device Plugin for Kubernetes
+# This role deploys the NVIDIA device plugin to expose GPUs to Kubernetes scheduler
+# Prerequisites:
+#   - NVIDIA drivers installed on worker nodes with compute: cuda label
+#   - NVIDIA Container Toolkit configured for CRI-O
+#   - Node labeled with compute: cuda in inventory
+
+- name: create nvidia RuntimeClass
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: node.k8s.io/v1
+      kind: RuntimeClass
+      metadata:
+        name: nvidia
+      handler: nvidia
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: check if nvidia device plugin is already deployed
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: DaemonSet
+    name: nvidia-device-plugin-daemonset
+    namespace: kube-system
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: nvidia_plugin_check
+  failed_when: false
+
+- name: deploy nvidia device plugin daemonset
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: nvidia-device-plugin-daemonset
+        namespace: kube-system
+      spec:
+        selector:
+          matchLabels:
+            name: nvidia-device-plugin-ds
+        updateStrategy:
+          type: RollingUpdate
+        template:
+          metadata:
+            labels:
+              name: nvidia-device-plugin-ds
+          spec:
+            runtimeClassName: nvidia
+            nodeSelector:
+              # Only deploy on nodes with CUDA compute capability
+              compute: cuda
+            priorityClassName: system-node-critical
+            tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+            containers:
+            - image: "nvcr.io/nvidia/k8s-device-plugin:{{ NVIDIA_DEVICE_PLUGIN_VERSION }}"
+              name: nvidia-device-plugin-ctr
+              env:
+              - name: FAIL_ON_INIT_ERROR
+                value: "false"
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+              - name: device-plugin
+                mountPath: /var/lib/kubelet/device-plugins
+            volumes:
+            - name: device-plugin
+              hostPath:
+                path: /var/lib/kubelet/device-plugins
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: nvidia_plugin_check.resources | length == 0
+
+- name: wait for nvidia device plugin pods to be running
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: kube-system
+    label_selectors:
+      - name=nvidia-device-plugin-ds
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: nvidia_plugin_pods
+  until:
+    - nvidia_plugin_pods.resources | length > 0
+    - nvidia_plugin_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == nvidia_plugin_pods.resources | length
+  retries: 30
+  delay: 10
+
+- name: verify gpu resources are advertised on nodes
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - compute=cuda
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: gpu_nodes
+  changed_when: false
+
+- name: display gpu node capacity
+  ansible.builtin.debug:
+    msg: |
+      Node: {{ item.metadata.name }}
+      GPU Capacity: {{ item.status.capacity['nvidia.com/gpu'] | default('0') }}
+  loop: "{{ gpu_nodes.resources }}"
+  when: gpu_nodes.resources | length > 0
+
+- name: label nodes with gpu feature
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Node
+      metadata:
+        name: "{{ item.metadata.name }}"
+        labels:
+          accelerator: nvidia-gpu
+          gpu-type: gtx-1060
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  loop: "{{ gpu_nodes.resources }}"
+  when: gpu_nodes.resources | length > 0

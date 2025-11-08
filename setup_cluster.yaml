@@ -42,6 +42,13 @@
   roles:
     - bootstrap_cephfs_storage_class
 
+- name: setup nvidia device plugin
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - bootstrap_nvidia_device_plugin
+
 - name: setup argo cd
   hosts: localhost
   gather_facts: true

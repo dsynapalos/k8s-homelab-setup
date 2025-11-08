@@ -122,6 +122,52 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
       - Deploy Ceph CSI driver via Helm
       - Create two StorageClasses: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
 
+   **NVIDIA GPU Passthrough** (optional for CUDA workloads):
+   1. Enable IOMMU and configure VFIO on the Proxmox host
+   2. Find the PCI address of your GPU on the Proxmox host:
+      ```bash
+      lspci | grep -i vga
+      # Example output: 01:00.0 VGA compatible controller: NVIDIA Corporation GP106 [GeForce GTX 1060 6GB]
+      ```
+   3. Extract the PCI address in format `0000:01:00` (domain:bus:slot, omit function):
+      ```bash
+      lspci -D | grep -i vga | awk '{print $1}' | cut -d'.' -f1
+      # Example output: 0000:01:00
+      ```
+   4. Set environment variables in `.env`:
+      ```bash
+      ENABLE_CUDA=true
+      GPU_PCI_ADDRESS=0000:01:00
+      NVIDIA_DEVICE_PLUGIN_VERSION=v0.14.5
+      ```
+   5. Ensure the target node has `compute: cuda` label in `inventory/k8s.yaml`
+   6. The automation will:
+      - Pass through GPU to VM during creation (Q35 machine type, includes all PCI functions)
+      - Install NVIDIA drivers on the node (auto-selects best LTS server version)
+      - Configure NVIDIA Container Toolkit for CRI-O
+      - Create CRI-O nvidia runtime handler (NOT as default for security)
+      - Create Kubernetes RuntimeClass `nvidia` for GPU access isolation
+      - Deploy NVIDIA device plugin to Kubernetes
+      - Advertise GPU resources to scheduler (`nvidia.com/gpu`)
+   
+   **Using GPUs in Pods**: Pods must explicitly request GPU access with both:
+   ```yaml
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: gpu-pod
+   spec:
+     runtimeClassName: nvidia  # Required: Enables GPU library injection
+     containers:
+     - name: cuda-container
+       image: nvidia/cuda:12.2.0-base-ubuntu22.04
+       command: ["nvidia-smi"]
+       resources:
+         limits:
+           nvidia.com/gpu: 1  # Required: Requests GPU allocation
+   ```
+   This two-layer security model prevents unauthorized GPU access.
+
 3. **Run automation**
    
    **Full cluster setup** (infrastructure + Kubernetes + ArgoCD):
@@ -162,6 +208,31 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
 - Kernel-based CephFS mounts for high performance
 - Two StorageClasses: `cephfs` (Delete) and `cephfs-retain` (Retain)
 - Dynamic replica scaling based on cluster size
+
+### GPU Support (Optional)
+- NVIDIA GPU PCI passthrough to VMs during creation
+  - Automatic Q35 machine type for PCIe passthrough
+  - Includes all PCI functions (GPU + Audio)
+- Intelligent LTS driver selection
+  - Scans available LTS server drivers from ubuntu-drivers
+  - Selects second-latest version (most battle-tested)
+  - Example: If 535, 580 available → installs 535-server
+  - Idempotent: preserves existing driver on re-runs (no auto-upgrades)
+- NVIDIA Container Toolkit for CRI-O runtime
+  - nvidia runtime handler (NOT default for security)
+  - RuntimeClass isolation for GPU access control
+- NVIDIA Device Plugin for GPU resource advertising
+- Node labeling for GPU workload scheduling
+
+**GPU Driver Upgrade Strategy**:
+- Initial installs get second-latest LTS (proven stable, not bleeding edge)
+- Re-runs preserve existing driver version (no automatic upgrades)
+- Manual upgrade process:
+  1. Test new driver on non-production nodes
+  2. Validate CUDA compatibility with workloads
+  3. Remove old driver: `apt remove nvidia-driver-XXX-server`
+  4. Re-run playbook to install current second-latest LTS
+  5. Reboot and validate with `nvidia-smi`
 
 ### GitOps & Tools
 - ArgoCD for application management
@@ -222,6 +293,11 @@ The automation is organized into modular Ansible roles, each responsible for a s
 - Uploads to Proxmox storage via API (idempotent - checks for existing ISOs)
 - Creates VMs with specified resources (CPU, memory, disk)
 - Configures static networking (IP, gateway, nameserver)
+- **GPU passthrough** (optional, for nodes with `compute: cuda` label):
+  - Adds PCI device passthrough during VM creation via `create_vm.py`
+  - Format: `hostpci0: {PCI_ADDRESS},pcie=1,x-vga=0`
+  - Includes all PCI functions (GPU + Audio device)
+  - Requires `GPU_PCI_ADDRESS` environment variable
 
 #### Operating System Configuration
 **`setup_os`** - Prepares Ubuntu hosts for Kubernetes installation
@@ -239,6 +315,15 @@ The automation is organized into modular Ansible roles, each responsible for a s
   - Loads ceph kernel module immediately via `modprobe`
   - Persists module loading via `/etc/modules-load.d/ceph.conf`
   - Validates configuration with grep check
+- **CUDA support** (optional, for nodes with `compute: cuda` label):
+  - Auto-selects best LTS server driver via `ubuntu-drivers list --gpgpu`
+  - Installs NVIDIA Container Toolkit
+  - Configures CRI-O with nvidia runtime handler (NOT as default for security)
+  - Creates proper CRI-O config at `/etc/crio/crio.conf.d/99-nvidia.conf`
+  - Configures nvidia-container-runtime with full runtime paths
+  - Reboots node automatically after driver installation if needed
+  - Verifies GPU with `nvidia-smi`
+  - Idempotent: Preserves existing driver version on re-runs
 
 #### Cluster Initialization
 **`setup_cluster_master`** - Initializes Kubernetes control plane
@@ -306,6 +391,18 @@ The automation is organized into modular Ansible roles, each responsible for a s
 - **Prerequisites**: Requires ceph kernel module (configured by `setup_os` role)
 - **Version**: Uses v3.9.0 by default (compatible with older x86-64 CPUs)
 
+**`bootstrap_nvidia_device_plugin`** - NVIDIA GPU device plugin deployment (optional, enabled via `ENABLE_CUDA=true`)
+- Deploys NVIDIA device plugin as DaemonSet in `kube-system` namespace
+- Uses `nodeSelector: compute: cuda` to target only GPU nodes
+- Exposes GPU resources to Kubernetes scheduler as `nvidia.com/gpu`
+- Adds node labels for workload targeting:
+  - `accelerator: nvidia-gpu`
+  - `gpu-type: gtx-1060`
+- Waits for device plugin pods to be running before proceeding
+- Verifies GPU capacity is advertised on nodes
+- **Prerequisites**: NVIDIA drivers and Container Toolkit installed by `setup_os` role
+- **Version**: Configurable via `NVIDIA_DEVICE_PLUGIN_VERSION` (default: v0.14.5)
+
 **`bootstrap_prometheus`** - Monitoring stack deployment (optional, deprecated)
 - Legacy role for direct Prometheus deployment
 - Consider using ArgoCD ApplicationSets instead
@@ -339,7 +436,13 @@ The main playbook (`setup_cluster.yaml`) orchestrates roles in this sequence:
 5. **Network Configuration** (`bootstrap_cillium`)
    - Configures LoadBalancer IP pools, L2 announcements
 
-6. **GitOps Installation** (`bootstrap_argocd`)
+6. **Storage Configuration** (`bootstrap_cephfs_storage_class`)
+   - Deploys CephFS CSI driver if enabled
+
+7. **GPU Device Plugin** (`bootstrap_nvidia_device_plugin`)
+   - Deploys NVIDIA device plugin if CUDA enabled
+
+8. **GitOps Installation** (`bootstrap_argocd`)
    - Deploys ArgoCD for application management
 
 ## Networking Architecture

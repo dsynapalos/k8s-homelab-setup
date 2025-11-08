@@ -10,3 +10,6 @@
 
 - include_tasks: configure_ceph_kernel.yaml
   when: ENABLE_CEPH | bool
+
+- include_tasks: configure_cuda.yaml
+  when: labels.compute is defined and labels.compute == 'cuda'

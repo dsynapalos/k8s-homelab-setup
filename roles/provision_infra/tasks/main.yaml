@@ -33,6 +33,7 @@
       VM_IP_ADDRESS: "{{ ansible_host }}"
       VM_GATEWAY: "{{ vm_gateway }}"
       VM_NAMESERVER: "{{ vm_nameserver | default('1.1.1.1') }}"
+      GPU_PCI_ADDRESS: "{{ lookup('env', 'GPU_PCI_ADDRESS') if labels.compute is defined and labels.compute == 'cuda' else '' }}"
     delegate_to: localhost
     register: create_vm_result
     changed_when: "'Starting VM' in create_vm_result.stdout"

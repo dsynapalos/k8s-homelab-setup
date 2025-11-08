@@ -1,0 +1,123 @@
+# Configure NVIDIA GPU support for CUDA workloads in Kubernetes
+# This installs NVIDIA drivers, container toolkit, and configures containerd
+# Only runs on nodes with labels: compute: cuda
+
+- name: install ubuntu-drivers-common for NVIDIA driver detection
+  ansible.builtin.apt:
+    pkg:
+      - ubuntu-drivers-common
+    state: present
+    update_cache: yes
+
+- name: check if any NVIDIA driver is already installed
+  ansible.builtin.shell: dpkg -l | grep -E 'nvidia-driver-[0-9]+' | awk '{print $2}' | head -1
+  register: installed_nvidia_driver
+  changed_when: false
+  failed_when: false
+
+- name: get all available NVIDIA server drivers
+  ansible.builtin.shell: ubuntu-drivers list --gpgpu | grep 'nvidia-driver.*-server' | cut -d',' -f1 | sort -V
+  register: available_server_drivers
+  changed_when: false
+  failed_when: false
+  when: not installed_nvidia_driver.stdout
+
+- name: select second-latest server driver (most proven stable)
+  ansible.builtin.set_fact:
+    preferred_driver: "{{ available_server_drivers.stdout_lines[-2] | default(available_server_drivers.stdout_lines[-1]) | default('nvidia-driver-535-server') }}"
+  when: not installed_nvidia_driver.stdout
+
+- name: install NVIDIA driver (preserves existing version if installed)
+  ansible.builtin.apt:
+    pkg:
+      - "{{ installed_nvidia_driver.stdout if installed_nvidia_driver.stdout else preferred_driver }}"
+    state: present
+  register: nvidia_driver_installed
+
+- name: check if NVIDIA driver is loaded
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_driver_check
+  changed_when: false
+  failed_when: false
+
+- name: add NVIDIA Container Toolkit GPG key
+  ansible.builtin.apt_key:
+    url: https://nvidia.github.io/libnvidia-container/gpgkey
+    keyring: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    state: present
+
+- name: detect distribution for NVIDIA Container Toolkit
+  ansible.builtin.shell: '. /etc/os-release; echo $ID$VERSION_ID'
+  register: nvidia_distro
+  changed_when: false
+
+- name: add NVIDIA Container Toolkit repository directly
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+    filename: nvidia-container-toolkit
+    state: present
+    update_cache: yes
+  environment:
+    ARCH: "amd64"
+
+- name: install NVIDIA Container Toolkit
+  ansible.builtin.apt:
+    pkg:
+      - nvidia-container-toolkit
+    state: present
+
+- name: create proper CRI-O nvidia runtime config
+  ansible.builtin.copy:
+    dest: /etc/crio/crio.conf.d/99-nvidia.conf
+    content: |
+      [crio.runtime.runtimes.nvidia]
+      runtime_path = "/usr/bin/nvidia-container-runtime"
+      runtime_type = "oci"
+      runtime_root = "/run/nvidia-container-runtime"
+      monitor_path = "/usr/libexec/crio/conmon"
+    owner: root
+    group: root
+    mode: '0644'
+  register: crio_nvidia_config
+
+- name: configure nvidia-container-runtime to use full paths for runtimes
+  ansible.builtin.lineinfile:
+    path: /etc/nvidia-container-runtime/config.toml
+    regexp: '^runtimes = '
+    line: 'runtimes = ["/usr/libexec/crio/runc", "/usr/libexec/crio/crun"]'
+    insertafter: '^\[nvidia-container-runtime\]'
+    state: present
+  register: nvidia_runtime_config
+
+- name: restart crio service
+  ansible.builtin.systemd:
+    name: crio
+    state: restarted
+  when: crio_nvidia_config.changed or nvidia_runtime_config.changed
+
+- name: reboot notification
+  ansible.builtin.debug:
+    msg: "NVIDIA driver installed. Node '{{ inventory_hostname }}' requires a reboot to load the driver. Reboot will be triggered after this play."
+  when: nvidia_driver_installed.changed and nvidia_driver_check.rc != 0
+
+- name: reboot node after NVIDIA driver installation
+  ansible.builtin.reboot:
+    msg: "Rebooting to load NVIDIA driver"
+    connect_timeout: 5
+    reboot_timeout: 600
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+  when: nvidia_driver_installed.changed and nvidia_driver_check.rc != 0
+
+- name: verify NVIDIA driver is loaded
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_smi_output
+  changed_when: false
+  failed_when: nvidia_smi_output.rc != 0
+  retries: 3
+  delay: 10
+  until: nvidia_smi_output.rc == 0
+
+- name: display GPU information
+  ansible.builtin.debug:
+    msg: "{{ nvidia_smi_output.stdout_lines }}"

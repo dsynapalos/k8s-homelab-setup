@@ -12,6 +12,7 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 - **K8s Stack**: kubeadm + CRI-O runtime + Cilium CNI + ArgoCD GitOps
 - **Networking**: Cilium with WireGuard encryption, L2 load balancer announcements
 - **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
+- **GPU Support**: Optional NVIDIA GPU passthrough and CUDA workload support
 
 ## Key Components
 
@@ -29,7 +30,7 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
   - Use case: Adding/updating applications on existing clusters
   - Workflow: Ensures ArgoCD installed → uploads manifests from `argocd_applications/`
 
-- `setup_cluster.yaml`: Main playbook orchestrating 6-phase deployment
+- `setup_cluster.yaml`: Main playbook orchestrating 7-phase deployment
 - `setup_applications.yaml`: Application playbook with 2 phases (ArgoCD + applications)
 - `inventory/k8s.yaml`: Environment-driven inventory with extensive variable templating
 - `inventory/localhost.yaml`: Localhost-specific inventory for ArgoCD and application tasks
@@ -37,15 +38,24 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 ### Role Structure Pattern
 ```
 roles/
-├── provision_infra/        # Proxmox VM creation, ISO handling
+├── provision_infra/        # Proxmox VM creation, ISO handling, GPU passthrough
+│   ├── files/
+│   │   └── create_vm.py        # VM creation with optional GPU passthrough (hostpci0)
 ├── setup_localhost/        # CLI tools installation (kubectl, helm, cilium-cli, hubble-cli)
-├── setup_os/              # OS preparation (packages, firewall, CRI-O, Ceph kernel module)
+├── setup_os/              # OS preparation (packages, firewall, CRI-O, kernel modules)
+│   ├── tasks/
+│   │   ├── configure_ceph_kernel.yaml  # CephFS kernel module setup
+│   │   └── configure_cuda.yaml         # NVIDIA driver + container toolkit for CUDA nodes
 ├── setup_cluster_master/  # kubeadm init, kubeconfig generation
 ├── setup_cluster_node/    # kubeadm join workers
 ├── bootstrap_cillium/     # Helm-based Cilium deployment, L2 announcements
 ├── bootstrap_cephfs_storage_class/ # CephFS CSI driver deployment, StorageClass creation
 │   ├── tasks/
 │   │   └── install_cephfs.yaml    # Helm deployment, Secret creation, dynamic scaling
+├── bootstrap_nvidia_device_plugin/ # NVIDIA device plugin for GPU scheduling
+│   ├── tasks/
+│   │   ├── main.yaml                      # Conditional inclusion based on ENABLE_CUDA
+│   │   └── install_nvidia_device_plugin.yaml  # DaemonSet deployment, node labeling
 ├── bootstrap_argocd/      # ArgoCD + SSH key management + deploy key registration
 │   ├── tasks/
 │   │   ├── main.yaml           # Orchestration, key detection, deploy key logic
@@ -59,10 +69,11 @@ roles/
 
 ### Environment Configuration
 - **Required**: Copy `example.env` to `.env` with actual values
-- **Critical vars**: IP addresses, SSH keys, Proxmox credentials, version specifications, repository URLs, Ceph configuration
+- **Critical vars**: IP addresses, SSH keys, Proxmox credentials, version specifications, repository URLs, Ceph configuration, GPU PCI address
 - **Pattern**: All inventory uses `{{ lookup("env", "VAR_NAME") }}` for configuration
 - **Git Integration**: `REPOSITORY_SSH_URL` and `REPOSITORY_TOKEN` for ArgoCD deploy key automation
 - **Storage Integration**: `ENABLE_CEPH` flag enables optional CephFS dynamic provisioning
+- **GPU Integration**: `ENABLE_CUDA` flag and `GPU_PCI_ADDRESS` for NVIDIA GPU passthrough and CUDA support
 
 ## Development Workflows
 
@@ -115,6 +126,41 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **StorageClasses**: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
 - **Configuration**: Requires Ceph cluster FSID, monitor address, client credentials
 
+### NVIDIA GPU Support (Optional)
+- **Feature flag**: Controlled by `ENABLE_CUDA` (default: false)
+- **GPU Passthrough**: Automatic PCI passthrough for nodes labeled `compute: cuda`
+  - Configured during VM creation via `create_vm.py` using `GPU_PCI_ADDRESS` env var
+  - Format: `hostpci0: {PCI_ADDRESS},pcie=1,x-vga=0` (includes all functions: GPU + Audio)
+  - PCI address obtained from Proxmox host: `lspci -D | grep -i vga | awk '{print $1}' | cut -d'.' -f1`
+  - Machine type: Automatically set to Q35 when GPU passthrough detected (required for PCIe passthrough)
+- **Driver installation**: `setup_os/configure_cuda.yaml` runs on nodes with `labels.compute == 'cuda'`
+  - **Intelligent LTS selection**: Queries `ubuntu-drivers list --gpgpu` for available LTS server drivers
+  - **Selection logic**: Picks second-latest LTS server version (most proven stable, not bleeding edge)
+    * Available drivers sorted: `[535-server, 570-server, 580-server]`
+    * Selection: `[-2]` → **535-server** (second from latest)
+    * Rationale: Latest may have regressions, second-latest has production track record
+    * If only one driver: uses that one `[-1]`
+    * Fallback: `nvidia-driver-535-server` if none available
+  - **Idempotent behavior**: Preserves existing driver version on re-runs (no automatic upgrades)
+  - **Upgrade strategy**: Manual only - test new driver, validate CUDA compatibility, remove old, re-run playbook
+  - Installs NVIDIA Container Toolkit for CRI-O runtime
+  - Configures CRI-O with nvidia runtime handler (NOT as default for security)
+  - Creates proper CRI-O config at `/etc/crio/crio.conf.d/99-nvidia.conf`
+  - Configures nvidia-container-runtime with full paths: `/usr/libexec/crio/runc`, `/usr/libexec/crio/crun`
+  - Reboots node automatically after driver installation if needed
+- **RuntimeClass**: Creates Kubernetes RuntimeClass `nvidia` for GPU access isolation
+  - Only pods with `runtimeClassName: nvidia` get GPU library injection
+  - Prevents unauthorized GPU access (security by design)
+- **Device Plugin**: `bootstrap_nvidia_device_plugin` deploys NVIDIA k8s device plugin
+  - DaemonSet with `nodeSelector: compute: cuda` and `runtimeClassName: nvidia`
+  - Advertises GPU resources as `nvidia.com/gpu` to scheduler
+  - Adds additional labels: `accelerator: nvidia-gpu` and `gpu-type: gtx-1060`
+- **Pod Requirements**: For GPU access, pods must specify:
+  1. `runtimeClassName: nvidia` (enables GPU library injection)
+  2. `resources.limits."nvidia.com/gpu": 1` (requests GPU allocation)
+- **Prerequisites**: Proxmox host must have IOMMU enabled and GPU bound to vfio-pci driver
+- **Driver Lifecycle**: Initial deployments get second-latest LTS (proven stability), manual upgrades only to prevent CUDA compatibility issues
+
 ## Critical Conventions
 
 ### Inventory Patterns
@@ -128,6 +174,15 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Module usage**: `kubernetes.core.k8s` and `kubernetes.core.helm` for declarative operations
 - **Resource management**: YAML definitions embedded in task files, not separate manifests
 - **Delegation**: ArgoCD tasks run on `localhost` but operate on cluster via kubeconfig
+
+### Node Label Management
+- **Declarative labels**: Defined in inventory `node_labels` variable, applied by `setup_cluster_node` role
+- **Automatic cleanup**: Removes user-managed labels not in inventory (enforces desired state)
+- **Protected namespaces**: Excludes labels managed by Kubernetes system or operators:
+  - `kubernetes.io/*` and `k8s.io/*` - Kubernetes system labels
+  - `nvidia.com/*` - NVIDIA device plugin labels
+  - `accelerator` and `gpu-type` - GPU-specific labels added by device plugin
+- **Idempotency**: Only updates labels when missing or value differs from desired state
 
 ### SSH Key Management (ArgoCD)
 - **Idempotency**: Public key stored in ConfigMap (`argocd-ssh-public-key`), not regenerated
@@ -168,6 +223,13 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **CephFS mounting**: Ensure ceph kernel module is loaded (`lsmod | grep ceph`)
 - **Ceph authentication**: Verify Secret encoding - userID/adminID must be base64, keys already are
 - **CSI version**: Use v3.9.0 for older CPUs (v3.12+ requires x86-64-v2 instructions)
+- **GPU passthrough**: Verify IOMMU enabled on Proxmox host, GPU bound to vfio-pci driver
+- **CUDA drivers**: Check `nvidia-smi` output on node, verify CRI-O runtime configuration
+- **Driver selection**: Check ubuntu-drivers output for available server drivers, verify second-latest logic
+- **Driver auto-upgrade**: Expected behavior - drivers are NEVER auto-upgraded, only selected at initial install
+- **GPU not detected**: Ensure RuntimeClass `nvidia` exists and pod has `runtimeClassName: nvidia`
+- **CRI-O nvidia runtime**: Check `/etc/crio/crio.conf.d/99-nvidia.conf` exists with proper monitor_path
+- **nvidia-container-runtime**: Verify `/etc/nvidia-container-runtime/config.toml` has full paths to runc/crun
 
 ### Best Practices for Modifications
 - **Avoid `is defined` checks**: Ansible handles undefined variables in `when` clauses
@@ -179,5 +241,8 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Secret encoding**: Use `data` field with `b64encode` filter when source is plain text, not `stringData`
 - **Dynamic scaling**: Use Jinja2 conditionals with `groups[]` for cluster-size-aware configuration
 - **Kernel modules**: Load with `modprobe` (state: present) and persist in `/etc/modules-load.d/`
+- **CRI-O runtime config**: Use `/etc/crio/crio.conf.d/*.conf` format with `monitor_path` for each runtime
+- **Runtime paths**: Always use full paths (e.g., `/usr/libexec/crio/runc`) in nvidia-container-runtime config
+- **RuntimeClass security**: Never set nvidia as default runtime; use RuntimeClass for isolation
 
 When modifying roles, maintain the delegation patterns for K8s operations and preserve environment variable templating for flexibility across deployments.

@@ -162,6 +162,11 @@ def main():
     pool = getenv("POOL")
     tags = getenv("TAGS")
 
+    # GPU passthrough configuration check (before building params)
+    # If GPU passthrough is enabled, we must use Q35 machine type
+    gpu_pci = getenv("GPU_PCI_ADDRESS")
+    machine_type = "q35" if gpu_pci else None  # Q35 required for PCIe passthrough
+
     # Build parameters for API call
     params = {
         "vmid": int(vmid),
@@ -178,6 +183,10 @@ def main():
         # auto-start VM at boot
         "onboot": 1 if onboot else 0,
     }
+
+    # Set machine type if needed (Q35 required for PCIe passthrough)
+    if machine_type:
+        params["machine"] = machine_type
 
     # Disk parameter: mirror UI by using scsi0 on local-lvm with size in GiB
     params["scsi0"] = f"{storage}:{disk_size}"
@@ -215,6 +224,17 @@ def main():
         params["pool"] = pool
     if tags:
         params["tags"] = tags
+
+    # GPU passthrough configuration (optional)
+    # GPU_PCI_ADDRESS already checked above when setting machine_type
+    if gpu_pci:
+        # hostpci0: PCI_ADDRESS,pcie=1,x-vga=0
+        # - pcie=1: Present as PCIe device (required for modern GPUs)
+        # - x-vga=0: Not primary VGA (headless mode for Kubernetes nodes)
+        # - Omitting function includes all functions (e.g., 01:00.0 GPU + 01:00.1 Audio)
+        # - Q35 machine type is set above when gpu_pci is detected
+        params["hostpci0"] = f"{gpu_pci},pcie=1,x-vga=0"
+        logging.info(f"GPU passthrough enabled: {gpu_pci} (machine: q35)")
 
     logging.info(f"Creating VM {name} (vmid={vmid}) on node {node} with params: cores={cores}, memory={memory} MiB, disk={disk_size}GiB, net={net0}")
 

@@ -44,6 +44,9 @@
         current_labels.keys() |
         reject('contains', 'kubernetes.io') |
         reject('contains', 'k8s.io') |
+        reject('contains', 'nvidia.com') |
+        reject('equalto', 'accelerator') |
+        reject('equalto', 'gpu-type') |
         list
       }}
 
