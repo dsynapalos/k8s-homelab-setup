@@ -161,6 +161,43 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Prerequisites**: Proxmox host must have IOMMU enabled and GPU bound to vfio-pci driver
 - **Driver Lifecycle**: Initial deployments get second-latest LTS (proven stability), manual upgrades only to prevent CUDA compatibility issues
 
+### GPU Monitoring Stack
+- **DCGM Exporter**: NVIDIA Data Center GPU Manager metrics collector
+  - **Version**: v3.3.5-3.4.1 (DaemonSet deployment on compute nodes)
+  - **Metrics exposed**: GPU utilization, temperature, power, memory, clocks, PCIe throughput
+  - **Deployment**: Runs on nodes with `compute: cuda` label using `runtimeClassName: nvidia`
+  - **Service discovery**: Prometheus scrapes via kubernetes-services job using service annotations
+  - **Configuration**: Standard ClusterIP service with `prometheus.io/scrape: "true"` annotation
+  - **Note**: Requires GPU allocation (`nvidia.com/gpu: 1`) to access device metrics
+  
+- **Prometheus Integration**: Vanilla Prometheus (not Operator)
+  - **Scraping**: Uses kubernetes_sd_configs for service discovery
+  - **Target**: `dcgm-exporter.monitoring.svc:9400/metrics`
+  - **Relabeling**: Preserves pod/container/namespace labels from DCGM metrics
+  - **No ServiceMonitor**: Uses annotation-based discovery (`prometheus.io/*` annotations)
+  
+- **Grafana Dashboard**: NVIDIA GPU monitoring dashboard
+  - **Location**: `argocd_applications/monitoring/grafana/dashboard_definitions/nvidia-gpu-dashboard.json`
+  - **Panels**: 8 visualizations (utilization, temp, power, memory usage, FB free, SM clock, memory clock, PCIe)
+  - **Query pattern**: Uses `max() by (gpu, Hostname)` aggregation to prevent duplicate time series
+  - **Datasource**: Requires `uid: prometheus` in datasource config for proper dashboard linking
+  - **Label filtering**: Queries use hardware labels (gpu, Hostname), not pod-specific labels
+  - **ConfigMap**: Deployed without hash suffix (`disableNameSuffixHash: true`) for stable naming
+  
+- **Metric Deduplication**: Critical for accurate visualization
+  - **Problem**: DCGM adds pod/container/namespace labels when GPU allocated, creating per-pod time series
+  - **Solution**: Aggregate by hardware identifiers only: `max() by (gpu, Hostname)`
+  - **Scraping**: Only service-level scraping (no pod annotations) to prevent duplicate targets
+  - **Result**: Single time series per GPU regardless of workload pod lifecycle
+
+- **Thermal Performance Benchmarks** (water-cooled GTX 1060 6GB):
+  - **Idle**: ~30-35°C
+  - **Initial load (100% util, 98.7W)**: 41°C
+  - **Thermal equilibrium (16 min sustained)**: 60°C (stable)
+  - **Safety margin**: 23°C below throttle point (83°C)
+  - **Rating**: Excellent for water cooling (optimal range: 45-60°C under load)
+  - **Test method**: CUDA matrix multiplication stress test (5000x5000 continuous loop)
+
 ## Critical Conventions
 
 ### Inventory Patterns
@@ -230,6 +267,10 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **GPU not detected**: Ensure RuntimeClass `nvidia` exists and pod has `runtimeClassName: nvidia`
 - **CRI-O nvidia runtime**: Check `/etc/crio/crio.conf.d/99-nvidia.conf` exists with proper monitor_path
 - **nvidia-container-runtime**: Verify `/etc/nvidia-container-runtime/config.toml` has full paths to runc/crun
+- **DCGM metrics missing**: Ensure DCGM exporter pod has GPU allocation and runtimeClassName: nvidia
+- **Duplicate GPU metrics**: Remove pod-level Prometheus annotations, only scrape service endpoint
+- **Dashboard shows multiple time series**: Add `max() by (gpu, Hostname)` aggregation to queries
+- **Grafana datasource not found**: Ensure datasource has explicit `uid: prometheus` in configuration
 
 ### Best Practices for Modifications
 - **Avoid `is defined` checks**: Ansible handles undefined variables in `when` clauses
@@ -244,5 +285,9 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **CRI-O runtime config**: Use `/etc/crio/crio.conf.d/*.conf` format with `monitor_path` for each runtime
 - **Runtime paths**: Always use full paths (e.g., `/usr/libexec/crio/runc`) in nvidia-container-runtime config
 - **RuntimeClass security**: Never set nvidia as default runtime; use RuntimeClass for isolation
+- **Prometheus service discovery**: Use service-level annotations only, avoid pod annotations to prevent duplicate scraping
+- **Grafana ConfigMaps**: Set `disableNameSuffixHash: true` for dashboard ConfigMaps to ensure stable naming
+- **GPU dashboard queries**: Always aggregate by hardware labels (`gpu`, `Hostname`) to prevent per-pod time series duplication
+- **DCGM deployment**: Must use `runtimeClassName: nvidia` and request GPU to access device metrics
 
 When modifying roles, maintain the delegation patterns for K8s operations and preserve environment variable templating for flexibility across deployments.

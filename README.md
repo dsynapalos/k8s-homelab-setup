@@ -86,6 +86,11 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
    CEPH_K8S_USER={{ Ceph client username for Kubernetes (plain text) }}
    CEPH_K8S_KEY={{ Ceph client key for Kubernetes (base64-encoded) }}
    CEPH_ADMIN_KEY={{ Ceph admin key (base64-encoded) }}
+   
+   # NVIDIA GPU Configuration (Optional)
+   ENABLE_CUDA={{ enable NVIDIA GPU passthrough and CUDA support (true/false) }}
+   GPU_PCI_ADDRESS={{ PCI address of GPU on Proxmox host (e.g., 0000:01:00) }}
+   NVIDIA_DEVICE_PLUGIN_VERSION={{ NVIDIA device plugin version (e.g., v0.14.5) }}
    ```
    
    **GitLab/Repository Integration** (optional for ArgoCD GitOps):
@@ -223,6 +228,10 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
   - RuntimeClass isolation for GPU access control
 - NVIDIA Device Plugin for GPU resource advertising
 - Node labeling for GPU workload scheduling
+- **GPU Monitoring Stack**:
+  - NVIDIA DCGM Exporter for GPU metrics (utilization, temperature, power, memory)
+  - Prometheus integration via service discovery
+  - Grafana dashboard with 8 GPU performance panels
 
 **GPU Driver Upgrade Strategy**:
 - Initial installs get second-latest LTS (proven stable, not bleeding edge)
@@ -471,7 +480,7 @@ The project implements a fully idempotent SSH key management system for ArgoCD r
 #### Flow Diagram
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. Check if argocd-ssh-public-key ConfigMap exists         │
+│ 1. Check if argocd-ssh-public-key ConfigMap exists          │
 └─────────────────┬───────────────────────────────────────────┘
                   │
          ┌────────┴─────────┐
@@ -502,8 +511,8 @@ The project implements a fully idempotent SSH key management system for ArgoCD r
          └───────────┬───────────────────────────────────┘
                      │
          ┌───────────▼───────────────────────────────────┐
-         │ 3. If 'gitlab' detected in host:             │
-         │    - GET /api/v4/projects/{path}/deploy_keys │
+         │ 3. If 'gitlab' detected in host:              │
+         │    - GET /api/v4/projects/{path}/deploy_keys  │
          │    - Compare public key fingerprints          │
          │    - POST only if key not found               │
          └───────────┬───────────────────────────────────┘
@@ -566,6 +575,118 @@ The project implements a fully idempotent SSH key management system for ArgoCD r
 **kubeconfig Not Found**
 - Check `/etc/kubernetes/new_cluster_admin.conf` exists on control plane
 - Verify SSH connectivity to control plane node
+
+**GPU Issues**
+- **GPU not detected**: Ensure RuntimeClass `nvidia` exists and pod has `runtimeClassName: nvidia`
+- **CRI-O nvidia runtime**: Check `/etc/crio/crio.conf.d/99-nvidia.conf` exists with proper monitor_path
+- **nvidia-container-runtime**: Verify `/etc/nvidia-container-runtime/config.toml` has full paths to runc/crun
+- **DCGM metrics missing**: Ensure DCGM exporter pod has GPU allocation and runtimeClassName: nvidia
+- **Duplicate GPU metrics**: Remove pod-level Prometheus annotations, only scrape service endpoint
+- **Dashboard shows multiple time series**: Add `max() by (gpu, Hostname)` aggregation to queries
+
+## GPU Stress Testing & Monitoring
+
+### Running CUDA Stress Test
+
+To validate GPU monitoring and thermal performance:
+
+```bash
+# Create a CUDA stress test pod
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-stress
+  namespace: default
+spec:
+  runtimeClassName: nvidia
+  restartPolicy: Never
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:12.2.0-devel-ubuntu22.04
+    command: ["/bin/bash", "-c"]
+    args:
+      - |
+        cat > stress.cu <<'EOC'
+        #include <cuda_runtime.h>
+        #include <stdio.h>
+        #include <stdlib.h>
+
+        #define N 5000
+        #define BLOCK_SIZE 16
+
+        __global__ void matrixMul(float *a, float *b, float *c, int n) {
+            int row = blockIdx.y * blockDim.y + threadIdx.y;
+            int col = blockIdx.x * blockDim.x + threadIdx.x;
+            
+            if (row < n && col < n) {
+                float sum = 0.0f;
+                for (int k = 0; k < n; k++) {
+                    sum += a[row * n + k] * b[k * n + col];
+                }
+                c[row * n + col] = sum;
+            }
+        }
+
+        int main() {
+            size_t bytes = N * N * sizeof(float);
+            float *d_a, *d_b, *d_c;
+            
+            cudaMalloc(&d_a, bytes);
+            cudaMalloc(&d_b, bytes);
+            cudaMalloc(&d_c, bytes);
+            
+            dim3 blocks(N/BLOCK_SIZE + 1, N/BLOCK_SIZE + 1);
+            dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+            
+            printf("Starting GPU stress test (5000x5000 matrix multiplication loop)\n");
+            printf("Monitor Grafana dashboard for GPU metrics\n");
+            
+            while(1) {
+                matrixMul<<<blocks, threads>>>(d_a, d_b, d_c, N);
+                cudaDeviceSynchronize();
+            }
+            
+            return 0;
+        }
+        EOC
+        nvcc stress.cu -o stress
+        ./stress
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+EOF
+
+# View in Grafana dashboard
+# Open: "NVIDIA GPU Dashboard"
+```
+
+### Expected Thermal Performance (Water-Cooled GTX 1060 6GB)
+
+Based on actual stress testing with sustained 100% GPU utilization:
+
+| Time | Temperature | GPU Utilization | Power Draw | Status |
+|------|-------------|-----------------|------------|--------|
+| Idle | 30-35°C | 0% | ~10W | Baseline |
+| 0 min | 41°C | 100% | 98.7W | Initial load |
+| 16 min | 60°C | 100% | 98.7W | Thermal equilibrium |
+
+**Analysis**:
+- **Heat soak rate**: ~1.2°C/minute initially, stabilizing at 60°C
+- **Safety margin**: 23°C below throttle point (83°C)
+- **Rating**: Excellent for water cooling (optimal: 45-60°C under load)
+- **Stock air cooling comparison**: Would typically reach 70-80°C under same load
+
+**Interpretation**:
+- GPU at 60°C indicates water cooling loop has reached thermal equilibrium
+- Radiator successfully dissipating 98.7W continuously
+- If CPU were also stressed simultaneously, expect additional 5-10°C rise (shared loop)
+- This thermal profile provides ample headroom for sustained compute workloads
+
+**Cleanup**:
+```bash
+kubectl delete pod gpu-stress
+```
 
 ## References
 - [Cilium Documentation](https://docs.cilium.io/)

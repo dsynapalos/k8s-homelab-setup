@@ -58,6 +58,9 @@ spec:
             - name: grafana-dashboard-json
               mountPath: /etc/grafana/provisioning/dashboards/k8s-cluster-dashboard.json
               subPath: k8s-cluster-dashboard.json
+            - name: grafana-gpu-dashboard-json
+              mountPath: /etc/grafana/provisioning/dashboards/nvidia-gpu-dashboard.json
+              subPath: nvidia-gpu-dashboard.json
             - name: grafana-datasource-config
               mountPath: /etc/grafana/provisioning/datasources/prometheus-datasource.yaml
               subPath: prometheus-datasource.yaml
@@ -68,6 +71,9 @@ spec:
         - name: grafana-dashboard-json
           configMap:
             name: grafana-k8s-dashboard
+        - name: grafana-gpu-dashboard-json
+          configMap:
+            name: grafana-gpu-dashboard
         - name: grafana-datasource-config
           configMap:
             name: grafana-prometheus-datasource

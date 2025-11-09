@@ -12,15 +12,15 @@ configMapGenerator:
   - name: grafana-dashboard-provider
     files:
       - dashboard-provider.yaml
-    options:
-      disableNameSuffixHash: false
   - name: grafana-k8s-dashboard
     files:
-      - k8s-cluster-dashboard.json
-    options:
-      disableNameSuffixHash: false
+      - dashboard_definitions/k8s-cluster-dashboard.json
+  - name: grafana-gpu-dashboard
+    files:
+      - dashboard_definitions/nvidia-gpu-dashboard.json
   - name: grafana-prometheus-datasource
     files:
       - prometheus-datasource.yaml
-    options:
-      disableNameSuffixHash: false
+
+generatorOptions:
+  disableNameSuffixHash: false
