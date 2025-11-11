@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  serviceName: matrix
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matrix
+  template:
+    metadata:
+      labels:
+        app: matrix
+    spec:
+      serviceAccountName: matrix
+      initContainers:
+      - name: generate-config
+        image: matrixdotorg/synapse:v1.98.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+          if [ ! -f /data/homeserver.yaml ]; then
+            echo "Generating Matrix Synapse configuration..."
+            /start.py generate
+          fi
+          
+          # Always ensure registration is enabled
+          if ! grep -q "^enable_registration: true" /data/homeserver.yaml; then
+            echo "enable_registration: true" >> /data/homeserver.yaml
+          fi
+          
+          if ! grep -q "^enable_registration_without_verification: true" /data/homeserver.yaml; then
+            echo "enable_registration_without_verification: true" >> /data/homeserver.yaml
+          fi
+          
+          echo "Configuration ready"
+        env:
+        - name: SYNAPSE_SERVER_NAME
+          value: matrix.k8s.local
+        - name: SYNAPSE_REPORT_STATS
+          value: "no"
+        - name: SYNAPSE_CONFIG_DIR
+          value: /data
+        - name: SYNAPSE_CONFIG_PATH
+          value: /data/homeserver.yaml
+        - name: SYNAPSE_DATA_DIR
+          value: /data
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      containers:
+      - name: synapse
+        image: matrixdotorg/synapse:v1.98.0
+        ports:
+        - name: http
+          containerPort: 8008
+        - name: federation
+          containerPort: 8448
+        env:
+        - name: SYNAPSE_CONFIG_PATH
+          value: /data/homeserver.yaml
+        - name: SYNAPSE_SERVER_NAME
+          value: matrix.k8s.local
+        - name: SYNAPSE_REPORT_STATS
+          value: "no"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db
+              key: password
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - name: postgres
+          containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db
+              key: database
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db
+              key: postgres-password
+        - name: POSTGRES_INITDB_ARGS
+          value: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: postgres-data
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: cephfs
+      resources:
+        requests:
+          storage: 10Gi

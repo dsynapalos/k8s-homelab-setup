@@ -4,112 +4,209 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 
 ## Architecture Overview
 
-**Execution Flow**: 
-- **Full cluster**: `setup-clusters.py` → `setup_cluster.yaml` → role-based automation
-- **Applications only**: `setup-applications.py` → `setup_applications.yaml` → `bootstrap_argocd` + `bootstrap_applications`
-
+**Tech Stack**: Python + Ansible + kubeadm + CRI-O + Cilium + ArgoCD
 - **Infrastructure**: Proxmox VM provisioning with Ubuntu autoinstall ISO modification
-- **K8s Stack**: kubeadm + CRI-O runtime + Cilium CNI + ArgoCD GitOps
-- **Networking**: Cilium with WireGuard encryption, L2 load balancer announcements
+- **Networking**: Cilium eBPF CNI with WireGuard encryption, L2 load balancer announcements
 - **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
-- **GPU Support**: Optional NVIDIA GPU passthrough and CUDA workload support
+- **GPU Support**: Optional NVIDIA GPU passthrough with intelligent LTS driver selection and CUDA workload support
+- **Monitoring**: Prometheus + Grafana + DCGM Exporter for GPU metrics
+- **Alerting**: Alertmanager + Matrix Synapse + alertmanager-matrix-bridge for real-time mobile notifications
 
-## Key Components
+**Execution Flow**: 
+- **Full cluster**: `setup-clusters.py` → `setup_cluster.yaml` → role-based automation (~17 min)
+- **Applications only**: `setup-applications.py` → `setup_applications.yaml` → manifest upload (seconds)
 
-### Main Entry Points
-- `setup-clusters.py`: Python wrapper using ansible-runner for full cluster provisioning
-  - Runs `setup_cluster.yaml` playbook
-  - Phases: localhost setup → infra provisioning → OS setup → cluster init → networking → ArgoCD
-  - Execution time: ~17 minutes (includes ISO download/remaster)
-  - Use case: New cluster deployments
-  
-- `setup-applications.py`: Python wrapper for application-only deployment
-  - Runs `setup_applications.yaml` playbook
-  - Phases: ArgoCD bootstrap → application manifest upload
-  - Execution time: Seconds to minutes (no infrastructure changes)
-  - Use case: Adding/updating applications on existing clusters
-  - Workflow: Ensures ArgoCD installed → uploads manifests from `argocd_applications/`
+**Critical Understanding**: This is a two-playbook architecture with distinct lifecycles:
+1. `setup_cluster.yaml`: Infrastructure + cluster provisioning (destructive, creates/modifies VMs)
+2. `setup_applications.yaml`: Application deployment only (safe, no infra changes)
 
-- `setup_cluster.yaml`: Main playbook orchestrating 7-phase deployment
-- `setup_applications.yaml`: Application playbook with 2 phases (ArgoCD + applications)
-- `inventory/k8s.yaml`: Environment-driven inventory with extensive variable templating
-- `inventory/localhost.yaml`: Localhost-specific inventory for ArgoCD and application tasks
+## Key Components & Data Flow
 
-### Role Structure Pattern
-```
-roles/
-├── provision_infra/        # Proxmox VM creation, ISO handling, GPU passthrough
-│   ├── files/
-│   │   └── create_vm.py        # VM creation with optional GPU passthrough (hostpci0)
-├── setup_localhost/        # CLI tools installation (kubectl, helm, cilium-cli, hubble-cli)
-├── setup_os/              # OS preparation (packages, firewall, CRI-O, kernel modules)
-│   ├── tasks/
-│   │   ├── configure_ceph_kernel.yaml  # CephFS kernel module setup
-│   │   └── configure_cuda.yaml         # NVIDIA driver + container toolkit for CUDA nodes
-├── setup_cluster_master/  # kubeadm init, kubeconfig generation
-├── setup_cluster_node/    # kubeadm join workers
-├── bootstrap_cillium/     # Helm-based Cilium deployment, L2 announcements
-├── bootstrap_cephfs_storage_class/ # CephFS CSI driver deployment, StorageClass creation
-│   ├── tasks/
-│   │   └── install_cephfs.yaml    # Helm deployment, Secret creation, dynamic scaling
-├── bootstrap_nvidia_device_plugin/ # NVIDIA device plugin for GPU scheduling
-│   ├── tasks/
-│   │   ├── main.yaml                      # Conditional inclusion based on ENABLE_CUDA
-│   │   └── install_nvidia_device_plugin.yaml  # DaemonSet deployment, node labeling
-├── bootstrap_argocd/      # ArgoCD + SSH key management + deploy key registration
-│   ├── tasks/
-│   │   ├── main.yaml           # Orchestration, key detection, deploy key logic
-│   │   └── manage_ssh_keys.yaml # Key generation, ConfigMap/Secret creation
-└── bootstrap_applications/ # Onboarding ArgoCD applications from manifests
-    ├── tasks/
-    │   └── main.yaml           # Uploads manifests from argocd_applications/ directory
-    └── files/
-        └── prometheus_manifest.yaml  # Example application manifest
-```
+### Entry Points (Python → Ansible)
+**`setup-clusters.py`** (Full provisioning)
+- Uses `ansible_runner` to execute `setup_cluster.yaml`
+- Cleans `artifacts/` directory on each run for fresh debugging logs
+- 7-phase execution: localhost setup → VM provisioning → OS prep → cluster init → Cilium → storage/GPU → ArgoCD
+- ~17 minutes including ISO download/remaster
+- **When to use**: New clusters, adding nodes, infrastructure changes
 
-### Environment Configuration
+**`setup-applications.py`** (Application-only)
+- Uses `ansible_runner` to execute `setup_applications.yaml`
+- Single-phase: Uploads ArgoCD Application manifests from `argocd_applications/`
+- Seconds to complete (no infrastructure operations)
+- **When to use**: GitOps manifest changes, adding applications to existing cluster
+
+### Inventory Architecture
+**`inventory/k8s.yaml`**: Cluster node configuration
+- **Pattern**: All variables use `{{ lookup("env", "VAR_NAME") }}` from `.env` file
+- **Host groups**: `proxmox`, `k8s-control`, `k8s-nodes` (all inherit from `k8s` parent)
+- **Node labels**: Defined per-host in `labels:` dict (e.g., `compute: cuda` for GPU nodes)
+- **Connection vars**: SSH keys, users, Python interpreter paths
+
+**`inventory/localhost.yaml`**: Control machine configuration  
+- Used for K8s API operations (ArgoCD, CephFS, NVIDIA device plugin roles)
+- Uses venv Python: `{{ playbook_dir }}/.venv/bin/python`
+- Consolidates all localhost-specific variables (Ceph config, GPU settings, ArgoCD credentials)
+
+### Ansible Role Patterns & Responsibilities
+
+#### Infrastructure Layer
+**`provision_infra`** (Proxmox host → VMs)
+- Downloads Ubuntu Server ISO, remasters with cloud-init autoinstall config
+- Creates hybrid-boot ISO (BIOS + UEFI) using 7z + xorriso
+- Uploads to Proxmox via API with idempotency checks
+- **GPU passthrough**: Calls `create_vm.py` with `hostpci0: {GPU_PCI_ADDRESS}` for nodes with `compute: cuda` label
+- **Q35 machine type**: Automatically enabled when GPU detected (required for PCIe passthrough)
+
+**`setup_os`** (OS → Container-ready)
+- Disables swap, configures APT repos for K8s packages
+- Installs CRI-O (version-matched to K8s), kubeadm, kubelet, kubectl
+- **Firewall**: UFW rules for K8s (6443, 10250), Cilium (8472/udp VXLAN, 51871/udp WireGuard)
+- **CephFS prep**: `configure_ceph_kernel.yaml` loads ceph module, persists to `/etc/modules-load.d/`
+- **CUDA prep**: `configure_cuda.yaml` (runs on `compute: cuda` nodes)
+  - Intelligent LTS driver selection: queries `ubuntu-drivers list --gpgpu`, picks **second-latest** (proven stable)
+  - Installs NVIDIA Container Toolkit, configures CRI-O nvidia runtime handler (NOT default)
+  - Creates `/etc/crio/crio.conf.d/99-nvidia.conf` with `monitor_path` for nvidia runtime
+  - Reboots node if driver installed (idempotent - preserves existing driver on re-runs)
+
+#### Cluster Layer
+**`setup_cluster_master`** (Control plane initialization)
+- Runs `kubeadm init`, installs Cilium via Helm (WireGuard + L2 announcements)
+- Generates `/etc/kubernetes/new_cluster_admin.conf`, fetches to localhost `~/.kube/config`
+- **Delegation**: All K8s operations use `delegate_to: localhost` with kubeconfig
+
+**`setup_cluster_node`** (Worker join + labeling)
+- Runs `kubeadm join` with token from control plane
+- **Declarative labels**: Applies labels from inventory `node_labels`, removes unlabeled keys (enforces desired state)
+- **Protected namespaces**: Excludes system labels (`kubernetes.io/*`, `k8s.io/*`, `nvidia.com/*`)
+
+**`bootstrap_cillium`** (Networking finalization)
+- Creates `CiliumLoadBalancerIPPool` for LoadBalancer service IPs
+- Per-node `CiliumL2AnnouncementPolicy` (ARP/NDP announcements)
+- Restarts unmanaged pods to apply Cilium networking
+
+#### Storage & GPU Layer (Optional)
+**`bootstrap_cephfs_storage_class`** (when `ENABLE_CEPH=true`)
+- Deploys Ceph CSI driver v3.9.0 via Helm (CPU-compatible, no x86-64-v2 requirement)
+- **Secret encoding**: Uses `data:` field with Ansible `b64encode` for `userID`/`adminID`, passes through pre-encoded Ceph keys
+- **Dynamic scaling**: `provisioner.replicaCount: {{ 2 if groups['k8s-nodes'] | length >= 2 else 1 }}`
+- Creates StorageClasses: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
+
+**`bootstrap_nvidia_device_plugin`** (when `ENABLE_CUDA=true`)
+- Creates Kubernetes `RuntimeClass: nvidia` for GPU access isolation
+- Deploys NVIDIA device plugin DaemonSet with `nodeSelector: compute: cuda`
+- Advertises `nvidia.com/gpu` resources, adds labels (`accelerator: nvidia-gpu`)
+- **Security model**: Pods MUST specify both `runtimeClassName: nvidia` AND `resources.limits."nvidia.com/gpu": 1`
+
+#### GitOps Layer
+**`bootstrap_argocd`** (ArgoCD + Git integration)
+- **SSH key idempotency**: Checks for ConfigMap `argocd-ssh-public-key` before generating new key
+- **Deploy key automation**: 
+  1. Parses `REPOSITORY_SSH_URL` to extract host/project path
+  2. URL-encodes path (`/` → `%2F`) for GitLab API
+  3. Queries existing deploy keys via `GET /api/v4/projects/{path}/deploy_keys`
+  4. Registers new key only if fingerprint not found (prevents duplicates)
+- Creates `homelab` AppProject (permissive: all repos, all namespaces)
+- Configures Ingress with TLS passthrough for ArgoCD UI
+
+**`bootstrap_applications`** (Application manifests)
+- Uploads ArgoCD Application manifests from `argocd_applications/` directory
+- **Pattern**: `kubernetes.core.k8s` with `definition: "{{ lookup('file', item) }}"`
+- **Fileglob**: `loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) }}"`
+- Example: `argocd_applications/monitoring/prometheus/` → full Prometheus stack
+
+### Environment Configuration Pattern
+**`.env` file**: Single source of truth for all configuration
 - **Required**: Copy `example.env` to `.env` with actual values
-- **Critical vars**: IP addresses, SSH keys, Proxmox credentials, version specifications, repository URLs, Ceph configuration, GPU PCI address
-- **Pattern**: All inventory uses `{{ lookup("env", "VAR_NAME") }}` for configuration
-- **Git Integration**: `REPOSITORY_SSH_URL` and `REPOSITORY_TOKEN` for ArgoCD deploy key automation
-- **Storage Integration**: `ENABLE_CEPH` flag enables optional CephFS dynamic provisioning
-- **GPU Integration**: `ENABLE_CUDA` flag and `GPU_PCI_ADDRESS` for NVIDIA GPU passthrough and CUDA support
+- **Inventory integration**: All vars accessed via `{{ lookup("env", "VAR_NAME") }}` 
+- **Categories**:
+  - **Node IPs/SSH**: `K8S_CONTROL_1_IP`, `K8S_NODE_1_IP`, `K8S_SSH_USER`, `K8S_SSH_KEY`
+  - **Versions**: `K8S_VERSION=1.34`, `CRIO_VERSION=1.33`, `CILIUM_VERSION=1.18.1`
+  - **Proxmox**: `PROXMOX_API_USER`, `PROXMOX_API_PASSWORD`, `PROXMOX_API_HOST`, `PROXMOX_NODE`
+  - **Networking**: `VM_GATEWAY`, `VM_NAMESERVER`, `CILIUM_LOADBALANCER_IPPOOL` (e.g., `192.168.1.193/27`)
+  - **Git/ArgoCD**: `REPOSITORY_SSH_URL`, `REPOSITORY_TOKEN` (requires `api` scope)
+  - **CephFS**: `ENABLE_CEPH=false`, `CEPH_FSID`, `CEPH_MONITOR`, `CEPH_K8S_KEY` (pre-encoded base64)
+  - **GPU**: `ENABLE_CUDA=false`, `GPU_PCI_ADDRESS=0000:01:00` (from `lspci -D | grep -i vga`)
+- **No defaults in roles**: All configuration must come from environment (fail-fast on missing vars)
 
 ## Development Workflows
 
-### Initial Setup
+### Initial Setup & Full Deployment
 ```bash
 sudo chmod +x init.sh && ./init.sh  # Python venv + Ansible dependencies
 cp example.env .env                  # Configure environment variables
 python3 setup-clusters.py           # Full automation run (~17 min)
 ```
 
-### Application Development Workflow
+### Application Development Cycle
 ```bash
-# 1. Create ArgoCD Application manifests in argocd_applications/
+# 1. Create/modify ArgoCD Application manifests
 mkdir -p argocd_applications/myapp
-vim argocd_applications/myapp/*.yaml
+vim argocd_applications/myapp/deployment.yaml
+vim argocd_applications/myapp/service.yaml
 
-# 2. Update bootstrap_applications role to include new manifest
-# Edit: roles/bootstrap_applications/tasks/main.yaml
+# 2. Add manifest to bootstrap_applications role
+vim roles/bootstrap_applications/files/myapp_manifest.yaml
 
-# 3. Deploy applications only (no infrastructure changes)
-python3 setup-applications.py       # Quick deployment (seconds)
+# 3. Deploy to cluster (quick iteration)
+python3 setup-applications.py       # Seconds, no infrastructure changes
+
+# 4. Verify in ArgoCD UI
+# Access via: https://argocd.k8s.local (configured in /etc/hosts)
 ```
 
-### Workflow Comparison
-| Task | Entry Point | Duration | Modifies Infrastructure | Use Case |
-|------|-------------|----------|------------------------|----------|
-| Full cluster build | `setup-clusters.py` | ~17 min | Yes (VMs, K8s, networking) | Initial deployment |
-| Application update | `setup-applications.py` | Seconds | No | GitOps manifest changes |
-| Add K8s node | `setup-clusters.py` | ~17 min | Yes (VM creation) | Scaling cluster |
-| Update ArgoCD app | `setup-applications.py` | Seconds | No | Application lifecycle |
+### Task Execution Comparison
+| Task | Entry Point | Duration | Infra Changes | K8s Changes | Use Case |
+|------|-------------|----------|---------------|-------------|----------|
+| Full cluster | `setup-clusters.py` | ~17 min | VM create/destroy | Full cluster build | New deployment, add nodes |
+| Applications only | `setup-applications.py` | Seconds | None | Manifests upload | App updates, GitOps changes |
+| OS-only changes | `setup-clusters.py` | ~5 min | None | None | Firewall, packages, drivers |
+| Cluster reset | `setup-clusters.py` | ~17 min | VM recreate | Full rebuild | Major version upgrades |
 
-### Role Development Patterns
-- **Task organization**: `main.yaml` includes sub-tasks for complex roles
-- **Delegation**: K8s operations use `delegate_to: localhost` with local kubeconfig
-- **Conditionals**: `when: inventory_hostname == 'k8s-control-1'` for control plane tasks
-- **Registration**: Use `register:` for capturing command outputs and change detection
+### Debugging Patterns
+**Ansible Runner Artifacts**: Check `artifacts/` directory for detailed execution logs
+- `stdout`: Full command output
+- `stderr`: Error messages
+- `job_events/*.json`: Detailed task execution timeline
+- Auto-cleaned on each run for fresh debugging
+
+**Common Investigation Commands**:
+```bash
+# Verify environment configuration
+cat .env | grep -E "(K8S_|PROXMOX_|ENABLE_)"
+
+# Check Ansible inventory rendering
+ansible-inventory -i inventory/k8s.yaml --list
+
+# Test connectivity to nodes
+ansible k8s -i inventory/k8s.yaml -m ping
+
+# Check Cilium status
+cilium status --wait
+
+# Verify GPU detection
+kubectl describe node k8s-node-1 | grep nvidia.com/gpu
+
+# Check ArgoCD deploy key registration
+kubectl get configmap argocd-ssh-public-key -n argocd -o yaml
+```
+
+### Idempotency Patterns in Roles
+**Key principle**: Re-running playbooks should be safe and converge to desired state
+
+**Examples from codebase**:
+- **SSH keys**: Check ConfigMap before generating (`bootstrap_argocd/tasks/main.yaml`)
+- **Deploy keys**: Query GitLab API for existing keys before registering
+- **Node labels**: Only update labels that differ from inventory (`setup_cluster_node`)
+- **Secrets**: Use `state: present` with `data` field to avoid overwriting
+- **Packages**: `apt: state=present` (installs only if missing)
+- **Kernel modules**: `modprobe: state=present` + persist to `/etc/modules-load.d/`
+
+**When adding new tasks**:
+- Use `kubernetes.core.k8s: state=present` for K8s resources (not `kubectl apply`)
+- Register command outputs to conditionally skip subsequent tasks
+- Use `creates:` parameter for file operations
+- Check existence before creation (ConfigMap, Secret, API keys)
 
 ### Cilium Specifics
 - **Dual mode support**: Gateway API vs Ingress Controller (controlled by `ENABLE_GATEWAY_API`)
@@ -190,13 +287,64 @@ python3 setup-applications.py       # Quick deployment (seconds)
   - **Scraping**: Only service-level scraping (no pod annotations) to prevent duplicate targets
   - **Result**: Single time series per GPU regardless of workload pod lifecycle
 
-- **Thermal Performance Benchmarks** (water-cooled GTX 1060 6GB):
-  - **Idle**: ~30-35°C
-  - **Initial load (100% util, 98.7W)**: 41°C
-  - **Thermal equilibrium (16 min sustained)**: 60°C (stable)
-  - **Safety margin**: 23°C below throttle point (83°C)
-  - **Rating**: Excellent for water cooling (optimal range: 45-60°C under load)
-  - **Test method**: CUDA matrix multiplication stress test (5000x5000 continuous loop)
+### Alerting Stack
+- **Alertmanager**: Routes alerts from Prometheus to notification channels
+  - **Version**: v0.27.0
+  - **Configuration**: `argocd_applications/monitoring/alertmanager/alertmanager.yml`
+  - **Webhook routing**: Routes all alerts to `http://alertmanager-matrix:3000/alerts/default`
+  - **API**: Uses v2 API (v1 deprecated in 0.28.0)
+
+- **Matrix Synapse**: Self-hosted Matrix homeserver for notifications
+  - **Version**: v1.98.0
+  - **Storage**: PostgreSQL 15-alpine sidecar for persistence
+  - **Registration**: Enabled via init container (`enable_registration: true`, `enable_registration_without_verification: true`)
+  - **Init container**: Always checks/adds registration settings on pod start (handles PVC persistence)
+  - **Ingress**: Accessible at `http://matrix.k8s.local` (port 8008 HTTP, 8448 federation)
+  - **Bootstrap automation**: PostSync Job creates bot user, Alerts room, saves credentials to Secret
+
+- **Matrix Bootstrap Job**: Automated bot registration and room setup
+  - **Execution**: ArgoCD PostSync hook (sync-wave 3)
+  - **Image**: Alpine 3.19 with curl, openssl, kubectl
+  - **Authentication**: HMAC-SHA1 using auto-generated `registration_shared_secret` from homeserver.yaml
+  - **Bot user**: Creates `@alertbot-TIMESTAMP:matrix.k8s.local` (timestamp for idempotency)
+  - **Room creation**: Creates public "Alerts" room with alias `#alerts:matrix.k8s.local`
+  - **Room settings**: `public_chat` preset, `world_readable` history, public join rules
+  - **Secret generation**: Saves to `matrix-bot` Secret (user-id, access-token, room-id, webhook-url)
+  - **Idempotency**: Checks for existing valid Secret before running, skips if present
+  - **RBAC**: Requires ServiceAccount with pods/exec and secrets permissions
+
+- **alertmanager-matrix-bridge**: Translates Alertmanager webhooks to Matrix messages
+  - **Version**: docker.io/metio/matrix-alertmanager-receiver:2025.11.5
+  - **Config generation**: Init container dynamically creates config.yaml from Secret values
+  - **Init container pattern**: Heredoc with quoted delimiter ('CONFIGEOF'), sed substitutions with YAML quoting
+  - **YAML quoting**: Critical for values with special characters (@, !, :) - uses `sed "s|...|\"${VAR}\"|g"`
+  - **Deployment**: Reads from `matrix-bot` Secret (created in sync-wave 3)
+  - **Sync-wave**: Wave 4 (after bootstrap creates Secret in wave 3)
+  - **Templates**: Emoji-based formatting (⚠️ warning, 🚨 critical, ✅ resolved, ℹ️ info)
+  - **Endpoint**: Listens on port 3000 at `/alerts/` path
+
+- **Alert Rules**: GPU temperature monitoring
+  - **Location**: `argocd_applications/monitoring/prometheus/alert-rules.yaml`
+  - **Rule**: `GPUHighTemperature` - fires when `DCGM_FI_DEV_GPU_TEMP > 60` for 5 minutes
+  - **Severity**: warning
+  - **Annotations**: Includes GPU ID, hostname, actual temperature, threshold value
+
+- **End-to-End Flow**: Prometheus → Alert Rules → Alertmanager → Bridge → Matrix → Element App (mobile push)
+
+### Application Stack Structure
+**Pattern**: Kustomize-based manifests in `argocd_applications/monitoring/`
+- **Prometheus**: Vanilla deployment (not Operator) with kubernetes_sd_configs service discovery
+- **Grafana**: ConfigMaps for dashboards (`disableNameSuffixHash: true` for stable naming)
+- **DCGM Exporter**: DaemonSet on GPU nodes with RuntimeClass nvidia
+- **Node Exporter**: DaemonSet for host metrics
+- **Alertmanager**: StatefulSet for alert routing
+
+**Key files per application**:
+- `kustomization.yaml`: Kustomize configuration
+- `deployment.yaml` or `statefulset.yaml` or `daemonset.yaml`: Workload definition
+- `service.yaml`: ClusterIP service with Prometheus annotations
+- `ingress.yaml` (optional): Cilium ingress for external access
+- Config files: `prometheus.yml`, `alert-rules.yaml`, etc.
 
 ## Critical Conventions
 
@@ -205,12 +353,14 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **Variable precedence**: Environment variables override defaults via lookup functions
 - **Connection vars**: SSH keys and users configured per environment
 - **Separate inventories**: `localhost.yaml` for local tasks, `k8s.yaml` for cluster nodes
+- **Label propagation**: `labels:` dict in inventory → Kubernetes node labels via `setup_cluster_node` role
 
 ### Kubernetes Operations
 - **Kubeconfig**: Generated as `/etc/kubernetes/new_cluster_admin.conf` on control plane
 - **Module usage**: `kubernetes.core.k8s` and `kubernetes.core.helm` for declarative operations
 - **Resource management**: YAML definitions embedded in task files, not separate manifests
-- **Delegation**: ArgoCD tasks run on `localhost` but operate on cluster via kubeconfig
+- **Delegation**: ArgoCD/CephFS/GPU tasks run on `localhost` but operate on cluster via kubeconfig
+- **State management**: Always use `state: present` (not imperative `kubectl apply`)
 
 ### Node Label Management
 - **Declarative labels**: Defined in inventory `node_labels` variable, applied by `setup_cluster_node` role
@@ -241,8 +391,10 @@ python3 setup-applications.py       # Quick deployment (seconds)
 
 ### File Organization
 - **Templates**: Jinja2 templates in `roles/*/templates/` (e.g., `netplan.j2`)
-- **Static files**: `roles/*/files/` for artifacts like ISO images
-- **ArgoCD apps**: Separate manifests in `argocd_applications/` directory
+- **Static files**: `roles/*/files/` for artifacts like ISO images and VM scripts (`create_vm.py`)
+- **ArgoCD apps**: Kustomize manifests in `argocd_applications/{category}/{app}/` directory structure
+- **Role tasks**: `main.yaml` orchestrates, sub-tasks in same directory for complex workflows
+- **Python wrappers**: Top-level `setup-*.py` files use ansible_runner, clean artifacts on each run
 
 ## Debugging & Troubleshooting
 
@@ -291,3 +443,38 @@ python3 setup-applications.py       # Quick deployment (seconds)
 - **DCGM deployment**: Must use `runtimeClassName: nvidia` and request GPU to access device metrics
 
 When modifying roles, maintain the delegation patterns for K8s operations and preserve environment variable templating for flexibility across deployments.
+
+## Quick Reference for AI Agents
+
+### Understanding the Two Execution Paths
+1. **Infrastructure + Apps** (`setup-clusters.py`): Use when VMs/cluster need changes. ~17 min, destructive.
+2. **Apps only** (`setup-applications.py`): Use when only manifests change. Seconds, safe.
+
+### Key Files to Check First
+- `.env`: All configuration lives here (IPs, versions, feature flags)
+- `inventory/k8s.yaml`: Node definitions, labels, VM specs from env vars
+- `inventory/localhost.yaml`: Localhost vars for K8s API operations
+- `setup_cluster.yaml`: 8-play sequence (read to understand execution order)
+- `artifacts/stdout`: Most recent run output for debugging
+
+### Common Patterns You'll See
+- **All config from env**: `{{ lookup("env", "VAR_NAME") }}` everywhere
+- **Delegation**: K8s tasks run on localhost: `delegate_to: localhost`, `kubeconfig: /etc/kubernetes/new_cluster_admin.conf`
+- **Conditional roles**: Optional features via `when: ENABLE_CEPH == "true"` or `when: ENABLE_CUDA == "true"`
+- **Idempotent checks**: ConfigMap/Secret existence checks before creation
+- **Label-driven behavior**: GPU nodes have `labels.compute: cuda` in inventory
+
+### Troubleshooting Decision Tree
+1. **Playbook failed**: Check `artifacts/stdout` and `artifacts/stderr`
+2. **Template error**: Missing `.env` variable - check `example.env` for reference
+3. **K8s resource not created**: Check kubeconfig path and delegation
+4. **SSH failure**: Verify `K8S_SSH_KEY` path and node accessibility
+5. **GPU not working**: Check RuntimeClass exists, pod has `runtimeClassName: nvidia`, CRI-O config
+6. **Duplicate metrics**: Only scrape services, not pods; use aggregation in queries
+
+### Making Changes Safely
+- **New application**: Add to `argocd_applications/`, run `setup-applications.py`
+- **New node**: Update `.env` and `inventory/k8s.yaml`, run `setup-clusters.py`
+- **Config change**: Update `.env`, determine which playbook is appropriate
+- **New optional feature**: Add `ENABLE_*` flag, use conditionals in roles
+- Always test idempotency: running twice should not break anything

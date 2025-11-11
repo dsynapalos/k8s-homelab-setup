@@ -1,0 +1,13 @@
+groups:
+  - name: gpu_alerts
+    interval: 30s
+    rules:
+      - alert: GPUHighTemperature
+        expr: DCGM_FI_DEV_GPU_TEMP > 60
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "GPU {{ $labels.gpu }} temperature is high"
+          description: "GPU {{ $labels.gpu }} on host {{ $labels.Hostname }} has temperature {{ $value }}°C (threshold: 50°C)"

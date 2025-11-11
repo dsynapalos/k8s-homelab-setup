@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: matrix-bootstrap
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: matrix
+      restartPolicy: OnFailure
+      containers:
+      - name: bootstrap
+        image: alpine:3.19
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk add --no-cache curl openssl kubectl
+          
+
+          # Wait for Matrix
+          until curl -s http://matrix:8008/_matrix/client/versions > /dev/null; do
+            sleep 5
+          done
+          
+          # Check if secret already exists and is valid
+          if kubectl get secret matrix-bot -n monitoring &>/dev/null; then
+            USER_ID=$(kubectl get secret matrix-bot -n monitoring -o jsonpath='{.data.user-id}' | base64 -d)
+            ACCESS_TOKEN=$(kubectl get secret matrix-bot -n monitoring -o jsonpath='{.data.access-token}' | base64 -d)
+            ROOM_ID=$(kubectl get secret matrix-bot -n monitoring -o jsonpath='{.data.room-id}' | base64 -d)
+            
+            if [ -n "$USER_ID" ] && [ -n "$ACCESS_TOKEN" ] && [ -n "$ROOM_ID" ]; then
+              echo "Valid matrix-bot Secret already exists. Skipping bootstrap."
+              exit 0
+            fi
+          fi
+          
+          # Extract registration_shared_secret from homeserver.yaml
+          REGISTRATION_SECRET=$(kubectl exec matrix-0 -n monitoring -c synapse -- grep "^registration_shared_secret:" /data/homeserver.yaml | cut -d'"' -f2)
+          
+          # Get nonce
+          NONCE=$(curl -s http://matrix:8008/_synapse/admin/v1/register | grep -o '"nonce":"[^"]*"' | cut -d'"' -f4)
+          
+          # Calculate HMAC
+          USERNAME="alertbot-$(date +%s)"
+          PASSWORD=$(openssl rand -base64 24)
+          MAC=$(printf '%s\0%s\0%s\0%s' "$NONCE" "$USERNAME" "$PASSWORD" "notadmin" | openssl sha1 -hmac "$REGISTRATION_SECRET" | awk '{print $2}')
+          
+          # Register bot
+          RESPONSE=$(curl -s -X POST http://matrix:8008/_synapse/admin/v1/register \
+            -H "Content-Type: application/json" \
+            -d "{\"nonce\":\"$NONCE\",\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\",\"admin\":false,\"mac\":\"$MAC\"}")
+          
+          echo "Registration response: $RESPONSE"
+          
+          # Check if user already exists
+          if echo "$RESPONSE" | grep -q "M_USER_IN_USE"; then
+            echo "ERROR: User alertbot already exists."
+            echo "To reset: kubectl delete secret matrix-bot -n monitoring && kubectl delete job matrix-bootstrap -n monitoring"
+            exit 1
+          fi
+          
+          ACCESS_TOKEN=$(echo "$RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+          USER_ID=$(echo "$RESPONSE" | grep -o '"user_id":"[^"]*"' | cut -d'"' -f4)
+          
+          if [ -z "$ACCESS_TOKEN" ] || [ -z "$USER_ID" ]; then
+            echo "ERROR: Failed to extract credentials. Response was: $RESPONSE"
+            exit 1
+          fi
+          
+          echo "Successfully registered USER_ID: $USER_ID"
+          
+          # Create room with public visibility
+          ROOM_RESPONSE=$(curl -s -X POST http://matrix:8008/_matrix/client/r0/createRoom \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Alerts","preset":"public_chat","visibility":"public","room_alias_name":"alerts"}')
+          
+          ROOM_ID=$(echo "$ROOM_RESPONSE" | grep -o '"room_id":"[^"]*"' | cut -d'"' -f4)
+          
+          # Matrix webhook expects JSON with msgtype and body
+          # Alertmanager webhook sends alerts in its own format
+          # We'll use a simple transaction ID approach
+          WEBHOOK_URL="http://matrix:8008/_matrix/client/r0/rooms/${ROOM_ID}/send/m.room.message?access_token=${ACCESS_TOKEN}"
+          
+          kubectl create secret generic matrix-bot -n monitoring \
+            --from-literal=webhook-url="$WEBHOOK_URL" \
+            --from-literal=room-id="$ROOM_ID" \
+            --from-literal=access-token="$ACCESS_TOKEN" \
+            --from-literal=user-id="$USER_ID" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          echo "Alertmanager-Matrix connection established. User: $USER_ID, Room: $ROOM_ID"

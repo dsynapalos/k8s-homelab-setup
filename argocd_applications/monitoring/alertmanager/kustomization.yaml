@@ -4,15 +4,10 @@ kind: Kustomization
 namespace: monitoring
 
 resources:
-  - serviceaccount.yaml
-  - clusterrole.yaml
-  - clusterrolebinding.yaml
   - deployment.yaml
   - service.yaml
-  - ingress.yaml
 
 configMapGenerator:
-  - name: prometheus-config
+  - name: alertmanager-config
     files:
-      - prometheus.yml
-      - alert-rules.yaml
+      - alertmanager.yml

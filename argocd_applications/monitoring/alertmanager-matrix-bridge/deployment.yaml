@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-matrix
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager-matrix
+  template:
+    metadata:
+      labels:
+        app: alertmanager-matrix
+    spec:
+      initContainers:
+      - name: config-generator
+        image: busybox:1.36
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cat > /config/config.yaml << 'CONFIGEOF'
+          http:
+            port: 3000
+          matrix:
+            homeserver-url: ${MATRIX_HOMESERVER_URL}
+            user-id: ${MATRIX_USER_ID}
+            access-token: ${MATRIX_ACCESS_TOKEN}
+            room-mapping:
+              default: ${MATRIX_ROOM_ID}
+          templating:
+            computed-values:
+              - values:
+                  color: white
+                  title: INFO
+                  icon: ℹ️
+              - values:
+                  color: orange
+                  title: WARNING
+                  icon: ⚠️
+                when-matching-labels:
+                  severity: warning
+              - values:
+                  color: red
+                  title: CRITICAL
+                  icon: 🚨
+                when-matching-labels:
+                  severity: critical
+              - values:
+                  color: limegreen
+                  title: RESOLVED
+                  icon: ✅
+                when-matching-status: resolved
+            firing-template: |
+              <strong><font color="{{ .ComputedValues.color }}">{{ .ComputedValues.icon }} {{ .ComputedValues.title }}</font></strong><br>
+              {{- $$alert := .Alert }}
+              Annotations:
+              <ul>
+              {{- range $$alert.Annotations.SortedPairs }}
+              <li><em>{{ .Name }}</em>: {{ .Value }}</li>
+              {{- end }}
+              </ul>
+              Labels:
+              <ul>
+              {{- range $$alert.Labels.SortedPairs }}
+              {{- if or (eq .Name "alertname") (eq .Name "severity") (eq .Name "namespace") }}
+              <li><em>{{ .Name }}</em>: <code>{{ .Value }}</code></li>
+              {{- end }}
+              {{- end }}
+              </ul>
+          CONFIGEOF
+          
+          # Now substitute environment variables with proper quoting
+          sed -i "s|homeserver-url: \${MATRIX_HOMESERVER_URL}|homeserver-url: \"${MATRIX_HOMESERVER_URL}\"|g" /config/config.yaml
+          sed -i "s|user-id: \${MATRIX_USER_ID}|user-id: \"${MATRIX_USER_ID}\"|g" /config/config.yaml
+          sed -i "s|access-token: \${MATRIX_ACCESS_TOKEN}|access-token: \"${MATRIX_ACCESS_TOKEN}\"|g" /config/config.yaml
+          sed -i "s|default: \${MATRIX_ROOM_ID}|default: \"${MATRIX_ROOM_ID}\"|g" /config/config.yaml
+          
+          echo "Config generated successfully"
+          echo "=== Generated config ==="
+          cat /config/config.yaml
+          echo "=== End config ==="
+        env:
+        - name: MATRIX_HOMESERVER_URL
+          value: "http://matrix:8008"
+        - name: MATRIX_USER_ID
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: user-id
+        - name: MATRIX_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: access-token
+        - name: MATRIX_ROOM_ID
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: room-id
+        volumeMounts:
+        - name: config
+          mountPath: /config
+      containers:
+      - name: receiver
+        image: docker.io/metio/matrix-alertmanager-receiver:2025.11.5
+        args:
+        - "--config-path"
+        - "/config/config.yaml"
+        ports:
+        - name: http
+          containerPort: 3000
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: config
+        emptyDir: {}
