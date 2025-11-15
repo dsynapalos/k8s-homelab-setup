@@ -1,0 +1,133 @@
+---
+# Install Istio Ambient mode components via Helm
+# Installation order: base (CRDs) → CNI → istiod (control plane) → ztunnel (data plane)
+
+- name: Add Istio Helm repository
+  kubernetes.core.helm_repository:
+    name: istio
+    repo_url: "https://istio-release.storage.googleapis.com/charts"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  delegate_to: localhost
+  become: false
+
+- name: Install Istio base (CRDs)
+  kubernetes.core.helm:
+    name: istio-base
+    chart_ref: istio/base
+    release_namespace: istio-system
+    create_namespace: true
+    chart_version: "{{ lookup('env', 'ISTIO_VERSION') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    update_repo_cache: true
+  register: istio_base_installed
+  delegate_to: localhost
+  become: false
+
+- name: Wait for Istio CRDs to be established
+  ansible.builtin.pause:
+    seconds: 10
+  when: istio_base_installed.changed
+
+- name: Install Istio CNI node agent
+  kubernetes.core.helm:
+    name: istio-cni
+    chart_ref: istio/cni
+    release_namespace: istio-system
+    chart_version: "{{ lookup('env', 'ISTIO_VERSION') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    values:
+      profile: ambient  # Use ambient profile (not sidecar mode)
+    update_repo_cache: true
+  register: istio_cni_installed
+  delegate_to: localhost
+  become: false
+
+- name: Install Istio discovery (istiod control plane)
+  kubernetes.core.helm:
+    name: istiod
+    chart_ref: istio/istiod
+    release_namespace: istio-system
+    chart_version: "{{ lookup('env', 'ISTIO_VERSION') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    values:
+      profile: ambient  # Critical: Use ambient profile (no sidecar injection)
+      
+      # Multi-cluster mesh configuration
+      global:
+        meshID: "{{ lookup('env', 'ISTIO_MESH_ID') }}"
+        multiCluster:
+          clusterName: "{{ lookup('env', 'ISTIO_CLUSTER_NAME') }}"
+        network: "{{ lookup('env', 'ISTIO_NETWORK') }}"
+      
+      # Ambient mode configuration
+      pilot:
+        env:
+          PILOT_ENABLE_AMBIENT_CONTROLLERS: "true"  # Required for ambient mode
+        replicas: 1  # Single control plane sufficient for small cluster
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+      
+      # Telemetry configuration
+      telemetry:
+        enabled: true
+        v2:
+          enabled: true
+          prometheus:
+            enabled: true  # Expose Prometheus metrics for monitoring stack
+    update_repo_cache: true
+  register: istiod_installed
+  delegate_to: localhost
+  become: false
+
+- name: Wait for istiod to be ready
+  ansible.builtin.shell: |
+    kubectl rollout status deployment/istiod -n istio-system --timeout=300s
+  when: istiod_installed.changed
+  delegate_to: localhost
+  become: false
+
+- name: Install ztunnel (Ambient data plane)
+  kubernetes.core.helm:
+    name: ztunnel
+    chart_ref: istio/ztunnel
+    release_namespace: istio-system
+    chart_version: "{{ lookup('env', 'ISTIO_VERSION') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    values:
+      # Multi-cluster configuration (must match istiod settings)
+      global:
+        meshID: "{{ lookup('env', 'ISTIO_MESH_ID') }}"
+        multiCluster:
+          clusterName: "{{ lookup('env', 'ISTIO_CLUSTER_NAME') }}"
+        network: "{{ lookup('env', 'ISTIO_NETWORK') }}"
+      
+      # ztunnel runs as DaemonSet with hostNetwork for traffic interception
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    update_repo_cache: true
+  register: ztunnel_installed
+  delegate_to: localhost
+  become: false
+
+- name: Display Istio installation summary
+  ansible.builtin.debug:
+    msg:
+      - "✓ Istio Ambient {{ lookup('env', 'ISTIO_VERSION') }} installed successfully"
+      - "✓ Mesh ID: {{ lookup('env', 'ISTIO_MESH_ID') }}"
+      - "✓ Cluster: {{ lookup('env', 'ISTIO_CLUSTER_NAME') }}"
+      - "✓ Network: {{ lookup('env', 'ISTIO_NETWORK') }}"
+      - ""
+      - "Next steps:"
+      - "1. Label namespaces for ambient mode: kubectl label namespace <ns> istio.io/dataplane-mode=ambient"
+      - "2. Deploy Istio Gateway for ingress traffic"
+      - "3. Configure VirtualServices for L7 routing"

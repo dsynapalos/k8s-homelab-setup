@@ -113,7 +113,7 @@
         create: false
         
     update_repo_cache: true
-  changed_when: "'has been upgraded' in ceph_csi_installed.stdout or 'You have successfully installed' in ceph_csi_installed.stdout"
+  changed_when: "'has been upgraded' in ceph_csi_installed.stdout or 'You have successfully installed' in ceph_csi_installed.stdout or 'Installing it now' in ceph_csi_installed.stdout"
   register: ceph_csi_installed
 
 # Wait for CSI provisioner to be ready

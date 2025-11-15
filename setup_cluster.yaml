@@ -35,6 +35,13 @@
   roles:
     - bootstrap_cillium
 
+- name: setup istio ambient service mesh
+  hosts: k8s-control
+  gather_facts: false
+  become: true
+  roles:
+    - bootstrap_istio_ambient
+
 - name: setup storage classes
   hosts: localhost
   gather_facts: false

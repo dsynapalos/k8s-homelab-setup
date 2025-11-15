@@ -1,0 +1,18 @@
+---
+# Bootstrap Istio Ambient mode service mesh
+# This role installs Istio in ambient mode (no sidecars) on top of Cilium CNI
+# Requires Cilium to be configured with: bpf.masquerade=false, socketLB.hostNamespaceOnly=true, cni.exclusive=false
+
+- name: Include Istio installation tasks
+  ansible.builtin.include_tasks: install_istio.yaml
+  register: istio_installation
+  when: 
+    - ENABLE_ISTIO | bool
+    - inventory_hostname == 'k8s-control-1'
+
+- name: Include verification tasks
+  ansible.builtin.include_tasks: verify_installation.yaml
+  when: 
+    - ENABLE_ISTIO | bool
+    - inventory_hostname == 'k8s-control-1'
+    - istio_installation.changed

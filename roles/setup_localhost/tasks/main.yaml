@@ -38,6 +38,52 @@
         group: "{{ ansible_facts.user_id }}"
       become: true
 
+- name: Install Istio CLI (istioctl)
+  block:
+    - name: Check if istioctl is already installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/istioctl
+      register: istioctl_exists
+      become: false
+
+    - name: Get installed istioctl version
+      ansible.builtin.command: /usr/local/bin/istioctl version --remote=false --short
+      register: istioctl_current_version
+      failed_when: false
+      changed_when: false
+      when: istioctl_exists.stat.exists
+      become: false
+
+    - name: Download and install istioctl
+      block:
+        - name: Download istioctl binary
+          ansible.builtin.get_url:
+            url: "https://github.com/istio/istio/releases/download/{{ lookup('env', 'ISTIO_VERSION') }}/istioctl-{{ lookup('env', 'ISTIO_VERSION') }}-linux-amd64.tar.gz"
+            dest: /tmp/istioctl.tar.gz
+            mode: '0644'
+          become: false
+
+        - name: Extract istioctl binary
+          ansible.builtin.unarchive:
+            src: /tmp/istioctl.tar.gz
+            dest: /usr/local/bin
+            remote_src: yes
+            mode: '0755'
+            owner: "{{ ansible_facts.user_id }}"
+            group: "{{ ansible_facts.user_id }}"
+          become: true
+
+        - name: Clean up istioctl tarball
+          ansible.builtin.file:
+            path: /tmp/istioctl.tar.gz
+            state: absent
+          become: false
+      when: >
+        not istioctl_exists.stat.exists or
+        (istioctl_current_version.stdout is defined and 
+         lookup('env', 'ISTIO_VERSION') not in istioctl_current_version.stdout)
+  when: ENABLE_ISTIO | bool
+
 - name: Fetch/build autoinstall iso 
   block:
     - include_tasks: handle_iso.yaml

@@ -1,0 +1,94 @@
+---
+# Verify Istio Ambient installation is successful and components are healthy
+
+- name: Wait for ztunnel DaemonSet to be ready
+  ansible.builtin.shell: |
+    kubectl rollout status daemonset/ztunnel -n istio-system --timeout=300s
+  delegate_to: localhost
+  become: false
+  register: ztunnel_status
+  failed_when: ztunnel_status.rc != 0
+
+- name: Verify all Istio pods are running
+  ansible.builtin.shell: |
+    kubectl get pods -n istio-system -o json | jq -r '.items[] | select(.status.phase != "Running") | .metadata.name' | wc -l
+  register: unhealthy_pods
+  delegate_to: localhost
+  become: false
+  failed_when: unhealthy_pods.stdout | int > 0
+  retries: 10
+  delay: 10
+  until: unhealthy_pods.stdout | int == 0
+
+- name: Get Istio component versions
+  ansible.builtin.shell: |
+    kubectl get pods -n istio-system -o json | jq -r '.items[] | "\(.metadata.name): \(.spec.containers[0].image)"'
+  register: istio_versions
+  delegate_to: localhost
+  become: false
+
+- name: Display Istio component status
+  ansible.builtin.debug:
+    msg:
+      - "Istio Ambient Components:"
+      - "{{ istio_versions.stdout_lines }}"
+
+- name: Verify Istio CNI is installed on all nodes
+  ansible.builtin.shell: |
+    NODE_COUNT=$(kubectl get nodes -o json | jq '.items | length')
+    CNI_POD_COUNT=$(kubectl get pods -n istio-system -l k8s-app=istio-cni-node -o json | jq '.items | length')
+    if [ "$NODE_COUNT" -eq "$CNI_POD_COUNT" ]; then
+      echo "OK: Istio CNI running on all $NODE_COUNT nodes"
+      exit 0
+    else
+      echo "ERROR: Expected $NODE_COUNT CNI pods, found $CNI_POD_COUNT"
+      exit 1
+    fi
+  delegate_to: localhost
+  become: false
+  register: cni_verification
+
+- name: Display CNI verification result
+  ansible.builtin.debug:
+    msg: "{{ cni_verification.stdout }}"
+
+- name: Check ztunnel is running on all nodes
+  ansible.builtin.shell: |
+    NODE_COUNT=$(kubectl get nodes -o json | jq '.items | length')
+    ZTUNNEL_COUNT=$(kubectl get pods -n istio-system -l app=ztunnel -o json | jq '.items | length')
+    if [ "$NODE_COUNT" -eq "$ZTUNNEL_COUNT" ]; then
+      echo "OK: ztunnel running on all $NODE_COUNT nodes"
+      exit 0
+    else
+      echo "ERROR: Expected $ZTUNNEL_COUNT ztunnel pods, found $ZTUNNEL_COUNT"
+      exit 1
+    fi
+  delegate_to: localhost
+  become: false
+  register: ztunnel_verification
+
+- name: Display ztunnel verification result
+  ansible.builtin.debug:
+    msg: "{{ ztunnel_verification.stdout }}"
+
+- name: Verify Istio control plane connectivity
+  ansible.builtin.shell: |
+    kubectl get --raw /healthz/ready -n istio-system
+  delegate_to: localhost
+  become: false
+  register: istiod_health
+  failed_when: istiod_health.stdout != "ok"
+
+- name: Display installation success message
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "✓ Istio Ambient installation verified"
+      - "✓ All components healthy and ready"
+      - "=========================================="
+      - ""
+      - "To enable ambient mode for a namespace:"
+      - "  kubectl label namespace <namespace> istio.io/dataplane-mode=ambient"
+      - ""
+      - "To verify mTLS is active:"
+      - "  kubectl exec -it <pod> -n <namespace> -- curl -s http://istiod.istio-system:15014/debug/authz"

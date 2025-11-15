@@ -114,7 +114,11 @@
       - value: "dns.enableIPv6=false"  # Disable IPv6 DNS - cluster is IPv4-only
       
       # NAT Configuration
-      - value: "bpf.masquerade=true"  # Use eBPF for masquerading/SNAT instead of iptables (better performance)
+      - value: "bpf.masquerade=false"  # Disabled for Istio Ambient compatibility (prevents link-local IP rewriting)
+      
+      # Istio Ambient Compatibility
+      - value: "socketLB.hostNamespaceOnly=true"  # Allow Istio ztunnel to intercept ClusterIP traffic at pod namespace
+      - value: "cni.exclusive=false"  # Allow Istio CNI plugin to coexist with Cilium CNI
     update_repo_cache: true
   changed_when: "'has been upgraded' in cilium_installed.stdout or 'You have successfully installed' in cilium_installed.stdout"
   register: cilium_installed

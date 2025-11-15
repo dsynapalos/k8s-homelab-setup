@@ -167,6 +167,11 @@ def main():
     gpu_pci = getenv("GPU_PCI_ADDRESS")
     machine_type = "q35" if gpu_pci else None  # Q35 required for PCIe passthrough
 
+    # CPU type configuration
+    # Use 'host' to expose full physical CPU instruction set (including x86-64-v2 for modern software)
+    # Default 'kvm64' only exposes baseline x86-64, causing issues with recent distroless images
+    cpu_type = getenv("VM_CPU_TYPE", "host")
+
     # Build parameters for API call
     params = {
         "vmid": int(vmid),
@@ -178,6 +183,7 @@ def main():
         "ostype": ostype,
         "scsihw": scsihw,
         "net0": net0,
+        "cpu": cpu_type,
         # enable or disable the QEMU guest agent
         "agent": 1 if qga else 0,
         # auto-start VM at boot

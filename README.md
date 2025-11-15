@@ -9,9 +9,12 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
 - **Automated VM Provisioning**: Creates Ubuntu VMs on Proxmox with custom autoinstall ISO
 - **Container Runtime**: CRI-O runtime with version matching
 - **CNI**: Cilium with eBPF data path, WireGuard encryption, and L2 load balancer announcements
+- **Service Mesh**: Optional Istio Ambient mode for sidecar-less mTLS encryption
 - **Ingress**: Gateway API or Ingress Controller modes
 - **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
-- **Observability**: Hubble for network flow visualization
+- **GPU Support**: Optional NVIDIA GPU passthrough with intelligent LTS driver selection
+- **Observability**: Hubble for network flow visualization, Prometheus + Grafana for metrics
+- **Alerting**: Alertmanager + Matrix Synapse for real-time notifications
 - **GitOps**: ArgoCD for declarative cluster management
 - **Developer Tools**: kubectl, helm, cilium-cli, hubble-cli auto-installed
 
@@ -91,6 +94,14 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
    ENABLE_CUDA={{ enable NVIDIA GPU passthrough and CUDA support (true/false) }}
    GPU_PCI_ADDRESS={{ PCI address of GPU on Proxmox host (e.g., 0000:01:00) }}
    NVIDIA_DEVICE_PLUGIN_VERSION={{ NVIDIA device plugin version (e.g., v0.14.5) }}
+   
+   # Istio Ambient Mesh Configuration (Optional)
+   ENABLE_ISTIO={{ enable Istio Ambient service mesh (true/false) }}
+   ISTIO_VERSION={{ Istio version (e.g., 1.26.6) }}
+   ISTIO_MESH_ID={{ Mesh identifier for multi-cluster (e.g., mesh1) }}
+   ISTIO_CLUSTER_NAME={{ Unique cluster name within mesh (e.g., cluster-1) }}
+   ISTIO_NETWORK={{ Network identifier (e.g., network-1) }}
+   VM_CPU_TYPE={{ Proxmox CPU type: 'host' for x86-64-v2+ support, 'kvm64' for baseline }}
    ```
    
    **GitLab/Repository Integration** (optional for ArgoCD GitOps):
@@ -172,6 +183,60 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
            nvidia.com/gpu: 1  # Required: Requests GPU allocation
    ```
    This two-layer security model prevents unauthorized GPU access.
+
+   **Istio Ambient Service Mesh** (optional for transparent mTLS encryption):
+   1. **CPU Requirements**: Ensure VMs have x86-64-v2 instruction set support
+      - Set `VM_CPU_TYPE=host` in `.env` to expose full CPU features
+      - Physical CPU must support SSE4.1, SSE4.2, and POPCNT (Intel Core 2008+, AMD Bulldozer 2011+)
+      - **Do NOT use** `VM_CPU_TYPE=kvm64` as it only provides baseline x86-64
+   2. Configure Istio variables in `.env`:
+      ```bash
+      ENABLE_ISTIO=true
+      ISTIO_VERSION=1.26.6
+      ISTIO_MESH_ID=mesh1         # Same across all clusters in multi-cluster setup
+      ISTIO_CLUSTER_NAME=cluster-1 # Unique per cluster
+      ISTIO_NETWORK=network-1      # Network identifier
+      VM_CPU_TYPE=host            # Critical for x86-64-v2 support
+      ```
+   3. The automation will:
+      - Configure Cilium with Istio compatibility settings (masquerade, socketLB, CNI chaining)
+      - Deploy Istio components: base (CRDs), istio-cni, istiod, ztunnel
+      - Enable ambient controllers in istiod (`PILOT_ENABLE_AMBIENT_CONTROLLERS=true`)
+      - Configure cluster name in ztunnel for proper authentication
+   4. **Enrolling namespaces in the mesh**:
+      ```bash
+      # Add namespace to mesh (pods automatically get mTLS, no restart needed)
+      kubectl label namespace <namespace> istio.io/dataplane-mode=ambient
+      
+      # Remove namespace from mesh
+      kubectl label namespace <namespace> istio.io/dataplane-mode-
+      
+      # Check which namespaces are in mesh
+      kubectl get namespaces -L istio.io/dataplane-mode
+      ```
+   5. **Namespace recommendations**:
+      - ✅ **Add to mesh**: Application namespaces (backend, frontend, api-gateway)
+      - ❌ **Keep out of mesh**: Platform components (kube-system, istio-system, monitoring, argocd)
+      - **Why**: Prevents circular dependencies, maintains observability, avoids platform instability
+   6. **mTLS modes** (default: PERMISSIVE):
+      - **PERMISSIVE**: Mesh-to-mesh uses mTLS, external traffic allowed
+      - **STRICT**: Requires mTLS for all traffic (blocks non-mesh sources)
+      - Use AuthorizationPolicy for fine-grained access control
+   7. **Verification**:
+      ```bash
+      # Check Istio pods
+      kubectl get pods -n istio-system
+      
+      # View mTLS traffic in ztunnel logs
+      kubectl logs -n istio-system -l app=ztunnel --tail=20 | grep "src.identity\|dst.identity"
+      ```
+   
+   **Istio Features**:
+   - **Zero-downtime enrollment**: Pods join mesh when namespace is labeled (no restart)
+   - **HBONE tunneling**: Encrypted L4 traffic over port 15008
+   - **SPIFFE identities**: Automatic cryptographic identities for workloads
+   - **Sidecar-less**: Lower resource overhead compared to traditional service mesh
+   - **Multi-cluster ready**: Configured for federation via mesh/cluster/network IDs
 
 3. **Run automation**
    
@@ -356,6 +421,10 @@ The automation is organized into modular Ansible roles, each responsible for a s
 - Configures per-node L2AnnouncementPolicy (ARP/NDP announcements)
 - Restarts unmanaged pods to apply Cilium networking
 - Integrates with CRI-O runtime
+- **Istio Compatibility** (when `ENABLE_ISTIO=true`):
+  - `bpf.masquerade=false`: Prevents rewriting link-local IPs (169.254.7.127) used by ztunnel
+  - `socketLB.hostNamespaceOnly=true`: Allows ztunnel to intercept ClusterIP traffic
+  - `cni.exclusive=false`: Enables CNI chaining (Cilium + Istio CNI coexistence)
 
 #### GitOps & Application Deployment
 **`bootstrap_argocd`** - Installs ArgoCD for declarative cluster management with Git repository integration
@@ -411,6 +480,28 @@ The automation is organized into modular Ansible roles, each responsible for a s
 - Verifies GPU capacity is advertised on nodes
 - **Prerequisites**: NVIDIA drivers and Container Toolkit installed by `setup_os` role
 - **Version**: Configurable via `NVIDIA_DEVICE_PLUGIN_VERSION` (default: v0.14.5)
+
+**`bootstrap_istio_ambient`** - Istio Ambient service mesh deployment (optional, enabled via `ENABLE_ISTIO=true`)
+- **Architecture**: Sidecar-less service mesh using ztunnel for L4 mTLS encryption
+- **Component Deployment** (via Helm):
+  1. **istio-base**: Installs Istio CRDs from istio.io/base chart
+  2. **istio-cni**: Deploys CNI plugin with `profile=ambient` for traffic redirection
+  3. **istiod**: Control plane with ambient controllers enabled (`PILOT_ENABLE_AMBIENT_CONTROLLERS=true`)
+  4. **ztunnel**: Zero-trust tunnel DaemonSet (per-node L4 proxy) with cluster name configuration
+- **Multi-cluster Configuration**:
+  - `global.meshID`: Mesh identifier from `ISTIO_MESH_ID` (e.g., mesh1)
+  - `global.multiCluster.clusterName`: Unique cluster name from `ISTIO_CLUSTER_NAME` (e.g., cluster-1)
+  - `global.network`: Network identifier from `ISTIO_NETWORK` (e.g., network-1)
+  - Both istiod and ztunnel configured with matching values for proper authentication
+- **Features**:
+  - HBONE tunneling: Encrypted L4 traffic over HTTP CONNECT on port 15008
+  - SPIFFE identities: Automatic cryptographic identities for workloads
+  - Transparent enrollment: Pods join mesh via namespace labeling (no restart)
+  - Default mTLS mode: PERMISSIVE (mesh-to-mesh encrypted, external access allowed)
+- **Prerequisites**: 
+  - Cilium configured with Istio compatibility (handled by `bootstrap_cillium`)
+  - VMs with x86-64-v2 CPU support (`VM_CPU_TYPE=host` required)
+- **Version**: Configurable via `ISTIO_VERSION` (default: 1.26.6)
 
 **`bootstrap_prometheus`** - Monitoring stack deployment (optional, deprecated)
 - Legacy role for direct Prometheus deployment
@@ -583,6 +674,43 @@ The project implements a fully idempotent SSH key management system for ArgoCD r
 - **DCGM metrics missing**: Ensure DCGM exporter pod has GPU allocation and runtimeClassName: nvidia
 - **Duplicate GPU metrics**: Remove pod-level Prometheus annotations, only scrape service endpoint
 - **Dashboard shows multiple time series**: Add `max() by (gpu, Hostname)` aggregation to queries
+
+**Istio Ambient Issues**
+- **"CPU does not support x86-64-v2"**: 
+  - Set `VM_CPU_TYPE=host` in `.env`
+  - Recreate VMs with `python3 setup-clusters.py`
+  - Istio 1.23+ requires SSE4.1, SSE4.2, POPCNT instructions
+- **ztunnel authentication failures**:
+  - Check logs: `kubectl logs -n istio-system -l app=ztunnel`
+  - Verify `global.multiCluster.clusterName` is set to `ISTIO_CLUSTER_NAME` in both istiod and ztunnel Helm values
+  - Check ISTIO_META_CLUSTER_ID: `kubectl get ds -n istio-system ztunnel -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="ISTIO_META_CLUSTER_ID")].value}'`
+  - Should match your `ISTIO_CLUSTER_NAME` from `.env`
+- **Pods not getting mTLS**:
+  - Check namespace label: `kubectl get namespace <ns> -L istio.io/dataplane-mode`
+  - Apply label: `kubectl label namespace <ns> istio.io/dataplane-mode=ambient`
+  - Check ztunnel logs for SPIFFE identities
+- **STRICT mode blocking traffic**:
+  - Default mode is PERMISSIVE (recommended)
+  - Add port-level exceptions in PeerAuthentication
+  - Use AuthorizationPolicy for granular access control
+  - Keep monitoring/platform namespaces OUT of mesh
+
+**CephFS Storage Issues**
+- **PVC stuck in Pending**: Check CSI provisioner logs for errors
+- **"Operation not permitted" with CSI v3.12+**:
+  - CSI v3.12+ requires access to `.mgr` RADOS pool for volumes manager
+  - Update Ceph permissions on Proxmox host:
+    ```bash
+    ceph auth caps client.kubernetes \
+      mon 'allow r' \
+      mds 'allow rw fsname=cephfs' \
+      osd 'allow rw pool=cephfs_data, allow rw pool=cephfs_metadata, allow rw pool=.mgr' \
+      mgr 'allow rw'
+    ```
+  - Restart CSI provisioner after permission change
+  - **Key difference**: v3.9.0 only needed data/metadata pools, v3.12+ needs `.mgr` pool
+- **Verify permissions**: `ssh root@<proxmox> "ceph auth get client.kubernetes"`
+- **Test manually**: Create test subvolume with kubernetes user to verify permissions work
 
 ## GPU Stress Testing & Monitoring
 

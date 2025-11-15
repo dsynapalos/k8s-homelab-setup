@@ -50,6 +50,7 @@ k8s:
     ENABLE_GATEWAY_API: '{{ lookup("env", "ENABLE_GATEWAY_API") | default("False") }}'
     ENABLE_CEPH: '{{ lookup("env", "ENABLE_CEPH") | default("false") }}'
     ENABLE_CUDA: '{{ lookup("env", "ENABLE_CUDA") | default("false") }}'
+    ENABLE_ISTIO: '{{ lookup("env", "ENABLE_ISTIO") | default("false") }}'
     NVIDIA_DEVICE_PLUGIN_VERSION: '{{ lookup("env", "NVIDIA_DEVICE_PLUGIN_VERSION") | default("v0.14.5") }}'
     ansible_user: '{{ lookup("env", "K8S_SSH_USER") | default(ansible_user_id) }}'
     ansible_ssh_private_key_file: '{{ lookup("env", "K8S_SSH_KEY") | default("~/.ssh/id_rsa") }}'
