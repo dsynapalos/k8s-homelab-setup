@@ -3,10 +3,12 @@ kind: Application
 metadata:
   name: thanos
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   destination:
     namespace: monitoring
-    server:  https://kubernetes.default.svc
+    server: https://kubernetes.default.svc
   source:
     path: argocd_applications/monitoring/thanos
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git

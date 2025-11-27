@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app: thanos-query
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-query
+  template:
+    metadata:
+      labels:
+        app: thanos-query
+    spec:
+      serviceAccountName: thanos
+      containers:
+      - name: thanos-query
+        image: quay.io/thanos/thanos:v0.36.1
+        args:
+        - query
+        - --log.level=info
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:9090
+        - --query.replica-label=receive_replica
+        - --query.replica-label=prometheus_replica
+        - --store=dnssrv+_grpc._tcp.thanos-receive.monitoring.svc.cluster.local
+        - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc.cluster.local
+        ports:
+        - name: grpc
+          containerPort: 10901
+        - name: http
+          containerPort: 9090
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10

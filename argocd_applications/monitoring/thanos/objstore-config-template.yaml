@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-objstore-config-template
+  namespace: monitoring
+data:
+  objstore-template.yml: |
+    type: S3
+    config:
+      bucket: "BUCKET_NAME"
+      endpoint: "BUCKET_HOST"
+      access_key: "AWS_ACCESS_KEY_ID"
+      secret_key: "AWS_SECRET_ACCESS_KEY"
+      insecure: true

@@ -47,11 +47,13 @@ spec:
             - SYS_ADMIN
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            cpu: 50m
+            memory: 128Mi
+            nvidia.com/gpu: 1
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            cpu: 200m
+            memory: 256Mi
+            nvidia.com/gpu: 1
         volumeMounts:
         - name: pod-gpu-resources
           mountPath: /var/lib/kubelet/pod-resources
