@@ -1,0 +1,52 @@
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystem
+metadata:
+  name: cephfs
+  namespace: rook-ceph
+spec:
+  metadataPool:
+    failureDomain: osd  # Single node, so failureDomain must be osd
+    replicated:
+      size: 1  # Single replica for single-node cluster
+      requireSafeReplicaSize: false  # Required for size=1
+  dataPools:
+    - name: replicated
+      failureDomain: osd  # Single node
+      replicated:
+        size: 1  # Single replica
+        requireSafeReplicaSize: false  # Required for size=1
+  preserveFilesystemOnDelete: true
+  metadataServer:
+    activeCount: 1
+    activeStandby: false  # No standby for single-node cluster
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        memory: "1Gi"
+    placement:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rook-cephfs
+provisioner: rook-ceph.cephfs.csi.ceph.com
+parameters:
+  clusterID: rook-ceph
+  fsName: cephfs
+  pool: cephfs-replicated
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
+  csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+allowVolumeExpansion: true
+reclaimPolicy: Delete

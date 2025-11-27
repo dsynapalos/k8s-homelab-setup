@@ -1,0 +1,113 @@
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  cephVersion:
+    image: quay.io/ceph/ceph:v19.2.0
+    allowUnsupported: false
+  dataDirHostPath: /var/lib/rook
+  skipUpgradeChecks: false
+  continueUpgradeAfterChecksEvenIfNotHealthy: false
+  
+  mon:
+    count: 1  # Single mon for single-node test cluster
+    allowMultiplePerNode: false  # Only one node, so not needed
+  
+  mgr:
+    count: 1
+    allowMultiplePerNode: false
+    modules:
+      - name: pg_autoscaler
+        enabled: true
+  
+  dashboard:
+    enabled: true
+    ssl: false
+  
+  monitoring:
+    enabled: false
+  
+  network:
+    connections:
+      encryption:
+        enabled: false
+      compression:
+        enabled: false
+  
+  crashCollector:
+    disable: false
+  
+  logCollector:
+    enabled: true
+    periodicity: 24h
+  
+  cleanupPolicy:
+    confirmation: ""
+    sanitizeDisks:
+      method: quick
+      dataSource: zero
+      iteration: 1
+    allowUninstallWithVolumes: false
+  
+  # Automatic device discovery - uses all available raw devices on worker nodes only
+  storage:
+    useAllNodes: false
+    useAllDevices: false
+    config:
+      osdsPerDevice: "1"  # Single OSD per device for testing
+    nodes:
+      - name: "k8s-node-1"  # Only k8s-node-1 hosts Rook storage
+        deviceFilter: "^sd[b-z]"  # Auto-discover sdb, sdc, sdd, etc. (excludes sda OS disk)
+  
+  resources:
+    mon:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        memory: "1Gi"
+    mgr:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        memory: "1Gi"
+    osd:
+      requests:
+        cpu: "250m"
+        memory: "2Gi"
+      limits:
+        memory: "4Gi"
+    prepareosd:
+      requests:
+        cpu: "250m"
+        memory: "50Mi"
+  
+  priorityClassNames:
+    mon: system-node-critical
+    osd: system-node-critical
+    mgr: system-cluster-critical
+  
+  # Placement: ensure Rook pods only run on k8s-node-1, NOT control plane
+  placement:
+    all:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+      tolerations:
+      - effect: NoSchedule
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+      - effect: NoSchedule
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+  
+  disruptionManagement:
+    managePodBudgets: false  # Disable for single-node cluster
+    osdMaintenanceTimeout: 30
+    pgHealthCheckTimeout: 0

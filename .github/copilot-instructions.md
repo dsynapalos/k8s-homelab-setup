@@ -8,7 +8,7 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 - **Infrastructure**: Proxmox VM provisioning with Ubuntu autoinstall ISO modification
 - **Networking**: Cilium eBPF CNI with WireGuard encryption, L2 load balancer announcements
 - **Service Mesh**: Optional Istio Ambient mode (sidecar-less L4 mesh with mTLS encryption via HBONE tunneling)
-- **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver
+- **Storage**: Optional CephFS dynamic provisioning via Ceph CSI driver OR Rook-Ceph for cloud-native storage
 - **GPU Support**: Optional NVIDIA GPU passthrough with intelligent LTS driver selection and CUDA workload support
 - **Monitoring**: Prometheus + Grafana + DCGM Exporter for GPU metrics
 - **Alerting**: Alertmanager + Matrix Synapse + alertmanager-matrix-bridge for real-time mobile notifications
@@ -96,6 +96,12 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 - **Secret encoding**: Uses `data:` field with Ansible `b64encode` for `userID`/`adminID`, passes through pre-encoded Ceph keys
 - **Dynamic scaling**: `provisioner.replicaCount: {{ 2 if groups['k8s-nodes'] | length >= 2 else 1 }}`
 - Creates StorageClasses: `cephfs` (default, Delete) and `cephfs-retain` (Retain)
+
+**`bootstrap_rook_ceph`** (when `ENABLE_ROOK=true`)
+- Cloud-native storage orchestrator for Kubernetes using Ceph
+- Two-phase deployment: operator (sync-wave 1) then cluster (sync-wave 2)
+- Automated via ArgoCD with GitOps manifests in `argocd_applications/storage/`
+- See **Rook-Ceph Storage (Optional)** section for detailed configuration
 
 **`bootstrap_nvidia_device_plugin`** (when `ENABLE_CUDA=true`)
 - Creates Kubernetes `RuntimeClass: nvidia` for GPU access isolation
@@ -257,6 +263,94 @@ kubectl get configmap argocd-ssh-public-key -n argocd -o yaml
   - v3.9.0 and earlier: Only needs data/metadata pool access
   - v3.12+ to v3.15.0: Requires `.mgr` pool access for volumes manager API
   - Missing `.mgr` permission causes "rados: ret=-1, Operation not permitted" errors
+
+### Rook-Ceph Storage (Optional)
+- **Feature flag**: Controlled by `ENABLE_ROOK` (default: false)
+- **Architecture**: Cloud-native storage orchestrator that runs Ceph inside Kubernetes
+- **Version**: Rook v1.16.0 + Ceph v19.2.0 (Squid stable)
+- **Deployment model**: GitOps via ArgoCD with two-phase sync waves
+  - **Operator (wave 1)**: CRDs, RBAC, operator deployment from upstream manifests
+  - **Cluster (wave 2)**: CephCluster CR, storage pools, StorageClasses
+
+**Operator Configuration** (`argocd_applications/storage/rook-operator/`):
+- **Base resources**: CRDs, common resources, operator from official Rook GitHub
+- **Operator patches** (`operator-config-patch.yaml`):
+  - `CSI_PROVISIONER_REPLICAS: "1"`: Single-replica CSI for single-node/small clusters
+  - `ROOK_ENABLE_DISCOVERY_DAEMON: "true"`: Auto-detects raw block devices on worker nodes
+  - `CSI_ENABLE_CEPHFS_SNAPSHOTTER: "true"`: Enables CephFS volume snapshots
+  - `CSI_ENABLE_RBD_SNAPSHOTTER: "true"`: Enables RBD (block) volume snapshots
+  - `ROOK_CSI_ENABLE_HOST_NETWORK: "false"`: Disables host networking for test clusters
+- **Sync policy**: `prune: false` (never auto-delete operator), `selfHeal: true`
+
+**Cluster Configuration** (`argocd_applications/storage/rook-cluster/cluster.yaml`):
+- **Single-node optimized**: All resource counts set to 1, failureDomain: osd
+- **Monitor (MON)**: 1 mon, system-node-critical priority (maintains cluster map)
+- **Manager (MGR)**: 1 mgr, pg_autoscaler enabled (automatic placement group tuning)
+- **Dashboard**: Enabled on HTTP (no SSL) for local cluster access
+- **Storage discovery**: `useAllNodes: false`, `useAllDevices: false`
+  - Targets `k8s-node-1` only with `deviceFilter: "^sd[b-z]"` (excludes sda OS disk)
+  - Auto-discovers sdb, sdc, sdd, etc. as OSDs (Object Storage Daemons)
+- **Placement**: Node affinity excludes control plane (`node-role.kubernetes.io/control-plane: DoesNotExist`)
+- **Resources**: Conservative limits for test clusters (250m CPU, 512Mi-1Gi memory per component)
+- **Config override** (`rook-config-override.yaml`):
+  ```yaml
+  osd_pool_default_size = 1
+  osd_pool_default_min_size = 1
+  ```
+
+**Storage Pools & StorageClasses**:
+
+1. **Block Storage (RBD)** (`blockpool.yaml`):
+   - Pool: `replicapool`, size=1, failureDomain: osd, requireSafeReplicaSize: false
+   - StorageClass: `rook-ceph-block` (RBD CSI provisioner)
+   - Features: Volume expansion, ext4 filesystem, Delete reclaim policy
+   - Use case: Database volumes, stateful app storage
+
+2. **Filesystem Storage (CephFS)** (`filesystem.yaml`):
+   - Filesystem: `cephfs`, metadata + data pools both size=1
+   - Metadata server (MDS): 1 active, no standby (single-node)
+   - StorageClass: `rook-cephfs` (CephFS CSI provisioner)
+   - Features: Multi-pod ReadWriteMany access, volume expansion
+   - Use case: Shared storage, log aggregation, ML datasets
+
+3. **Object Storage (S3/Swift)** (`object-store.yaml`):
+   - ObjectStore: `rook-ceph-rgw`, metadata + data pools size=1
+   - RADOS Gateway (RGW): 1 instance, HTTP port 80
+   - StorageClass: `rook-ceph-bucket` (OBC provisioner)
+   - Features: S3-compatible API, bucket provisioning
+   - Use case: Application backups, artifact storage, media files
+
+**Multi-node/Production Scaling** (`storageclass-rbd.yaml` - future use):
+- **Device classes**: Separate NVMe (`nvme-primary`) and SATA SSD (`ssd-backup`) pools
+- **Replication**: size=2 with failureDomain: host (data across 2 nodes)
+- **Compression**: None for primary, aggressive for backup tier
+- **Use when**: Expanding to 2+ worker nodes with mixed storage types
+
+**Health & Status**:
+- **Ready conditions**: CephCluster CR `.status.phase == "Ready"` and `.status.state == "Created"`
+- **Warnings (single-node)**: POOL_NO_REDUNDANCY (expected), MDS_UP_LESS_THAN_MAX (no standby MDS)
+- **Dashboard access**: `kubectl port-forward -n rook-ceph svc/rook-ceph-mgr-dashboard 8443:8443`
+- **Ceph CLI**: `kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph status`
+
+**Ansible Integration**:
+- **Role**: `bootstrap_rook_ceph` deploys ArgoCD Application manifests
+- **Operator manifest**: `roles/bootstrap_rook_ceph/files/rook_operator_manifest.yaml`
+- **Cluster manifest**: `roles/bootstrap_rook_ceph/files/rook_cluster_manifest.yaml`
+- **Wait conditions**: Operator deployment ready (5 min timeout), CephCluster ready (15 min timeout, 30 retries)
+- **Idempotency**: Safe to re-run, ArgoCD handles resource updates
+
+**Troubleshooting**:
+- **OSD not starting**: Check device filter matches actual devices (`lsblk` on node)
+- **Dashboard not accessible**: Verify MGR pod running, check service endpoints
+- **CSI provisioning fails**: Ensure CSI pods in rook-ceph namespace are ready
+- **HEALTH_ERR status**: Expected for single-node (check details, ignore POOL_NO_REDUNDANCY)
+- **Slow cluster creation**: Initial OSD creation takes 5-10 min (device wiping, metadata creation)
+
+**Migration from CephFS CSI driver**:
+- Rook-Ceph replaces external Ceph cluster dependency with in-cluster Ceph
+- **Pros**: GitOps-managed, no external infra, unified K8s lifecycle
+- **Cons**: Consumes worker node resources, requires raw block devices
+- **Coexistence**: Can run both (different StorageClasses) for migration period
 
 ### NVIDIA GPU Support (Optional)
 - **Feature flag**: Controlled by `ENABLE_CUDA` (default: false)

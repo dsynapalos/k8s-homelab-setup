@@ -47,7 +47,10 @@
   gather_facts: false
   become: false
   roles:
-    - bootstrap_cephfs_storage_class
+    - role: bootstrap_cephfs_storage_class
+      when: lookup('env', 'ENABLE_CEPH') == 'true'
+    - role: bootstrap_rook_ceph
+      when: lookup('env', 'ENABLE_ROOK') == 'true'
 
 - name: setup nvidia device plugin
   hosts: localhost

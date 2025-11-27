@@ -1,0 +1,46 @@
+---
+- name: Deploy Rook-Ceph operator Application
+  delegate_to: localhost
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', role_path + '/files/rook_operator_manifest.yaml') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: Wait for Rook operator to be ready
+  delegate_to: localhost
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: rook-ceph-operator
+    namespace: rook-ceph
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    wait: yes
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+
+- name: Deploy Rook-Ceph cluster Application
+  delegate_to: localhost
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', role_path + '/files/rook_cluster_manifest.yaml') }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: Wait for Ceph cluster to be ready
+  delegate_to: localhost
+  kubernetes.core.k8s_info:
+    kind: CephCluster
+    name: rook-ceph
+    namespace: rook-ceph
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    wait: yes
+    wait_timeout: 900
+  register: ceph_cluster_status
+  until: ceph_cluster_status.resources[0].status.phase == "Ready"
+  retries: 30
+  delay: 30
+
+- name: Display Ceph cluster status
+  delegate_to: localhost
+  ansible.builtin.debug:
+    msg: "Rook-Ceph cluster deployed successfully"

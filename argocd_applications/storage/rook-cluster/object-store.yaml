@@ -1,0 +1,67 @@
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStore
+metadata:
+  name: rook-ceph-rgw
+  namespace: rook-ceph
+spec:
+  metadataPool:
+    failureDomain: osd  # Single node, so failureDomain must be osd
+    replicated:
+      size: 1  # Single replica for single-node cluster
+      requireSafeReplicaSize: false  # Required for size=1
+  dataPool:
+    failureDomain: osd  # Single node
+    replicated:
+      size: 1  # Single replica
+      requireSafeReplicaSize: false  # Required for size=1
+    parameters:
+      compression_mode: none  # Disabled compression for testing
+  preservePoolsOnDelete: true
+  gateway:
+    port: 80
+    instances: 1  # Single RGW instance
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        memory: "1Gi"
+    priorityClassName: system-cluster-critical
+    placement:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rook-ceph-rgw-rook-ceph-rgw
+  namespace: rook-ceph
+  labels:
+    app: rook-ceph-rgw
+    rook_cluster: rook-ceph
+    rook_object_store: rook-ceph-rgw
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: rook-ceph-rgw
+    rook_cluster: rook-ceph
+    rook_object_store: rook-ceph-rgw
+  type: ClusterIP
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rook-ceph-bucket
+provisioner: rook-ceph.ceph.rook.io/bucket
+parameters:
+  objectStoreName: rook-ceph-rgw
+  objectStoreNamespace: rook-ceph
+reclaimPolicy: Delete
