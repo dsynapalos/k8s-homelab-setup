@@ -1,0 +1,37 @@
+---
+# Setup secondary storage pool on Proxmox for VM disk provisioning
+# 
+# This creates an LVM thin pool from available secondary disks,
+# enabling the storage capacity to be split across multiple VMs.
+# The Python script handles idempotency checks internally.
+
+- name: Setup secondary storage pool
+  ansible.builtin.script: setup_secondary_storage.py
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  environment:
+    PROXMOX_HOST: "{{ proxmox_api_host }}"
+    PROXMOX_USER: "{{ proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ proxmox_node }}"
+    SECONDARY_DISKS: "{{ secondary_disk_devices | join(',') }}"
+    STORAGE_NAME: "{{ secondary_storage_name }}"
+    VG_NAME: "{{ secondary_vg_name }}"
+  delegate_to: localhost
+  run_once: true
+  register: storage_setup_result
+  when: 
+    - secondary_disk_devices is defined
+    - secondary_disk_devices | length > 0
+
+- name: Parse storage setup results
+  ansible.builtin.set_fact:
+    secondary_storage_created: "{{ (storage_setup_result.stdout | from_json).changed | default(false) }}"
+  run_once: true
+  when: storage_setup_result is not skipped
+
+- name: Display storage setup status
+  ansible.builtin.debug:
+    msg: "Secondary storage pool '{{ secondary_storage_name }}' is ready ({{ 'newly created' if secondary_storage_created | default(false) else 'already existed' }})"
+  run_once: true

@@ -89,3 +89,8 @@
     - include_tasks: handle_iso.yaml
   run_once: true
   delegate_to: localhost
+
+# Setup secondary storage pools on Proxmox (must complete before VM provisioning)
+- name: Setup secondary storage for worker nodes
+  include_tasks: setup_secondary_storage.yaml
+  when: groups['k8s-nodes'] | length > 0

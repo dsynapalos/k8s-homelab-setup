@@ -18,3 +18,5 @@ storage:
   layout:
     name: lvm
     sizing-policy: all
+    match:
+      path: /dev/sda

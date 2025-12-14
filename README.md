@@ -81,7 +81,7 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
    REPOSITORY_SSH_URL={{ git repository SSH URL (e.g., git@gitlab.com:username/repo.git) }}
    REPOSITORY_TOKEN={{ Repository Personal Access Token with API scope }}
    
-   # CephFS Storage Configuration (Optional)
+   # CephFS Storage Configuration (Optional - External Ceph cluster)
    ENABLE_CEPH={{ enable CephFS dynamic storage provisioning (true/false) }}
    CEPH_CSI_VERSION={{ Ceph CSI driver version (e.g., 3.9.0) }}
    CEPH_CLUSTER_ID={{ Ceph cluster FSID from 'ceph fsid' }}
@@ -89,6 +89,11 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
    CEPH_K8S_USER={{ Ceph client username for Kubernetes (plain text) }}
    CEPH_K8S_KEY={{ Ceph client key for Kubernetes (base64-encoded) }}
    CEPH_ADMIN_KEY={{ Ceph admin key (base64-encoded) }}
+   
+   # Rook-Ceph Storage Configuration (Optional - In-cluster Ceph)
+   ENABLE_ROOK={{ enable Rook-Ceph cloud-native storage (true/false) }}
+   # Note: Rook uses secondary disks on Proxmox host, auto-discovered as raw block devices
+   # Disks must be raw (no LVM/partitions) - run wipefs if re-provisioning
    
    # NVIDIA GPU Configuration (Optional)
    ENABLE_CUDA={{ enable NVIDIA GPU passthrough and CUDA support (true/false) }}
@@ -274,10 +279,34 @@ Automated end-to-end Kubernetes cluster provisioning using Ansible, from VM crea
   - Hubble observability suite
 
 ### Storage (Optional)
+
+**Option A: External CephFS (ENABLE_CEPH=true)**
 - CephFS dynamic provisioning via Ceph CSI driver
 - Kernel-based CephFS mounts for high performance
 - Two StorageClasses: `cephfs` (Delete) and `cephfs-retain` (Retain)
 - Dynamic replica scaling based on cluster size
+- Requires existing external Ceph cluster
+
+**Option B: Rook-Ceph (ENABLE_ROOK=true)**
+- Cloud-native storage orchestrator running Ceph inside Kubernetes
+- **Secondary disk provisioning**: Automatically provisions physical disks as VM storage
+  - Discovery: `setup_localhost` role queries Proxmox for raw (unused) disks
+  - Storage pools: Creates LVM thin pools (`vm-storage-1`, `vm-storage-2`, etc.)
+  - Allocation: Divides capacity equally among worker nodes
+  - Virtual disks: Attached to VMs as `/dev/sdb`, `/dev/sdc`, etc.
+- Rook-Ceph then manages these disks as Ceph OSDs within Kubernetes
+- StorageClasses: `rook-ceph-block` (RBD), `rook-cephfs` (CephFS), `rook-ceph-bucket` (S3)
+- No external infrastructure required
+
+**Cleanup for Re-provisioning** (when using Rook-Ceph):
+```bash
+# On Proxmox host - remove storage pools and wipe disk signatures
+pvesm remove vm-storage-1; pvesm remove vm-storage-2
+lvremove -f vg-secondary-1/vm-storage-1; lvremove -f vg-secondary-2/vm-storage-2
+vgremove -f vg-secondary-1; vgremove -f vg-secondary-2
+pvremove -y /dev/nvme0n1; pvremove -y /dev/sda  # Adjust device paths
+wipefs -a /dev/nvme0n1; wipefs -a /dev/sda      # Required for discovery
+```
 
 ### GPU Support (Optional)
 - NVIDIA GPU PCI passthrough to VMs during creation

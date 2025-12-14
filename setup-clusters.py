@@ -8,6 +8,8 @@ load_dotenv()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 artifact_path = os.path.join(dir_path, 'artifacts')
+venv_bin = os.path.join(dir_path, '.venv', 'bin')
+
 try:
     shutil.rmtree(artifact_path)
 except Exception as e:
@@ -15,9 +17,14 @@ except Exception as e:
 
 start_time = time.time()
 
+# Set PATH to include venv bin directory for ansible-playbook
+env = os.environ.copy()
+env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
+
 r = ansible_runner.run(
         private_data_dir=dir_path, 
-        playbook=os.path.join(dir_path,'setup_cluster.yaml')
+        playbook=os.path.join(dir_path,'setup_cluster.yaml'),
+        envvars=env
     )
 
 print(r.stats)

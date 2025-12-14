@@ -58,6 +58,36 @@ This project automates end-to-end Kubernetes cluster provisioning using Ansible,
 - Uploads to Proxmox via API with idempotency checks
 - **GPU passthrough**: Calls `create_vm.py` with `hostpci0: {GPU_PCI_ADDRESS}` for nodes with `compute: cuda` label
 - **Q35 machine type**: Automatically enabled when GPU detected (required for PCIe passthrough)
+- **Secondary disk attachment**: Reads `cached_secondary_disks_spec` from localhost hostvars (set by `setup_localhost` role)
+  - Only attached to `k8s-nodes` hosts (not control plane)
+  - Format: `storage:size,storage:size` (e.g., `vm-storage-1:238,vm-storage-2:223`)
+  - Virtual disks appear as `/dev/sdb`, `/dev/sdc`, etc. inside VMs (matching Rook deviceFilter)
+
+**`setup_localhost`** (Control machine → Proxmox storage)
+- **Secondary Storage Discovery & Provisioning** (for Rook-Ceph):
+  - `discover_storage.py`: Queries Proxmox API to identify available secondary disks
+    - **Raw disks only**: Disks with no `used` field in Proxmox API are available
+    - **Skip criteria**: Any disk with LVM, partitions, BIOS boot, or mounted filesystems
+    - OS disk identified by `BIOS boot` usage marker
+  - `setup_secondary_storage.py`: Creates LVM thin pools from raw disks
+    - **Naming convention**: `vm-storage-1` (VG: `vg-secondary-1`), `vm-storage-2`, etc.
+    - **Per-disk pools**: Each physical disk becomes one storage pool
+    - Waits for Proxmox async UPID task completion before proceeding
+  - `calculate_disk_allocation.yaml`: Divides secondary storage equally among node VMs
+    - **Allocation logic**: Each physical disk's capacity divided by node count
+    - Example: 2 disks (477G, 447G), 1 node → node gets 2 virtual disks (477G, 447G)
+    - Example: 2 disks (477G, 447G), 2 nodes → each node gets 2 virtual disks (238G, 223G)
+  - **Scripts location**: `roles/setup_localhost/files/`
+  - **Execution order**: Runs in `setup_localhost` play BEFORE `provision_infra` play
+- **Cleanup requirement**: When destroying VMs/storage, must also wipe disk signatures:
+  ```bash
+  # Full cleanup command for re-provisioning
+  pvesm remove vm-storage-1; pvesm remove vm-storage-2
+  lvremove -f vg-secondary-1/vm-storage-1; lvremove -f vg-secondary-2/vm-storage-2
+  vgremove -f vg-secondary-1; vgremove -f vg-secondary-2
+  pvremove -y /dev/nvme0n1; pvremove -y /dev/sda  # Adjust device paths
+  wipefs -a /dev/nvme0n1; wipefs -a /dev/sda      # Remove filesystem signatures
+  ```
 
 **`setup_os`** (OS → Container-ready)
 - Disables swap, configures APT repos for K8s packages
@@ -345,6 +375,15 @@ kubectl get configmap argocd-ssh-public-key -n argocd -o yaml
 - **CSI provisioning fails**: Ensure CSI pods in rook-ceph namespace are ready
 - **HEALTH_ERR status**: Expected for single-node (check details, ignore POOL_NO_REDUNDANCY)
 - **Slow cluster creation**: Initial OSD creation takes 5-10 min (device wiping, metadata creation)
+- **No secondary disks discovered**: Disks have leftover LVM/partition signatures. Run full cleanup on Proxmox:
+  ```bash
+  # Remove Proxmox storage pools and LVM structures
+  pvesm remove vm-storage-1; pvesm remove vm-storage-2
+  lvremove -f vg-secondary-1/vm-storage-1; lvremove -f vg-secondary-2/vm-storage-2
+  vgremove -f vg-secondary-1; vgremove -f vg-secondary-2
+  pvremove -y /dev/nvme0n1; pvremove -y /dev/sda
+  wipefs -a /dev/nvme0n1; wipefs -a /dev/sda
+  ```
 
 **Migration from CephFS CSI driver**:
 - Rook-Ceph replaces external Ceph cluster dependency with in-cluster Ceph
@@ -625,6 +664,14 @@ kubectl get configmap argocd-ssh-public-key -n argocd -o yaml
 - **Istio ztunnel auth failures**: Check `global.multiCluster.clusterName` matches `ISTIO_CLUSTER_NAME` in both istiod and ztunnel Helm values
 - **Istio namespace not in mesh**: Apply label `kubectl label namespace <ns> istio.io/dataplane-mode=ambient`
 - **STRICT mTLS blocking traffic**: Use PERMISSIVE mode + AuthorizationPolicy, or add port-level exceptions
+- **Secondary storage not discovered**: Disks must be raw (no LVM signatures). Cleanup on Proxmox host:
+  ```bash
+  pvesm remove vm-storage-1; pvesm remove vm-storage-2
+  lvremove -f vg-secondary-1/vm-storage-1; lvremove -f vg-secondary-2/vm-storage-2
+  vgremove -f vg-secondary-1; vgremove -f vg-secondary-2
+  pvremove -y /dev/nvme0n1; pvremove -y /dev/sda
+  wipefs -a /dev/nvme0n1; wipefs -a /dev/sda
+  ```
 
 ### Best Practices for Modifications
 - **Avoid `is defined` checks**: Ansible handles undefined variables in `when` clauses

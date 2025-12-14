@@ -1,0 +1,78 @@
+---
+# Calculate secondary disk allocation for each node VM
+#
+# This task calculates how to split the available secondary storage
+# across all node VMs in the current Proxmox host.
+#
+# Strategy:
+# - Each physical disk's capacity is divided equally among all node VMs
+# - Each node gets one virtual disk per physical disk (same count, split size)
+# - Example: 2 nodes, 2 physical disks (500G, 500G) → each node gets 2x 250G disks
+
+- name: Get list of node VMs for this Proxmox host
+  ansible.builtin.set_fact:
+    node_vms_for_host: "{{ groups['k8s-nodes'] | default([]) }}"
+  run_once: true
+
+- name: Calculate node count
+  ansible.builtin.set_fact:
+    node_vm_count: "{{ node_vms_for_host | length }}"
+  run_once: true
+
+- name: Display node allocation info
+  ansible.builtin.debug:
+    msg: |
+      Node VMs to provision: {{ node_vm_count }}
+      Secondary disks available: {{ secondary_disk_sizes_gib | default([]) | length }}
+      Total secondary storage: {{ proxmox_storage_info.total_secondary_gib | default(0) }} GiB
+  run_once: true
+
+# Calculate using Jinja2 for proper integer division
+- name: Calculate per-node disk allocations
+  ansible.builtin.set_fact:
+    per_node_disk_sizes_gib: >-
+      {%- set result = [] -%}
+      {%- for size in secondary_disk_sizes_gib | default([]) -%}
+        {%- set _ = result.append((size | float / (node_vm_count | int)) | int) -%}
+      {%- endfor -%}
+      {{ result }}
+  run_once: true
+  when:
+    - secondary_disk_sizes_gib is defined
+    - secondary_disk_sizes_gib | length > 0
+    - node_vm_count | int > 0
+
+- name: Build secondary disks specification for VMs
+  ansible.builtin.set_fact:
+    # Format: "storage-1:size,storage-2:size,..." for each disk
+    # Each physical disk has its own storage pool (vm-storage-1, vm-storage-2, etc.)
+    secondary_disks_spec: >-
+      {%- set specs = [] -%}
+      {%- for size in per_node_disk_sizes_gib | default([]) -%}
+        {%- if size | int > 0 -%}
+          {%- set _ = specs.append(secondary_storage_name ~ '-' ~ loop.index ~ ':' ~ (size | int)) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ specs | join(',') }}
+  run_once: true
+  when: per_node_disk_sizes_gib is defined
+
+# Propagate the secondary_disks_spec to all hosts so it's available during VM creation
+- name: Propagate secondary disks spec to all hosts
+  ansible.builtin.set_fact:
+    secondary_disks_spec: "{{ hostvars[groups['proxmox'][0]].secondary_disks_spec | default('') }}"
+  when: 
+    - hostvars[groups['proxmox'][0]].secondary_disks_spec is defined
+    - inventory_hostname != groups['proxmox'][0]
+
+- name: Display per-node disk allocation
+  ansible.builtin.debug:
+    msg: |
+      Per-node disk allocation:
+      {% for size in per_node_disk_sizes_gib | default([]) %}
+      - Disk {{ loop.index }}: {{ size }} GiB (from {{ secondary_disk_sizes_gib[loop.index0] }} GiB physical disk)
+      {% endfor %}
+      
+      Secondary disks spec for VM creation: {{ secondary_disks_spec | default('none') }}
+  run_once: true
+  when: per_node_disk_sizes_gib is defined

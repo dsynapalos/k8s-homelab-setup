@@ -1,5 +1,8 @@
 - include_tasks: aggregate_labels.yaml
 
+# Secondary storage setup is done in setup_localhost play (before this play)
+# The cached_secondary_disks_spec fact is set on localhost and accessed via hostvars
+
 - name: create vm {{ inventory_hostname }}
   block:
   - name: Calculate stagger delay for host {{ inventory_hostname }}
@@ -22,7 +25,8 @@
       PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
       PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
       PROXMOX_NODE: "{{ proxmox_node }}"
-      PROXMOX_STORAGE: "{{ proxmox_local_storage }}"
+      # Use local-lvm for VM disks (not local which is for ISOs)
+      PROXMOX_STORAGE: "local-lvm"
       VM_NAME: "{{ inventory_hostname }}"
       VM_MEMORY: "{{ vm_provision.memory_mb }}"
       VM_CORES: "{{ vm_provision.cpu }}"
@@ -34,6 +38,10 @@
       VM_GATEWAY: "{{ vm_gateway }}"
       VM_NAMESERVER: "{{ vm_nameserver | default('1.1.1.1') }}"
       GPU_PCI_ADDRESS: "{{ lookup('env', 'GPU_PCI_ADDRESS') if labels.compute is defined and labels.compute == 'cuda' else '' }}"
+      # Secondary disks for node VMs (Rook-Ceph storage, etc.)
+      # Only passed for k8s-nodes, not control plane
+      # Uses cached spec from localhost (set in setup_localhost play before this)
+      SECONDARY_DISKS: "{{ hostvars['localhost'].cached_secondary_disks_spec | default('') if inventory_hostname in groups['k8s-nodes'] else '' }}"
     delegate_to: localhost
     register: create_vm_result
     changed_when: "'Starting VM' in create_vm_result.stdout"
@@ -55,6 +63,7 @@
       PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
       PROXMOX_NODE: "{{ proxmox_node }}"
       VM_ID: "{{ vm_id }}"
+      POLL_TIMEOUT: "1800"
     delegate_to: localhost
     register: poll_for_ip_result
     changed_when: poll_for_ip_result.rc != 0  # Only changed when IP not found
@@ -62,7 +71,7 @@
   - name: set ansible_host fact
     set_fact:
       ansible_host: "{{ poll_for_ip_result.stdout_lines[0] }}"
-    when: poll_for_ip_result.stdout_lines[0] != hostvars[inventory_hostname].vm_provision.ssh_user
+    when: poll_for_ip_result.stdout_lines[0] != hostvars[inventory_hostname].vm_provision.ip
 
   - name: set ansible_user fact
     set_fact:

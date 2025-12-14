@@ -167,6 +167,20 @@ def main():
     gpu_pci = getenv("GPU_PCI_ADDRESS")
     machine_type = "q35" if gpu_pci else None  # Q35 required for PCIe passthrough
 
+    # Secondary disks configuration (for Rook-Ceph storage, etc.)
+    # Format: comma-separated list of "storage:size" pairs
+    # Example: "vm-storage:256,vm-storage:256" creates two 256 GiB disks from vm-storage pool
+    # These appear as /dev/sdb, /dev/sdc, etc. inside the VM
+    secondary_disks_raw = getenv("SECONDARY_DISKS", "")
+    secondary_disks = []
+    if secondary_disks_raw:
+        for disk_spec in secondary_disks_raw.split(","):
+            disk_spec = disk_spec.strip()
+            if disk_spec:
+                secondary_disks.append(disk_spec)
+        if secondary_disks:
+            logging.info(f"Secondary disks to attach: {secondary_disks}")
+
     # CPU type configuration
     # Use 'host' to expose full physical CPU instruction set (including x86-64-v2 for modern software)
     # Default 'kvm64' only exposes baseline x86-64, causing issues with recent distroless images
@@ -195,7 +209,15 @@ def main():
         params["machine"] = machine_type
 
     # Disk parameter: mirror UI by using scsi0 on local-lvm with size in GiB
+    # This is the OS disk (appears as /dev/sda in the VM)
     params["scsi0"] = f"{storage}:{disk_size}"
+
+    # Secondary disks: attach additional disks for Rook-Ceph storage, etc.
+    # These appear as /dev/sdb, /dev/sdc, etc. inside the VM
+    for idx, disk_spec in enumerate(secondary_disks, start=1):
+        # disk_spec format: "storage:size" e.g., "vm-storage:256"
+        params[f"scsi{idx}"] = disk_spec
+        logging.info(f"Attaching secondary disk scsi{idx}: {disk_spec}")
 
     # If an ISO is provided, attach it as cdrom and set boot order to prefer the installed disk
     if iso:

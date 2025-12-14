@@ -11,6 +11,7 @@
   gather_facts: false
   become: true
   strategy: free
+  any_errors_fatal: true
   roles:
     - provision_infra
 
@@ -42,16 +43,6 @@
   roles:
     - bootstrap_istio_ambient
 
-- name: setup storage classes
-  hosts: localhost
-  gather_facts: false
-  become: false
-  roles:
-    - role: bootstrap_cephfs_storage_class
-      when: lookup('env', 'ENABLE_CEPH') == 'true'
-    - role: bootstrap_rook_ceph
-      when: lookup('env', 'ENABLE_ROOK') == 'true'
-
 - name: setup nvidia device plugin
   hosts: localhost
   gather_facts: false
@@ -65,6 +56,16 @@
   become: true
   roles:
     - bootstrap_argocd
+
+- name: setup storage classes
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - role: bootstrap_cephfs_storage_class
+      when: lookup('env', 'ENABLE_CEPH') == 'true'
+    - role: bootstrap_rook_ceph
+      when: lookup('env', 'ENABLE_ROOK') == 'true'
 
 - name: setup applications
   hosts: localhost
