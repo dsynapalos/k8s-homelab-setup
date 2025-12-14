@@ -64,25 +64,25 @@ spec:
   resources:
     mon:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "512Mi"
       limits:
         memory: "1Gi"
     mgr:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "512Mi"
       limits:
         memory: "1Gi"
     osd:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "2Gi"
       limits:
         memory: "4Gi"
     prepareosd:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "50Mi"
   
   priorityClassNames:

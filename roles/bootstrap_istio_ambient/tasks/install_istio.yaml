@@ -66,7 +66,7 @@
         replicas: 1  # Single control plane sufficient for small cluster
         resources:
           requests:
-            cpu: 200m
+            cpu: 10m
             memory: 512Mi
           limits:
             cpu: 1000m
@@ -109,7 +109,7 @@
       # ztunnel runs as DaemonSet with hostNetwork for traffic interception
       resources:
         requests:
-          cpu: 100m
+          cpu: 10m
           memory: 256Mi
         limits:
           cpu: 500m

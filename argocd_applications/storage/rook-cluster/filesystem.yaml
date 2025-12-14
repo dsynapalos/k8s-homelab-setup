@@ -21,7 +21,7 @@ spec:
     activeStandby: false  # No standby for single-node cluster
     resources:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "512Mi"
       limits:
         memory: "1Gi"

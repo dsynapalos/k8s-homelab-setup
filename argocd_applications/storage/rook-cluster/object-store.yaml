@@ -22,7 +22,7 @@ spec:
     instances: 1  # Single RGW instance
     resources:
       requests:
-        cpu: "250m"
+        cpu: "10m"
         memory: "512Mi"
       limits:
         memory: "1Gi"

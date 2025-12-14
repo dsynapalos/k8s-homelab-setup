@@ -47,7 +47,7 @@ spec:
             - SYS_ADMIN
         resources:
           requests:
-            cpu: 50m
+            cpu: 10m
             memory: 128Mi
             nvidia.com/gpu: 1
           limits:
