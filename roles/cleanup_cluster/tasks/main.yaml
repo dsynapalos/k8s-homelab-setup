@@ -1,0 +1,143 @@
+---
+# Cleanup cluster role: Destroy VMs and clean up secondary storage
+#
+# This role reverses the provisioning done by setup_localhost + provision_infra:
+# 1. Destroys all VMs defined in the inventory (k8s-control + k8s-nodes)
+# 2. Removes Proxmox secondary storage pool registrations
+# 3. Cleans up LVM structures (thin pools, VGs, PVs) on secondary disks
+# 4. Wipes disk signatures so disks are clean for the next provisioning run
+#
+# Runs entirely on localhost using Proxmox API + SSH to Proxmox host
+
+# --- Phase 1: Destroy VMs ---
+
+- name: Build list of VM names from inventory
+  ansible.builtin.set_fact:
+    vm_names_to_destroy: "{{ (groups['k8s-control'] | default([])) + (groups['k8s-nodes'] | default([])) }}"
+
+- name: Display VMs targeted for destruction
+  ansible.builtin.debug:
+    msg: |
+      VMs to destroy: {{ vm_names_to_destroy | join(', ') }}
+
+- name: Destroy cluster VMs on Proxmox
+  ansible.builtin.script: "{{ role_path }}/files/destroy_vms.py"
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  environment:
+    PROXMOX_HOST: "{{ proxmox_api_host }}"
+    PROXMOX_USER: "{{ proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ proxmox_node }}"
+    VM_NAMES: "{{ vm_names_to_destroy | join(',') }}"
+  register: destroy_vms_result
+  when: vm_names_to_destroy | length > 0
+
+- name: Display VM destruction result
+  ansible.builtin.debug:
+    msg: "{{ (destroy_vms_result.stdout | from_json).message }}"
+  when:
+    - destroy_vms_result is not skipped
+    - destroy_vms_result.stdout is defined
+
+# --- Phase 2: Clean up secondary storage ---
+
+- name: Remove Proxmox storage pools and discover LVM structures
+  ansible.builtin.script: "{{ role_path }}/files/cleanup_storage.py"
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  environment:
+    PROXMOX_HOST: "{{ proxmox_api_host }}"
+    PROXMOX_USER: "{{ proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ proxmox_node }}"
+    STORAGE_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_STORAGE') | default('vm-storage', true) }}"
+    VG_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_VG') | default('vg-secondary', true) }}"
+  register: cleanup_storage_result
+
+- name: Parse storage cleanup results
+  ansible.builtin.set_fact:
+    storage_cleanup_info: "{{ cleanup_storage_result.stdout | from_json }}"
+
+- name: Display storage cleanup result
+  ansible.builtin.debug:
+    msg: "{{ storage_cleanup_info.message }}"
+
+# --- Phase 3: Clean up LVM structures and wipe disks via SSH ---
+# The Proxmox API can remove storage pool registrations, but cleaning up
+# the underlying LVM structures and wiping disk signatures requires
+# shell commands on the Proxmox host itself.
+
+- name: Discover LVM VGs matching secondary pattern on Proxmox host
+  ansible.builtin.command:
+    cmd: >
+      ssh -o StrictHostKeyChecking=no
+      {{ proxmox_api_user | regex_replace('@pam$', '') }}@{{ proxmox_api_host }}
+      "vgs --noheadings -o vg_name,pv_name --separator='|' 2>/dev/null | grep '{{ lookup('env', 'PROXMOX_SECONDARY_VG') | default('vg-secondary', true) }}' || true"
+  register: vg_discovery_result
+  changed_when: false
+
+- name: Parse discovered VGs and their backing devices
+  ansible.builtin.set_fact:
+    discovered_vgs: >-
+      {%- set vgs = [] -%}
+      {%- for line in vg_discovery_result.stdout_lines -%}
+        {%- set parts = line.strip().split('|') -%}
+        {%- if parts | length == 2 -%}
+          {%- set _ = vgs.append({'vg_name': parts[0].strip(), 'pv_device': parts[1].strip()}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ vgs }}
+
+- name: Display discovered LVM structures
+  ansible.builtin.debug:
+    msg: |
+      Discovered VGs to clean:
+      {% for vg in discovered_vgs %}
+      - VG: {{ vg.vg_name }} on {{ vg.pv_device }}
+      {% endfor %}
+  when: discovered_vgs | length > 0
+
+- name: Clean up LVM structures and wipe disks on Proxmox host
+  ansible.builtin.command:
+    cmd: >
+      ssh -o StrictHostKeyChecking=no
+      {{ proxmox_api_user | regex_replace('@pam$', '') }}@{{ proxmox_api_host }}
+      "set -e;
+      {% for vg in discovered_vgs %}
+      echo 'Removing LVM structures for {{ vg.vg_name }} on {{ vg.pv_device }}...';
+      lvremove -f {{ vg.vg_name }} 2>/dev/null || true;
+      vgremove -f {{ vg.vg_name }} 2>/dev/null || true;
+      pvremove -y {{ vg.pv_device }} 2>/dev/null || true;
+      wipefs -a {{ vg.pv_device }};
+      echo 'Cleaned {{ vg.pv_device }}';
+      {% endfor %}
+      echo 'All secondary disks cleaned'"
+  register: disk_cleanup_result
+  when: discovered_vgs | length > 0
+
+- name: Display disk cleanup output
+  ansible.builtin.debug:
+    msg: "{{ disk_cleanup_result.stdout_lines }}"
+  when:
+    - disk_cleanup_result is not skipped
+    - disk_cleanup_result.stdout_lines is defined
+
+- name: Remove local kubeconfig
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.kube/config"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup summary
+  ansible.builtin.debug:
+    msg: |
+      === Cleanup Complete ===
+      VMs destroyed: {{ (destroy_vms_result.stdout | from_json).destroyed | default([]) | length if destroy_vms_result is not skipped and destroy_vms_result.stdout is defined else 0 }}
+      Storage pools removed: {{ storage_cleanup_info.removed_pools | length }}
+      LVM VGs cleaned: {{ discovered_vgs | length }}
+      
+      The secondary disks are now clean and will be auto-discovered
+      as available storage on the next 'python3 setup-clusters.py' run.

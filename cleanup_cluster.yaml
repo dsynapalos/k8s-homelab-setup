@@ -1,0 +1,17 @@
+---
+# Cleanup playbook: Destroy cluster VMs and reinitialize secondary storage
+#
+# This reverses the provisioning done by setup_cluster.yaml:
+# - Destroys all VMs defined in the k8s inventory
+# - Removes Proxmox secondary storage pools (vm-storage-*)
+# - Cleans up LVM structures (VGs, PVs) on secondary disks
+# - Wipes disk signatures so disks are discovered as clean on next run
+#
+# Usage: python3 cleanup-clusters.py
+
+- name: cleanup cluster
+  hosts: localhost
+  become: false
+  gather_facts: true
+  roles:
+    - cleanup_cluster
