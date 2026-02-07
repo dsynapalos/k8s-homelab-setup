@@ -58,6 +58,7 @@ Cilium announces LoadBalancer service IPs via ARP (IPv4) and NDP (IPv6) on the l
 
 - A `CiliumLoadBalancerIPPool` is created from the `CILIUM_LOADBALANCER_IPPOOL` CIDR
 - Per-node `CiliumL2AnnouncementPolicy` resources are created on each worker node
+- Each policy uses a `nodeSelector` with `node-role.kubernetes.io/control-plane: DoesNotExist` to ensure only worker nodes participate in L2 leader election — control plane nodes must never hold LoadBalancer IPs because their network interface names may differ from workers
 - Clients on the LAN can reach LoadBalancer IPs directly
 
 ### Firewall Rules
@@ -236,7 +237,7 @@ helm get values cilium -n kube-system
 
 **DNS not resolving**: Check that VXLAN (8472/udp) and WireGuard (51871/udp) ports are open on all nodes. Run `cilium connectivity test` — it will pinpoint the failure.
 
-**LoadBalancer IP not reachable from LAN**: Verify the `CILIUM_LOADBALANCER_IPPOOL` CIDR is on your local subnet. Check that `CiliumL2AnnouncementPolicy` exists for each worker node. From another machine, try `arping <loadbalancer-ip>` to confirm L2 announcements.
+**LoadBalancer IP not reachable from LAN**: Verify the `CILIUM_LOADBALANCER_IPPOOL` CIDR is on your local subnet. Check that `CiliumL2AnnouncementPolicy` exists for each worker node. From another machine, try `arping <loadbalancer-ip>` to confirm L2 announcements. Also check which node holds the L2 lease: `kubectl get lease -n kube-system -l cilium.io/l2-announce=true`. If a control plane node holds the lease, the `nodeSelector` on the `CiliumL2AnnouncementPolicy` may be missing — control plane nodes have a different interface name (`ens18` vs `enp6s18`) and must be excluded from L2 elections.
 
 **Pods stuck in ContainerCreating after initial deploy**: Cilium may still be initializing. Wait for all Cilium pods to reach Running. Check `kubectl describe pod <stuck-pod>` for CNI-related events.
 

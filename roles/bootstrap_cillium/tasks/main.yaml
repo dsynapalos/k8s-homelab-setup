@@ -162,6 +162,10 @@
       metadata:
         name: "cilium-{{ inventory_hostname }}-l2announcement-policy"
       spec:
+        nodeSelector:
+          matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: DoesNotExist
         interfaces:
         - "{{ ansible_facts.default_ipv4.interface }}"  # Announce on primary network interface
         externalIPs: true  # Announce IPs from Service.spec.externalIPs
