@@ -2,7 +2,7 @@
 
 ## What It Does
 
-Thanos extends Prometheus with long-term metric storage, global querying, and data compaction. In this environment, it receives metrics from Prometheus via remote write, stores them in Rook-Ceph S3-compatible object storage, and provides a unified query interface that Grafana uses as its primary datasource.
+Thanos extends the monitoring stack with long-term metric storage, global querying, and data compaction. In this environment, it receives metrics from the [OTel Collector](otel-collector.md) via Prometheus remote write, stores them in Rook-Ceph S3-compatible object storage, and provides a unified query interface that Grafana uses as its primary datasource.
 
 ## Why It's Here
 
@@ -16,7 +16,7 @@ Thanos solves this by shipping metrics to Rook-Ceph's S3 bucket, compacting them
 
 ## Architecture
 
-> **⚠️ Prerequisite: Prometheus `remote_write` not yet configured**: Thanos Receive is deployed and listening on port 19291, but Prometheus does not currently have a `remote_write` section in its configuration. Until you add `remote_write` to `prometheus.yml` targeting `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`, Thanos will have no data. Grafana queries Thanos Query as its datasource, so dashboards will show metrics only from Prometheus's local 200h retention (served directly through Thanos Query's store fanout) until remote write is enabled.
+> The [OTel Collector](otel-collector.md) sends metrics to Thanos Receive via the `prometheusremotewrite` exporter, targeting `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`. This closes the remote-write gap that previously existed with standalone Prometheus.
 
 Thanos is deployed as four distinct components:
 
@@ -69,16 +69,16 @@ Each Thanos component uses an init container to assemble `objstore.yml` from the
 ## Data Flow
 
 ```
-Prometheus → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
-  (⚠️ not yet configured)       ↓                    ↓
-                          Thanos Query ← Thanos Store (reads from S3)
-                                ↓
-                             Grafana
-                                
-                          Thanos Compactor → compacts/downsamples in S3
+OTel Collector → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
+                                     ↓                    ↓
+                              Thanos Query ← Thanos Store (reads from S3)
+                                    ↓
+                                 Grafana
+                                    
+                              Thanos Compactor → compacts/downsamples in S3
 ```
 
-> The first arrow (Prometheus → Thanos Receive) requires adding `remote_write` to Prometheus's configuration. All other connections are already operational.
+> The OTel Collector uses its `prometheusremotewrite` exporter to send all scraped metrics to Thanos Receive. All connections in this pipeline are operational.
 
 ## Retention Policy
 
@@ -92,7 +92,8 @@ Prometheus → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
 
 | Component | Relationship |
 |-----------|-------------|
-| [Prometheus](prometheus.md) | Sends metrics via remote write to Thanos Receive |
+| [OTel Collector](otel-collector.md) | Sends metrics via `prometheusremotewrite` exporter to Thanos Receive |
+| [Prometheus](prometheus.md) | *(Deprecated)* Previously sent metrics via remote write — replaced by OTel Collector |
 | [Grafana](grafana.md) | Queries Thanos Query as its primary datasource (`uid: prometheus`) |
 | [Rook-Ceph Cluster](../storage/rook-cluster.md) | S3 bucket for metric storage, block PVCs for local data |
 
@@ -124,7 +125,7 @@ kubectl get secret thanos-bucket -n monitoring
 kubectl get pvc -n monitoring | grep thanos
 ```
 
-**Thanos has no data / dashboards empty**: Most likely Prometheus does not have `remote_write` configured. Add `remote_write` to `prometheus.yml` pointing to `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`.
+**Thanos has no data / dashboards empty**: Check that the OTel Collector pod is running and its `prometheusremotewrite` exporter is configured to send to `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`. Verify with `kubectl logs -n monitoring -l app=otel-collector --tail=50`.
 
 **Thanos Query shows no stores**: Check that Receive and Store pods are running. Query discovers stores via `--store` flags — verify the service DNS names resolve correctly.
 

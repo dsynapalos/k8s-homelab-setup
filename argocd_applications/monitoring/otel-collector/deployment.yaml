@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: monitoring
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8888"
+    spec:
+      serviceAccountName: otel-collector
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.120.0
+        args:
+          - '--config=file:/etc/otelcol/otel-base-config.yaml'
+          - '--config=file:/etc/otelcol/otel-metrics-pipeline.yaml'
+        ports:
+        - containerPort: 8888
+          name: metrics
+        - containerPort: 8889
+          name: prom-exporter
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/otelcol/
+        resources:
+          requests:
+            cpu: 10m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 15
+      volumes:
+      - name: otel-collector-config
+        projected:
+          sources:
+          - configMap:
+              name: otel-base-config
+          - configMap:
+              name: otel-metrics-pipeline

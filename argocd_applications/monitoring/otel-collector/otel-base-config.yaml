@@ -1,0 +1,23 @@
+# Base OTel Collector configuration — pipeline-independent settings.
+#
+# This file is merged with all otel-*-pipeline.yaml files at startup via
+# multiple --config=file: flags in the Deployment args. The collector
+# deep-merges all config files: each pipeline file contributes its own
+# receivers, processors, exporters, and service.pipelines.<name> entry.
+#
+# To add a new pipeline:
+#   1. Create otel-<context>-pipeline.yaml with receivers/processors/exporters
+#      and a service.pipelines.<type> entry
+#   2. Add a configMapGenerator entry in kustomization.yaml
+#   3. Add the new ConfigMap as a projected.sources entry in deployment.yaml
+#   4. Add a --config=file:/etc/otelcol/<filename>.yaml arg to the Deployment
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+service:
+  extensions: [health_check]
+  telemetry:
+    metrics:
+      address: "0.0.0.0:8888"

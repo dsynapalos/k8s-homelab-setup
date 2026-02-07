@@ -3,4 +3,4 @@
     state: present
     definition: "{{ lookup('file', item) }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
-  loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) }}"
+  loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) | reject('search', 'prometheus_manifest.yaml') | list }}"

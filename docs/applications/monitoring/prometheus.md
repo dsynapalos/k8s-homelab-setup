@@ -1,5 +1,7 @@
 # Prometheus
 
+> **⚠️ DEPRECATED**: Prometheus has been replaced by the [OpenTelemetry Collector](otel-collector.md) as the cluster's metrics collection engine. The OTel Collector uses a Prometheus receiver with the same scrape configuration and forwards metrics to Thanos Receive via `prometheusremotewrite` exporter — closing the remote-write gap that existed with standalone Prometheus. The Prometheus ArgoCD Application manifest is no longer deployed. These manifests remain in the repository for reference but are not actively maintained.
+
 ## What It Does
 
 Prometheus is the core metrics collection and alerting engine for the cluster. It scrapes metrics from every layer of the Kubernetes stack — API server, nodes, pods, services — and stores them as time-series data. In this environment, Prometheus is the single source of truth for all operational metrics.

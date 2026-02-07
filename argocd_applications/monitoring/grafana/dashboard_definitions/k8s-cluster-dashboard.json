@@ -1660,7 +1660,10 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
         "includeAll": true,
         "name": "Node",
         "options": [],
@@ -1676,7 +1679,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Kubernetes cluster monitoring (via Prometheus)",
+  "title": "Kubernetes cluster monitoring (via Thanos)",
   "uid": "11987a60-a5a9-473f-a0bd-35cebce00d64",
   "version": 1
 }

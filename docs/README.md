@@ -27,7 +27,7 @@ docs/
 │
 └── applications/                    ← Per-application docs (mirrors argocd_applications/)
     ├── monitoring/
-    │   ├── prometheus.md            ← Metrics collection, scrape config, alert rules
+    │   ├── prometheus.md            ← (deprecated) Replaced by otel-collector
     │   ├── grafana.md               ← Dashboards, datasource provisioning
     │   ├── thanos.md                ← Long-term storage, Receive, Query, Compactor
     │   ├── alertmanager.md          ← Alert routing & deduplication
@@ -35,8 +35,8 @@ docs/
     │   ├── alertmanager-matrix-bridge.md  ← Webhook → Matrix message translation
     │   ├── dcgm-exporter.md         ← NVIDIA GPU metrics exporter
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
-    │   ├── metrics-server.md        ← (placeholder) kubectl top / HPA
-    │   └── otel-collector.md        ← (placeholder) OpenTelemetry pipeline
+    │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
+    │   └── metrics-server.md        ← (placeholder) kubectl top / HPA
     └── storage/
         ├── rook-operator.md         ← Rook operator lifecycle & CRDs
         └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
@@ -131,7 +131,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 
 | Document | Purpose |
 |---|---|
-| [prometheus.md](applications/monitoring/prometheus.md) | Metrics collection engine. Scrape configuration, service discovery, alert rules, RBAC. |
+| [prometheus.md](applications/monitoring/prometheus.md) | *(Deprecated)* Standalone Prometheus deployment. Replaced by [OTel Collector](applications/monitoring/otel-collector.md). Manifests kept for reference. |
 | [grafana.md](applications/monitoring/grafana.md) | Dashboard visualization. Datasource provisioning (uid: prometheus), dashboard ConfigMaps, ingress. |
 | [thanos.md](applications/monitoring/thanos.md) | Long-term metric storage. Receive (remote write target), Query, Store, Compactor. S3 via Rook-Ceph ObjectStore. |
 | [alertmanager.md](applications/monitoring/alertmanager.md) | Alert routing. Deduplication, grouping, webhook delivery to alertmanager-matrix-bridge. |
@@ -139,8 +139,8 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [alertmanager-matrix-bridge.md](applications/monitoring/alertmanager-matrix-bridge.md) | Webhook translator. Init container config generation from `matrix-bot` Secret, emoji-formatted HTML messages. |
 | [dcgm-exporter.md](applications/monitoring/dcgm-exporter.md) | NVIDIA GPU metrics. Requires RuntimeClass nvidia + GPU allocation. Metric deduplication via `max() by (gpu, Hostname)`. |
 | [node-exporter.md](applications/monitoring/node-exporter.md) | Host metrics DaemonSet. CPU, memory, disk I/O, network, filesystem utilization from every node. |
+| [otel-collector.md](applications/monitoring/otel-collector.md) | Metrics collection pipeline. Prometheus receiver, remote write to Thanos, expandable for traces/logs. |
 | [metrics-server.md](applications/monitoring/metrics-server.md) | *(Placeholder)* Kubernetes Metrics API aggregator for `kubectl top` and HPA. |
-| [otel-collector.md](applications/monitoring/otel-collector.md) | *(Placeholder)* OpenTelemetry Collector for traces, metrics, and logs routing. |
 
 #### Storage (`applications/storage/`)
 
@@ -221,5 +221,5 @@ If you are an AI agent navigating this repository:
 3. **Follow the folder convention**: `docs/applications/` mirrors `argocd_applications/`, so manifest locations map directly to doc locations.
 4. **Troubleshooting lives in two places**: component-specific sections inside each doc, and the cross-cutting [troubleshooting.md](infrastructure/troubleshooting.md) for cluster-wide issues. Check the per-component doc first, fall back to troubleshooting.md.
 5. **Configuration is centralized**: All environment variables are documented in [configuration.md](infrastructure/configuration.md). The `.env` file is the single source of truth at runtime; the doc is the reference for what each variable does.
-6. **Placeholder docs** (`metrics-server.md`, `otel-collector.md`) exist for planned components. They contain the structure skeleton but no implementation details yet.
+6. **Placeholder docs** (`metrics-server.md`) exist for planned components. They contain the structure skeleton but no implementation details yet. **Deprecated docs** (`prometheus.md`) are marked with a banner and kept for reference.
 7. **The project does not use `ansible` CLI** — only `ansible_runner.run()` from Python. Never suggest `ansible-playbook`, `ansible-inventory`, or `ansible -m ping` commands.
