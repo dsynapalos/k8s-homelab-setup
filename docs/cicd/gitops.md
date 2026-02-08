@@ -17,11 +17,13 @@ Without GitOps, deploying applications means running `kubectl apply` manually or
 
 ### Installation
 
-The `bootstrap_argocd` role installs ArgoCD from upstream manifests (version controlled by `ARGOCD_VERSION`), creates the `argocd` namespace, and sets up dual Ingress:
+The `bootstrap_argocd` role installs ArgoCD from upstream manifests (version controlled by `ARGOCD_VERSION`), creates the `argocd` namespace, and sets up Ingress with TLS:
 
-- **HTTP Ingress**: Redirects to HTTPS
-- **HTTPS Ingress**: TLS passthrough via Cilium annotation (`ingress.cilium.io/tls-passthrough: enabled`)
+- **TLS termination**: cert-manager provisions a certificate for `argocd.k8s.local` via the `homelab-ca-issuer` ClusterIssuer
+- **Insecure mode**: ArgoCD server runs with `server.insecure: "true"` (serves HTTP behind the TLS-terminating Cilium Ingress)
 - **Access**: `https://argocd.k8s.local`
+
+During initial bootstrap, cert-manager is not yet running (it deploys as an ArgoCD Application). ArgoCD is accessible via HTTP until cert-manager starts and provisions the TLS certificate.
 
 An AppProject called `homelab` is created with permissive settings — all source repos, all destination namespaces, all resource types. This keeps the homelab simple; production would lock this down.
 
@@ -115,13 +117,16 @@ argocd_applications/
 │   ├── matrix/
 │   ├── thanos/
 │   └── ...
-└── storage/
-    ├── rook-operator/
-    └── rook-cluster/
+├── storage/
+│   ├── rook-operator/
+│   └── rook-cluster/
+└── security/
+    └── cert-manager/      ← TLS certificate automation
 
 roles/bootstrap_applications/files/
 ├── prometheus_manifest.yaml     ← ArgoCD Application CRs
 ├── grafana_manifest.yaml
+├── cert-manager_manifest.yaml
 ├── alertmanager_manifest.yaml
 ├── matrix_manifest.yaml
 ├── thanos_manifest.yaml
@@ -134,8 +139,8 @@ Applications deploy in a specific order via ArgoCD sync waves to respect depende
 
 | Wave | Applications | Why This Order |
 |------|-------------|---------------|
-| 1 | Matrix (Synapse homeserver), Rook Operator (CRDs + operator) | Must be running before dependent resources |
-| 2 | Alertmanager, Prometheus, Thanos, Rook Cluster (CephCluster CR + pools) | Core monitoring + storage, after operator/Matrix ready |
+| 1 | cert-manager (CRDs + controller + CA chain), Matrix (Synapse homeserver), Rook Operator (CRDs + operator) | Infrastructure services must be running before dependent resources |
+| 2 | Alertmanager, Prometheus, Thanos, Rook Cluster (CephCluster CR + pools), OTel Collector | Core monitoring + storage, after operator/Matrix ready |
 | 3 | Matrix bootstrap job | Creates bot user and `matrix-bot` Secret; auto-cleans after 300s (`ttlSecondsAfterFinished`) |
 | 4 | Alertmanager-Matrix-Bridge | Reads `matrix-bot` Secret from wave 3 |
 

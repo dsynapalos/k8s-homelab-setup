@@ -227,6 +227,27 @@ For networking internals and Cilium integration, see [Networking](networking.md)
 
 ---
 
+## cert-manager (TLS Certificates)
+
+### What It Does
+
+Automates TLS certificate provisioning for all Ingress endpoints using a self-signed CA chain. Deployed as an ArgoCD Application — no feature flag required (always-on).
+
+### Configuration
+
+cert-manager has no `.env` variables. The version is pinned directly in the Kustomize resource URL at `argocd_applications/security/cert-manager/kustomization.yaml`. All ingresses reference the `homelab-ca-issuer` ClusterIssuer via annotation.
+
+### How It Works
+
+1. cert-manager deploys from upstream static manifest via ArgoCD (sync-wave 1)
+2. A self-signed CA chain is bootstrapped (selfsigned-issuer → homelab-ca Certificate → homelab-ca-issuer ClusterIssuer)
+3. Every Ingress annotated with `cert-manager.io/cluster-issuer: homelab-ca-issuer` gets an automatic TLS certificate
+4. ArgoCD runs in insecure mode with TLS terminated at the Cilium Ingress
+
+For full details, see [cert-manager](../applications/security/cert-manager.md). For networking integration, see [Networking — TLS Certificate Management](networking.md#tls-certificate-management).
+
+---
+
 ## Feature Flag Summary
 
 | Feature | Variable | Default | Dependencies |

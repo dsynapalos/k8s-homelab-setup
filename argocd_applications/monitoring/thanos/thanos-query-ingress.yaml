@@ -4,9 +4,14 @@ metadata:
   name: thanos-query
   namespace: monitoring
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
 spec:
   ingressClassName: cilium
+  tls:
+  - hosts:
+    - thanos.k8s.local
+    secretName: thanos-query-tls
   rules:
   - host: thanos.k8s.local
     http:

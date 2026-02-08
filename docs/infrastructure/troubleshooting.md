@@ -10,7 +10,7 @@ Common failure modes and how to debug them, organized by component. Start with t
 
 ### Ingress Access (*.k8s.local hostnames)
 
-All web UIs (ArgoCD, Grafana, Prometheus, Hubble, Matrix, Thanos) are exposed via Cilium Ingress using `*.k8s.local` hostnames. These are **not real DNS names** — you must add them to your workstation's `/etc/hosts`:
+All web UIs (ArgoCD, Grafana, Prometheus, Hubble, Matrix, Thanos) are exposed via Cilium Ingress using `*.k8s.local` hostnames with TLS certificates from cert-manager. HTTP requests are automatically redirected to HTTPS (via `ingress.cilium.io/force-https`). These are **not real DNS names** — you must add them to your workstation's `/etc/hosts`:
 
 ```bash
 # Replace the IP with one from your CILIUM_LOADBALANCER_IPPOOL range
@@ -20,6 +20,8 @@ All web UIs (ArgoCD, Grafana, Prometheus, Hubble, Matrix, Thanos) are exposed vi
 
 If you can reach the cluster via `kubectl` but can't open any web UI, this is almost certainly the issue.
 
+Since the CA is self-signed, browsers will show a certificate warning. To remove it, import the CA certificate into your trust store — see [cert-manager — Troubleshooting](../applications/security/cert-manager.md#troubleshooting).
+
 ### ArgoCD Login
 
 ArgoCD generates a random admin password on first install:
@@ -28,7 +30,7 @@ ArgoCD generates a random admin password on first install:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
 
-Username is `admin`. The HTTPS certificate is self-signed — expect a browser warning.
+Username is `admin`. TLS is terminated at the Cilium Ingress using a cert-manager-provisioned certificate. The CA is self-signed — expect a browser warning unless you've imported the CA cert (see [cert-manager](../applications/security/cert-manager.md#troubleshooting)).
 
 ### Ansible Runner Artifacts
 
@@ -149,6 +151,12 @@ See the individual application docs for diagnostic commands and common issues:
 - [Thanos](../applications/monitoring/thanos.md#troubleshooting) — remote write from OTel Collector, S3 bucket, component health
 - [DCGM Exporter](../applications/monitoring/dcgm-exporter.md#troubleshooting) — GPU metrics, scheduling, deduplication
 - [Node Exporter](../applications/monitoring/node-exporter.md#troubleshooting) — DaemonSet status, collector errors
+
+---
+
+## cert-manager / TLS Certificates
+
+See [cert-manager — Troubleshooting](../applications/security/cert-manager.md#troubleshooting) for diagnostic commands and common issues (ClusterIssuer not ready, certificates stuck in Pending, webhook validation errors, browser trust warnings).
 
 ---
 

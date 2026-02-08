@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# NOTE: No namespace transformer — the upstream cert-manager.yaml manages its own
+# namespaces across cert-manager and kube-system (for leader election RBAC).
+# Overriding with namespace: cert-manager breaks cainjector leader election.
+resources:
+  # cert-manager v1.17.2 — update version here when upgrading
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+  - self-signed-issuer.yaml
+  - ca-certificate.yaml
+  - ca-issuer.yaml

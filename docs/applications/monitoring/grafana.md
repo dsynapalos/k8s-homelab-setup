@@ -25,7 +25,7 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 
 **Dashboard provider**: Configured to read from `/etc/grafana/provisioning/dashboards/`, with `disableNameSuffixHash: false` in Kustomize. This means ConfigMap names include a content hash (e.g., `grafana-k8s-dashboard-abc123`). When you update a dashboard JSON file, the hash changes, generating a new ConfigMap name. The Deployment references ConfigMaps by name, so this **automatically triggers a Grafana pod restart** to pick up dashboard changes — no manual rollout needed.
 
-**Access**: Exposed via Cilium Ingress at `grafana.k8s.local`.
+**Access**: Exposed via Cilium Ingress at `https://grafana.k8s.local` (HTTP requests are redirected to HTTPS via `ingress.cilium.io/force-https`).
 
 ## Dashboard Notes
 

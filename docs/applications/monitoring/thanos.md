@@ -38,7 +38,7 @@ Thanos is deployed as five distinct components:
 - Fans out queries to both Thanos Receive (real-time) and Thanos Store (historical)
 - Deduplicates by `receive_replica` and `prometheus_replica` labels
 - This is what Grafana connects to as its datasource
-- Exposed via Cilium Ingress at `thanos.k8s.local`
+- Exposed via Cilium Ingress at `https://thanos.k8s.local` (HTTP redirects to HTTPS)
 
 ### Thanos Ruler (StatefulSet)
 - Evaluates Prometheus-format alerting and recording rules against Thanos Query

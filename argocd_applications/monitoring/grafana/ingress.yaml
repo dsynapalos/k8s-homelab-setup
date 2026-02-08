@@ -5,8 +5,15 @@ metadata:
   namespace: monitoring
   labels:
     app: grafana
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
 spec:
   ingressClassName: cilium
+  tls:
+  - hosts:
+    - grafana.k8s.local
+    secretName: grafana-tls
   rules:
   - host: grafana.k8s.local
     http:

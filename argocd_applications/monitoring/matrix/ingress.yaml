@@ -5,8 +5,15 @@ metadata:
   namespace: monitoring
   labels:
     app: matrix
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
 spec:
   ingressClassName: cilium
+  tls:
+  - hosts:
+    - matrix.k8s.local
+    secretName: matrix-tls
   rules:
   - host: matrix.k8s.local
     http:

@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: homelab-ca-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  ca:
+    secretName: homelab-ca-secret

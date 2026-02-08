@@ -31,7 +31,7 @@ Every observable system needs a metrics backend. Prometheus was chosen because:
 
 **Alerting**: Forwards alerts to Alertmanager at `alertmanager.monitoring.svc.cluster.local:9093`. Alert rules are loaded from a ConfigMap (currently includes GPU temperature alerts).
 
-**Access**: Exposed via Cilium Ingress at `prometheus.k8s.local`.
+**Access**: Exposed via Cilium Ingress at `https://prometheus.k8s.local` (HTTP redirects to HTTPS).
 
 **ArgoCD sync-wave**: 2 (deploys alongside other core monitoring components).
 

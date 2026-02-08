@@ -195,7 +195,13 @@
         namespace: kube-system
         annotations:
           kubernetes.io/ingress.class: cilium
+          cert-manager.io/cluster-issuer: homelab-ca-issuer
+          ingress.cilium.io/force-https: "enabled"
       spec:
+        tls:
+        - hosts:
+          - hubble.k8s.local
+          secretName: hubble-ui-tls
         rules:
         - host: hubble.k8s.local
           http:

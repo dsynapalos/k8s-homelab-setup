@@ -182,7 +182,9 @@ Creates the `nvidia` RuntimeClass and deploys the NVIDIA device plugin:
 Installs ArgoCD and configures Git repository access:
 
 - Deploys ArgoCD from upstream manifests (version `ARGOCD_VERSION`)
-- Creates dual Ingress: HTTP redirect + HTTPS with TLS passthrough
+- Configures ArgoCD server in insecure mode (`server.insecure: "true"` via `argocd-cmd-params-cm`)
+- Creates a single Ingress with cert-manager TLS termination and `ingress.cilium.io/force-https` for HTTP→HTTPS redirect
+- Removes legacy dual-ingress resources (HTTP + HTTPS passthrough) if they exist
 - Generates SSH keypair (if not already stored in ConfigMap), registers as deploy key on GitLab
 - Creates the `homelab` AppProject allowing all repos, namespaces, and resource types
 
@@ -216,7 +218,7 @@ Uploads all ArgoCD Application manifests:
 - ArgoCD then takes over lifecycle management, syncing from Git
 
 Currently deployed manifests:
-`alertmanager`, `alertmanager-matrix-bridge`, `dcgm-exporter`, `grafana`, `matrix`, `node-exporter`, `prometheus`, `thanos`
+`alertmanager`, `alertmanager-matrix-bridge`, `cert-manager`, `dcgm-exporter`, `grafana`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`
 
 ---
 

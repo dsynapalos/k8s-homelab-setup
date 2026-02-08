@@ -282,6 +282,74 @@ helm get values ztunnel -n istio-system
 
 ---
 
+## TLS Certificate Management
+
+### How It Works
+
+All Ingress endpoints use HTTPS with TLS certificates provisioned automatically by [cert-manager](../applications/security/cert-manager.md). Since this cluster uses `*.k8s.local` hostnames (not real DNS), a self-signed CA chain is used instead of a public CA like Let's Encrypt.
+
+The CA hierarchy:
+
+1. **selfsigned-issuer** — bootstrap ClusterIssuer (creates the CA itself)
+2. **homelab-ca** — root CA Certificate (10-year validity, ECDSA P-256)
+3. **homelab-ca-issuer** — production ClusterIssuer that signs all leaf certificates
+
+### Ingress TLS Pattern
+
+Every Ingress resource includes three additions:
+
+```yaml
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
+spec:
+  tls:
+  - hosts:
+    - <app>.k8s.local
+    secretName: <app>-tls
+```
+
+cert-manager's ingress-shim controller watches for the annotation, creates a Certificate resource, obtains a signed certificate from the CA, and stores it in the referenced Secret. Cilium's Ingress Controller uses the Secret for TLS termination.
+
+The `ingress.cilium.io/force-https: "enabled"` annotation makes Cilium create an HTTP listener that returns a `301` redirect to the HTTPS URL. This ensures all plain HTTP requests are automatically redirected to HTTPS — users never see unencrypted content.
+
+### ArgoCD TLS
+
+ArgoCD runs in insecure mode (`server.insecure: "true"` in `argocd-cmd-params-cm`), serving HTTP behind the Cilium Ingress. TLS is terminated at the Ingress using a cert-manager-provisioned certificate (`argocd-tls` Secret). This replaces the previous TLS passthrough setup where ArgoCD managed its own self-signed certificate.
+
+### Hubble UI TLS
+
+The Hubble UI Ingress (created by the `bootstrap_cillium` role in the infrastructure stage) includes the cert-manager annotation. Since cert-manager deploys later (via ArgoCD in the application stage), the certificate is provisioned after cert-manager starts. Until then, Hubble UI is accessible via HTTP.
+
+### Boundary with Istio mTLS
+
+cert-manager and Istio Ambient handle different TLS concerns:
+
+| Traffic | Handler | Certificate Source |
+|---------|---------|-------------------|
+| Client → Ingress (north-south) | cert-manager + Cilium | homelab-ca-issuer |
+| Pod → Pod (east-west) | Istio ztunnel | istiod built-in CA (SPIFFE) |
+
+These are separate PKI chains. cert-manager does **not** replace or interact with Istio's workload certificate management. Do not configure `istio-csr` to bridge them unless you have an explicit multi-cluster PKI requirement.
+
+### Trusting the CA
+
+Since the CA is self-signed, browsers will show an untrusted certificate warning. To trust it:
+
+```bash
+# Extract the CA certificate
+kubectl get secret -n cert-manager homelab-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > homelab-ca.crt
+
+# Add to system trust (Ubuntu/Debian)
+sudo cp homelab-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+```
+
+For details on cert-manager configuration, troubleshooting, and the full certificate inventory, see [cert-manager](../applications/security/cert-manager.md).
+
+---
+
 ## Links
 
 - [Cilium Documentation](https://docs.cilium.io/)
@@ -291,3 +359,4 @@ helm get values ztunnel -n istio-system
 - [Istio Ambient Documentation](https://istio.io/latest/docs/ambient/)
 - [Istio HBONE Protocol](https://istio.io/latest/docs/ambient/architecture/hbone/)
 - [SPIFFE Identity Framework](https://spiffe.io/)
+- [cert-manager Documentation](https://cert-manager.io/docs/)

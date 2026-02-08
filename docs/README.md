@@ -38,9 +38,11 @@ docs/
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
     │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
     │   └── metrics-server.md        ← kubectl top / HPA metrics aggregator
-    └── storage/
-        ├── rook-operator.md         ← Rook operator lifecycle & CRDs
-        └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
+    ├── storage/
+    │   ├── rook-operator.md         ← Rook operator lifecycle & CRDs
+    │   └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
+    └── security/
+        └── cert-manager.md          ← TLS certificate automation, CA chain, ingress integration
 ```
 
 ### Key principle: `applications/` mirrors `argocd_applications/`
@@ -51,6 +53,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 |---|---|
 | `argocd_applications/monitoring/prometheus/` | `docs/applications/monitoring/prometheus.md` |
 | `argocd_applications/storage/rook-cluster/` | `docs/applications/storage/rook-cluster.md` |
+| `argocd_applications/security/cert-manager/` | `docs/applications/security/cert-manager.md` |
 
 ---
 
@@ -150,6 +153,12 @@ One doc per deployed application. Each follows the same internal structure (see 
 |---|---|
 | [rook-operator.md](applications/storage/rook-operator.md) | Rook operator deployment. CRDs, RBAC, CSI drivers, discovery daemon, operator ConfigMap patches. |
 | [rook-cluster.md](applications/storage/rook-cluster.md) | CephCluster CR definition. MON/MGR/OSD/MDS/RGW components, block/filesystem/object pools, StorageClasses, health status. |
+
+#### Security (`applications/security/`)
+
+| Document | Purpose |
+|---|---|
+| [cert-manager.md](applications/security/cert-manager.md) | TLS certificate automation. Self-signed CA chain, ingress-shim integration, ArgoCD TLS termination, Istio mTLS boundary. |
 
 ---
 

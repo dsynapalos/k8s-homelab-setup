@@ -5,8 +5,15 @@ metadata:
   namespace: monitoring
   labels:
     app: prometheus
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
 spec:
   ingressClassName: cilium
+  tls:
+  - hosts:
+    - prometheus.k8s.local
+    secretName: prometheus-tls
   rules:
   - host: prometheus.k8s.local
     http:

@@ -15,17 +15,68 @@
     namespace: argocd
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
 
-- name: create argocd Ingress for HTTP
+- name: configure argocd server for TLS termination at ingress
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+        namespace: argocd
+      data:
+        server.insecure: "true"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: argocd_insecure_config
+
+- name: restart argocd-server to apply insecure mode
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-server
+        namespace: argocd
+      spec:
+        template:
+          metadata:
+            annotations:
+              config-patch/restartedAt: "{{ ansible_date_time.iso8601 }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: argocd_insecure_config.changed
+
+- name: remove legacy argocd ingresses
+  kubernetes.core.k8s:
+    state: absent
+    kind: Ingress
+    name: "{{ item }}"
+    namespace: argocd
+    api_version: networking.k8s.io/v1
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  loop:
+    - argocd-server-http
+    - argocd-server-https
+  ignore_errors: true
+
+- name: create argocd Ingress with TLS termination
   kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
-        name: argocd-server-http
+        name: argocd-server
         namespace: argocd
+        annotations:
+          cert-manager.io/cluster-issuer: homelab-ca-issuer
+          ingress.cilium.io/force-https: "enabled"
       spec:
         ingressClassName: cilium
+        tls:
+        - hosts:
+          - argocd.k8s.local
+          secretName: argocd-tls
         rules:
         - host: argocd.k8s.local
           http:
@@ -37,32 +88,6 @@
                   name: argocd-server
                   port:
                     number: 80
-    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
-
-- name: create argocd Ingress for HTTPS with TLS passthrough
-  kubernetes.core.k8s:
-    state: present
-    definition:
-      apiVersion: networking.k8s.io/v1
-      kind: Ingress
-      metadata:
-        name: argocd-server-https
-        namespace: argocd
-        annotations:
-          ingress.cilium.io/tls-passthrough: "enabled"
-      spec:
-        ingressClassName: cilium
-        rules:
-        - host: argocd.k8s.local
-          http:
-            paths:
-            - path: /
-              pathType: Prefix
-              backend:
-                service:
-                  name: argocd-server
-                  port:
-                    number: 443
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
 
 - name: check if argocd ssh public key configmap exists

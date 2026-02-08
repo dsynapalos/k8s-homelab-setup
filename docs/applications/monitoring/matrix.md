@@ -28,7 +28,7 @@ The alerting stack needs a destination that supports push notifications to your 
 - Creates public `#alerts` room with world-readable history
 - Saves all credentials to `matrix-bot` Secret (used by [alertmanager-matrix-bridge](alertmanager-matrix-bridge.md))
 
-**Access**: Exposed via Cilium Ingress at `matrix.k8s.local` (port 8008 HTTP, 8448 federation).
+**Access**: Exposed via Cilium Ingress at `https://matrix.k8s.local` (HTTP requests are redirected to HTTPS). Synapse listens on port 8008 internally; TLS is terminated at the ingress.
 
 **ArgoCD sync-wave**: 1 (deploys first so the bootstrap job can run before dependent components).
 
@@ -44,7 +44,7 @@ Wave 4: alertmanager-matrix-bridge reads matrix-bot Secret
 ## Connecting as a User
 
 1. Open Element (or any Matrix client)
-2. Set homeserver to `http://matrix.k8s.local`
+2. Set homeserver to `https://matrix.k8s.local`
 3. Register a new account (registration is enabled)
 4. Join the `#alerts` room
 
