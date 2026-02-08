@@ -1,0 +1,19 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: metrics-server
+  namespace: monitoring
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '10250'
+    prometheus.io/scheme: 'https'
+spec:
+  selector:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/name: metrics-server
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: https

@@ -37,7 +37,7 @@ docs/
     │   ├── kube-state-metrics.md    ← Kubernetes object state metrics
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
     │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
-    │   └── metrics-server.md        ← (placeholder) kubectl top / HPA
+    │   └── metrics-server.md        ← kubectl top / HPA metrics aggregator
     └── storage/
         ├── rook-operator.md         ← Rook operator lifecycle & CRDs
         └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
@@ -142,7 +142,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [kube-state-metrics.md](applications/monitoring/kube-state-metrics.md) | Kubernetes object state metrics. Deployment/pod/node/job counts, conditions, resource requests. |
 | [node-exporter.md](applications/monitoring/node-exporter.md) | Host metrics DaemonSet. CPU, memory, disk I/O, network, filesystem utilization from every node. |
 | [otel-collector.md](applications/monitoring/otel-collector.md) | Metrics collection pipeline. Prometheus receiver, remote write to Thanos, expandable for traces/logs. |
-| [metrics-server.md](applications/monitoring/metrics-server.md) | *(Placeholder)* Kubernetes Metrics API aggregator for `kubectl top` and HPA. |
+| [metrics-server.md](applications/monitoring/metrics-server.md) | Kubernetes Metrics API aggregator. Enables `kubectl top`, HPA, and VPA via kubelet metric collection. |
 
 #### Storage (`applications/storage/`)
 
@@ -223,5 +223,5 @@ If you are an AI agent navigating this repository:
 3. **Follow the folder convention**: `docs/applications/` mirrors `argocd_applications/`, so manifest locations map directly to doc locations.
 4. **Troubleshooting lives in two places**: component-specific sections inside each doc, and the cross-cutting [troubleshooting.md](infrastructure/troubleshooting.md) for cluster-wide issues. Check the per-component doc first, fall back to troubleshooting.md.
 5. **Configuration is centralized**: All environment variables are documented in [configuration.md](infrastructure/configuration.md). The `.env` file is the single source of truth at runtime; the doc is the reference for what each variable does.
-6. **Placeholder docs** (`metrics-server.md`) exist for planned components. They contain the structure skeleton but no implementation details yet. **Deprecated docs** (`prometheus.md`) are marked with a banner and kept for reference.
+6. **Deprecated docs** (`prometheus.md`) are marked with a banner and kept for reference.
 7. **The project does not use `ansible` CLI** — only `ansible_runner.run()` from Python. Never suggest `ansible-playbook`, `ansible-inventory`, or `ansible -m ping` commands.
