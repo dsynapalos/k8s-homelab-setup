@@ -134,27 +134,6 @@ receivers:
               target_label: systemd_service_name
               replacement: '$${1}'
 
-        # Scrape Node Exporter
-        - job_name: 'node-exporter'
-          kubernetes_sd_configs:
-            - role: endpointslice
-          relabel_configs:
-          - source_labels: [__meta_kubernetes_endpointslice_name]
-            regex: 'node-exporter'
-            action: keep
-
-        # Scrape kube-state-metrics
-        - job_name: 'kube-state-metrics'
-          kubernetes_sd_configs:
-            - role: endpointslice
-          relabel_configs:
-          - source_labels: [__meta_kubernetes_endpointslice_name]
-            regex: 'kube-state-metrics.*'
-            action: keep
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            regex: 'http-metrics'
-            action: keep
-
 processors:
   memory_limiter:
     limit_mib: 2800
@@ -202,6 +181,8 @@ exporters:
       insecure: true
     resource_to_telemetry_conversion:
       enabled: true
+    retry_on_failure:
+      enabled: false
 
 service:
   pipelines:
