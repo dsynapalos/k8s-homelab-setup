@@ -25,6 +25,9 @@ spec:
         args:
           - '--config=file:/etc/otelcol/otel-base-config.yaml'
           - '--config=file:/etc/otelcol/otel-metrics-pipeline.yaml'
+        env:
+        - name: GOMEMLIMIT
+          value: "1GiB"
         ports:
         - containerPort: 8888
           name: metrics
