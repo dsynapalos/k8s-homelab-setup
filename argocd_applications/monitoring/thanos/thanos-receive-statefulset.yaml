@@ -58,6 +58,7 @@ spec:
         - --label=receive_cluster="homelab"
         - --objstore.config-file=/etc/thanos/objstore.yml
         - --tsdb.retention=2h
+        - --tsdb.out-of-order.time-window=5m
         env:
         - name: POD_NAME
           valueFrom:
