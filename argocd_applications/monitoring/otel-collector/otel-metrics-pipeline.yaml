@@ -157,9 +157,26 @@ receivers:
 
 processors:
   memory_limiter:
-    limit_mib: 3200
-    spike_limit_mib: 512
+    limit_mib: 2800
+    spike_limit_mib: 400
     check_interval: 5s
+
+  batch:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+  filter:
+    error_mode: ignore
+    metrics:
+      metric:
+        - 'name == "container_tasks_state"'
+        - 'name == "container_memory_failures_total"'
+        - 'name == "container_blkio_device_usage_total"'
+        - 'name == "container_network_receive_errors_total"'
+        - 'name == "container_network_transmit_errors_total"'
+        - 'name == "container_network_receive_packets_dropped_total"'
+        - 'name == "container_network_transmit_packets_dropped_total"'
 
   # Remove resource attributes that arrive with empty values from kubelet/cAdvisor
   # scrapes (net.host.port, server.port). resource_to_telemetry_conversion would
@@ -190,5 +207,5 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      processors: [memory_limiter, transform]
+      processors: [memory_limiter, batch, filter, transform]
       exporters: [prometheusremotewrite, prometheus]
