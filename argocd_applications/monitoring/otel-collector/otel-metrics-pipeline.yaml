@@ -157,7 +157,8 @@ receivers:
 
 processors:
   memory_limiter:
-    limit_mib: 900
+    limit_mib: 3200
+    spike_limit_mib: 512
     check_interval: 5s
 
   # Remove resource attributes that arrive with empty values from kubelet/cAdvisor
