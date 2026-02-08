@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-ruler
+  namespace: monitoring
+  labels:
+    app: thanos-ruler
+spec:
+  serviceName: thanos-ruler
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-ruler
+  template:
+    metadata:
+      labels:
+        app: thanos-ruler
+    spec:
+      serviceAccountName: thanos
+      securityContext:
+        fsGroup: 65534
+      containers:
+      - name: thanos-ruler
+        image: quay.io/thanos/thanos:v0.36.1
+        args:
+        - rule
+        - --log.level=info
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:10902
+        - --rule-file=/etc/thanos-ruler/rules/*.yaml
+        - --query=http://thanos-query.monitoring.svc.cluster.local:9090
+        - --alertmanagers.url=http://alertmanager.monitoring.svc.cluster.local:9093
+        - --alert.query-url=http://thanos.k8s.local
+        - --label=ruler_cluster="homelab"
+        - --data-dir=/data
+        ports:
+        - name: grpc
+          containerPort: 10901
+        - name: http
+          containerPort: 10902
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: alert-rules
+          mountPath: /etc/thanos-ruler/rules
+        resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 10902
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 10902
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: alert-rules
+        configMap:
+          name: thanos-ruler-alert-rules
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: rook-ceph-block
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

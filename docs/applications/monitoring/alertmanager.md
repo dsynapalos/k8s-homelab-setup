@@ -24,7 +24,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 ## Alert Flow
 
 ```
-Prometheus rule fires → Alertmanager groups & deduplicates
+Thanos Ruler evaluates rules (via Thanos Query) → Alertmanager groups & deduplicates
     → Webhook POST to alertmanager-matrix-bridge
     → Matrix message to #alerts room
     → Element app push notification on your phone
@@ -40,7 +40,7 @@ Prometheus rule fires → Alertmanager groups & deduplicates
 
 | Component | Relationship |
 |-----------|-------------|
-| [Prometheus](prometheus.md) | Sends firing/resolved alerts |
+| [Thanos Ruler](thanos.md#thanos-ruler-statefulset) | Sends firing/resolved alerts (replaced Prometheus rule evaluation) |
 | [Alertmanager-Matrix-Bridge](alertmanager-matrix-bridge.md) | Receives webhooks and translates to Matrix messages |
 
 ## Troubleshooting
@@ -64,7 +64,7 @@ curl -s http://localhost:9093/api/v2/silences | python3 -m json.tool
 kubectl exec -n monitoring deploy/alertmanager -- wget -q -O- http://alertmanager-matrix:3000/healthz 2>&1 || echo "Bridge not reachable"
 ```
 
-**Alerts not firing**: Check Prometheus alert rules are loaded (Prometheus UI → Alerts). Ensure the alert condition is actually met — the threshold may not be exceeded yet.
+**Alerts not firing**: Check that Thanos Ruler is running (`kubectl get pods -n monitoring -l app=thanos-ruler`) and rules are loaded (Ruler UI on port 10902 → Rules). Ensure the alert condition is actually met — the threshold may not be exceeded yet.
 
 **Alerts firing but no Matrix notification**: Verify the `alertmanager-matrix-bridge` pod is running (sync-wave 4). Check the `matrix-bot` Secret exists. See [Alertmanager-Matrix-Bridge troubleshooting](alertmanager-matrix-bridge.md#troubleshooting).
 

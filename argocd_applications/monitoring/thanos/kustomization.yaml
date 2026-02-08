@@ -16,3 +16,12 @@ resources:
   - thanos-store-service.yaml
   - thanos-compactor-statefulset.yaml
   - thanos-compactor-service.yaml
+  - thanos-ruler-statefulset.yaml
+  - thanos-ruler-service.yaml
+
+configMapGenerator:
+  - name: thanos-ruler-alert-rules
+    files:
+      - thanos-ruler-alert-rules.yaml
+    options:
+      immutable: true

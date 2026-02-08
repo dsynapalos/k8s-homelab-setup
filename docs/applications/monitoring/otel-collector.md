@@ -154,9 +154,7 @@ The collector merges `receivers.otlp`, `processors.batch`, `exporters.otlp/jaege
 | [Grafana](grafana.md) | Queries metrics through Thanos Query (datasource `uid: prometheus`) |
 | [Node Exporter](node-exporter.md) | Scraped for host-level metrics via EndpointSlice discovery |
 | [DCGM Exporter](dcgm-exporter.md) | Scraped for GPU metrics via pod annotation discovery (when `ENABLE_CUDA=true`) |
-| [Alertmanager](alertmanager.md) | Not directly connected — alert rules are not yet migrated (see note below) |
-
-> **Alert rules**: The former Prometheus deployment loaded alert rules from a ConfigMap (`alert-rules.yaml`). The OTel Collector's Prometheus receiver does not support `rule_files` or `alertmanagers` configuration. Alert rule evaluation will need to be handled by a separate component (e.g., Thanos Ruler or a dedicated Prometheus instance for rules only) in a future iteration.
+| [Alertmanager](alertmanager.md) | Not directly connected — the OTel Collector's Prometheus receiver does not support `rule_files` or `alertmanagers`. Alert rule evaluation is handled by [Thanos Ruler](thanos.md#thanos-ruler-statefulset), which queries metrics through Thanos Query and sends firing alerts to Alertmanager. |
 
 ## Troubleshooting
 

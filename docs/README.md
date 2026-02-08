@@ -133,7 +133,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 |---|---|
 | [prometheus.md](applications/monitoring/prometheus.md) | *(Deprecated)* Standalone Prometheus deployment. Replaced by [OTel Collector](applications/monitoring/otel-collector.md). Manifests kept for reference. |
 | [grafana.md](applications/monitoring/grafana.md) | Dashboard visualization. Datasource provisioning (uid: prometheus), dashboard ConfigMaps, ingress. |
-| [thanos.md](applications/monitoring/thanos.md) | Long-term metric storage. Receive (remote write target), Query, Store, Compactor. S3 via Rook-Ceph ObjectStore. |
+| [thanos.md](applications/monitoring/thanos.md) | Long-term metric storage and alerting. Receive, Query, Store, Compactor, Ruler. S3 via Rook-Ceph ObjectStore. Ruler evaluates alert rules and fires to Alertmanager. |
 | [alertmanager.md](applications/monitoring/alertmanager.md) | Alert routing. Deduplication, grouping, webhook delivery to alertmanager-matrix-bridge. |
 | [matrix.md](applications/monitoring/matrix.md) | Matrix Synapse homeserver. PostgreSQL sidecar, bootstrap job (bot user + Alerts room), Element client access. |
 | [alertmanager-matrix-bridge.md](applications/monitoring/alertmanager-matrix-bridge.md) | Webhook translator. Init container config generation from `matrix-bot` Secret, emoji-formatted HTML messages. |

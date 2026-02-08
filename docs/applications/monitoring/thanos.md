@@ -18,7 +18,7 @@ Thanos solves this by shipping metrics to Rook-Ceph's S3 bucket, compacting them
 
 > The [OTel Collector](otel-collector.md) sends metrics to Thanos Receive via the `prometheusremotewrite` exporter, targeting `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`. This closes the remote-write gap that previously existed with standalone Prometheus.
 
-Thanos is deployed as four distinct components:
+Thanos is deployed as five distinct components:
 
 ### Thanos Receive (StatefulSet)
 - Accepts remote write from Prometheus (port 19291)
@@ -39,6 +39,15 @@ Thanos is deployed as four distinct components:
 - Deduplicates by `receive_replica` and `prometheus_replica` labels
 - This is what Grafana connects to as its datasource
 - Exposed via Cilium Ingress at `thanos.k8s.local`
+
+### Thanos Ruler (StatefulSet)
+- Evaluates Prometheus-format alerting and recording rules against Thanos Query
+- Sends firing alerts to Alertmanager at `http://alertmanager:9093`
+- Rules loaded from a ConfigMap (`thanos-ruler-alert-rules`) via `--rule-file` glob
+- Discoverable by Thanos Query as a store (gRPC port 10901) so rule evaluation results are queryable
+- Exposes an HTTP UI (port 10902) showing rule evaluation status
+- External alert links point to `http://thanos.k8s.local` via `--alert.query-url`
+- Storage: `rook-ceph-block` PVC (1Gi) for rule evaluation WAL data
 
 ### Thanos Compactor (StatefulSet)
 - Background process that compacts and downsamples old data in S3
@@ -72,8 +81,10 @@ Each Thanos component uses an init container to assemble `objstore.yml` from the
 OTel Collector → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
                                      ↓                    ↓
                               Thanos Query ← Thanos Store (reads from S3)
-                                    ↓
-                                 Grafana
+                                ↓       ↓
+                            Grafana   Thanos Ruler (evaluates alert rules)
+                                          ↓
+                                     Alertmanager → Matrix Bridge → Matrix
                                     
                               Thanos Compactor → compacts/downsamples in S3
 ```
@@ -95,6 +106,7 @@ OTel Collector → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
 | [OTel Collector](otel-collector.md) | Sends metrics via `prometheusremotewrite` exporter to Thanos Receive |
 | [Prometheus](prometheus.md) | *(Deprecated)* Previously sent metrics via remote write — replaced by OTel Collector |
 | [Grafana](grafana.md) | Queries Thanos Query as its primary datasource (`uid: prometheus`) |
+| [Alertmanager](alertmanager.md) | Receives firing alerts from Thanos Ruler |
 | [Rook-Ceph Cluster](../storage/rook-cluster.md) | S3 bucket for metric storage, block PVCs for local data |
 
 ## Troubleshooting
@@ -113,6 +125,13 @@ kubectl port-forward -n monitoring svc/thanos-query 9090:9090
 # Check Thanos Store (can it read from S3?)
 kubectl logs -n monitoring -l app=thanos-store --tail=30
 
+# Check Thanos Ruler (is it evaluating rules?)
+kubectl logs -n monitoring -l app=thanos-ruler --tail=30
+
+# Check Thanos Ruler rule status UI
+kubectl port-forward -n monitoring svc/thanos-ruler 10902:10902
+# Then open http://localhost:10902
+
 # Check Thanos Compactor
 kubectl logs -n monitoring -l app=thanos-compactor --tail=30
 
@@ -130,6 +149,8 @@ kubectl get pvc -n monitoring | grep thanos
 **Thanos Query shows no stores**: Check that Receive and Store pods are running. Query discovers stores via `--store` flags — verify the service DNS names resolve correctly.
 
 **S3 bucket errors**: Ensure the Rook-Ceph Object Store (RGW) is running: `kubectl get pods -n rook-ceph -l app=rook-ceph-rgw`. Check that the `thanos-bucket` ConfigMap and Secret have valid credentials.
+
+**Ruler not firing alerts**: Verify the Ruler pod is running: `kubectl get pods -n monitoring -l app=thanos-ruler`. Check that Thanos Query is reachable from Ruler. Verify alert rules are loaded: `kubectl logs -n monitoring -l app=thanos-ruler --tail=50 | grep -i rule`. Confirm Alertmanager is reachable: `kubectl get svc alertmanager -n monitoring`.
 
 **Compactor failing**: Check for lock conflicts (only one compactor should run). Verify the `rook-ceph-block` PVC is bound and writable.
 
