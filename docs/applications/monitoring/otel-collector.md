@@ -2,7 +2,7 @@
 
 ## What It Does
 
-The OpenTelemetry Collector is the cluster's metrics collection pipeline, replacing standalone Prometheus. It uses a Prometheus receiver to scrape all Kubernetes service discovery targets (API server, nodes, pods, services, cAdvisor, Node Exporter) on the same 15-second interval, then fans out to two exporters: a Prometheus-compatible `/metrics` endpoint (port 8889) for ad-hoc queries, and a `prometheusremotewrite` exporter that ships all metrics to Thanos Receive for durable long-term storage.
+The OpenTelemetry Collector is the cluster's metrics collection pipeline, replacing standalone Prometheus. It uses a Prometheus receiver to scrape all Kubernetes service discovery targets (API server, nodes, pods, services, cAdvisor, Node Exporter, kube-state-metrics) on the same 15-second interval, then fans out to two exporters: a Prometheus-compatible `/metrics` endpoint (port 8889) for ad-hoc queries, and a `prometheusremotewrite` exporter that ships all metrics to Thanos Receive for durable long-term storage.
 
 ## Why It's Here
 
@@ -153,6 +153,7 @@ The collector merges `receivers.otlp`, `processors.batch`, `exporters.otlp/jaege
 | [Thanos](thanos.md) | Receives all metrics via `prometheusremotewrite` exporter on port 19291 |
 | [Grafana](grafana.md) | Queries metrics through Thanos Query (datasource `uid: prometheus`) |
 | [Node Exporter](node-exporter.md) | Scraped for host-level metrics via EndpointSlice discovery |
+| [kube-state-metrics](kube-state-metrics.md) | Scraped for Kubernetes object state metrics via EndpointSlice discovery |
 | [DCGM Exporter](dcgm-exporter.md) | Scraped for GPU metrics via pod annotation discovery (when `ENABLE_CUDA=true`) |
 | [Alertmanager](alertmanager.md) | Not directly connected — the OTel Collector's Prometheus receiver does not support `rule_files` or `alertmanagers`. Alert rule evaluation is handled by [Thanos Ruler](thanos.md#thanos-ruler-statefulset), which queries metrics through Thanos Query and sends firing alerts to Alertmanager. |
 

@@ -34,6 +34,7 @@ docs/
     │   ├── matrix.md                ← Matrix Synapse homeserver, bootstrap job
     │   ├── alertmanager-matrix-bridge.md  ← Webhook → Matrix message translation
     │   ├── dcgm-exporter.md         ← NVIDIA GPU metrics exporter
+    │   ├── kube-state-metrics.md    ← Kubernetes object state metrics
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
     │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
     │   └── metrics-server.md        ← (placeholder) kubectl top / HPA
@@ -138,6 +139,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [matrix.md](applications/monitoring/matrix.md) | Matrix Synapse homeserver. PostgreSQL sidecar, bootstrap job (bot user + Alerts room), Element client access. |
 | [alertmanager-matrix-bridge.md](applications/monitoring/alertmanager-matrix-bridge.md) | Webhook translator. Init container config generation from `matrix-bot` Secret, emoji-formatted HTML messages. |
 | [dcgm-exporter.md](applications/monitoring/dcgm-exporter.md) | NVIDIA GPU metrics. Requires RuntimeClass nvidia + GPU allocation. Metric deduplication via `max() by (gpu, Hostname)`. |
+| [kube-state-metrics.md](applications/monitoring/kube-state-metrics.md) | Kubernetes object state metrics. Deployment/pod/node/job counts, conditions, resource requests. |
 | [node-exporter.md](applications/monitoring/node-exporter.md) | Host metrics DaemonSet. CPU, memory, disk I/O, network, filesystem utilization from every node. |
 | [otel-collector.md](applications/monitoring/otel-collector.md) | Metrics collection pipeline. Prometheus receiver, remote write to Thanos, expandable for traces/logs. |
 | [metrics-server.md](applications/monitoring/metrics-server.md) | *(Placeholder)* Kubernetes Metrics API aggregator for `kubectl top` and HPA. |

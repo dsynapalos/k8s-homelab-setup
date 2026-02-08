@@ -18,6 +18,18 @@ configMapGenerator:
   - name: grafana-gpu-dashboard
     files:
       - dashboard_definitions/nvidia-gpu-dashboard.json
+  - name: grafana-k8s-views-global
+    files:
+      - dashboard_definitions/k8s-views-global.json
+  - name: grafana-k8s-views-namespaces
+    files:
+      - dashboard_definitions/k8s-views-namespaces.json
+  - name: grafana-k8s-views-nodes
+    files:
+      - dashboard_definitions/k8s-views-nodes.json
+  - name: grafana-k8s-views-pods
+    files:
+      - dashboard_definitions/k8s-views-pods.json
   - name: grafana-prometheus-datasource
     files:
       - prometheus-datasource.yaml

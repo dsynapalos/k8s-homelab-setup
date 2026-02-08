@@ -143,6 +143,18 @@ receivers:
             regex: 'node-exporter'
             action: keep
 
+        # Scrape kube-state-metrics
+        - job_name: 'kube-state-metrics'
+          kubernetes_sd_configs:
+            - role: endpointslice
+          relabel_configs:
+          - source_labels: [__meta_kubernetes_endpointslice_name]
+            regex: 'kube-state-metrics.*'
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            regex: 'http-metrics'
+            action: keep
+
 processors:
   memory_limiter:
     limit_mib: 900

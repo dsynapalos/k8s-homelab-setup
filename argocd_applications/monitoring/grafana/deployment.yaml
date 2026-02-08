@@ -61,6 +61,18 @@ spec:
             - name: grafana-gpu-dashboard-json
               mountPath: /etc/grafana/provisioning/dashboards/nvidia-gpu-dashboard.json
               subPath: nvidia-gpu-dashboard.json
+            - name: grafana-k8s-views-global-json
+              mountPath: /etc/grafana/provisioning/dashboards/k8s-views-global.json
+              subPath: k8s-views-global.json
+            - name: grafana-k8s-views-namespaces-json
+              mountPath: /etc/grafana/provisioning/dashboards/k8s-views-namespaces.json
+              subPath: k8s-views-namespaces.json
+            - name: grafana-k8s-views-nodes-json
+              mountPath: /etc/grafana/provisioning/dashboards/k8s-views-nodes.json
+              subPath: k8s-views-nodes.json
+            - name: grafana-k8s-views-pods-json
+              mountPath: /etc/grafana/provisioning/dashboards/k8s-views-pods.json
+              subPath: k8s-views-pods.json
             - name: grafana-datasource-config
               mountPath: /etc/grafana/provisioning/datasources/prometheus-datasource.yaml
               subPath: prometheus-datasource.yaml
@@ -74,6 +86,18 @@ spec:
         - name: grafana-gpu-dashboard-json
           configMap:
             name: grafana-gpu-dashboard
+        - name: grafana-k8s-views-global-json
+          configMap:
+            name: grafana-k8s-views-global
+        - name: grafana-k8s-views-namespaces-json
+          configMap:
+            name: grafana-k8s-views-namespaces
+        - name: grafana-k8s-views-nodes-json
+          configMap:
+            name: grafana-k8s-views-nodes
+        - name: grafana-k8s-views-pods-json
+          configMap:
+            name: grafana-k8s-views-pods
         - name: grafana-datasource-config
           configMap:
             name: grafana-prometheus-datasource
