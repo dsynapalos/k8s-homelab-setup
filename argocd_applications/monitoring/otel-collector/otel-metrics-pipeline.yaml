@@ -16,6 +16,19 @@ receivers:
           static_configs:
             - targets: ['localhost:8888']
 
+        # Trigger metric_expiration cleanup on the prometheus exporter.
+        # The exporter only purges stale metrics during Collect() (scrape),
+        # so without this job its internal map grows unboundedly.
+        # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/41123
+        - job_name: 'otel-prom-exporter-gc'
+          scrape_interval: 60s
+          static_configs:
+            - targets: ['localhost:8889']
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: '.*'
+              action: drop
+
         # Scrape Kubernetes API server
         - job_name: 'kubernetes-apiservers'
           kubernetes_sd_configs:
@@ -135,11 +148,6 @@ receivers:
               replacement: '$${1}'
 
 processors:
-  memory_limiter:
-    limit_mib: 2800
-    spike_limit_mib: 400
-    check_interval: 5s
-
   batch:
     send_batch_size: 2000
     send_batch_max_size: 4000
@@ -188,5 +196,5 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      processors: [memory_limiter, batch, filter, transform]
+      processors: [batch, filter, transform]
       exporters: [prometheusremotewrite, prometheus]

@@ -18,7 +18,7 @@ Without kube-state-metrics, the monitoring stack has no visibility into Kubernet
 - `8080` — primary metrics endpoint (`/metrics`), exposes all kube_* metrics
 - `8081` — self-telemetry endpoint, exposes internal process metrics and readiness probe
 
-**Metrics endpoint**: Port 8080, discovered by the OTel Collector via a dedicated `kube-state-metrics` scrape job using EndpointSlice discovery (same pattern as Node Exporter). The Service also carries `prometheus.io/scrape: "true"` for annotation-based fallback discovery.
+**Metrics endpoint**: Port 8080, discovered by the OTel Collector via the catch-all `kubernetes-services` scrape job using the `prometheus.io/scrape: "true"` annotation on the Service.
 
 **Security**: Runs as non-root (UID 65534), read-only root filesystem, all capabilities dropped.
 
@@ -39,7 +39,7 @@ Without kube-state-metrics, the monitoring stack has no visibility into Kubernet
 
 | Component | Relationship |
 |-----------|-------------|
-| [OTel Collector](otel-collector.md) | Scraped via dedicated `kube-state-metrics` job (EndpointSlice discovery) |
+| [OTel Collector](otel-collector.md) | Scraped via `kubernetes-services` catch-all job (annotation-based discovery) |
 | [Thanos](thanos.md) | Metrics shipped via OTel Collector's remote write exporter |
 | [Grafana](grafana.md) | Metrics rendered in K8s Cluster Dashboard (deployment health, pod status) |
 
@@ -64,7 +64,7 @@ curl -s http://localhost:8889/metrics | grep kube_pod_status_phase | head -5
 
 **Pod stuck in Pending**: Check ServiceAccount and ClusterRoleBinding exist. kube-state-metrics needs API access at startup.
 
-**Metrics missing in Thanos/Grafana**: Verify the EndpointSlice scrape job is active in the OTel Collector config. Check OTel Collector logs for scrape errors targeting `kube-state-metrics`.
+**Metrics missing in Thanos/Grafana**: Verify the kube-state-metrics Service has `prometheus.io/scrape: "true"` and `prometheus.io/port: "8080"` annotations. Check OTel Collector logs for scrape errors targeting `kube-state-metrics`.
 
 **High cardinality**: kube-state-metrics generates one time series per Kubernetes object. In large clusters, this can be significant. The default configuration exposes all resource types; disable unused collectors via `--resources` flag if needed.
 
