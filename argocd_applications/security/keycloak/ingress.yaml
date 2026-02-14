@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-ingress
+  namespace: security
+  labels:
+    app: keycloak
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
+spec:
+  ingressClassName: cilium
+  tls:
+  - hosts:
+    - keycloak.k8s.local
+    secretName: keycloak-tls
+  rules:
+  - host: keycloak.k8s.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: keycloak
+            port:
+              number: 8080

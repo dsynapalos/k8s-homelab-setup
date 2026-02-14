@@ -15,7 +15,7 @@ All web UIs (ArgoCD, Grafana, Prometheus, Hubble, Matrix, Thanos) are exposed vi
 ```bash
 # Replace the IP with one from your CILIUM_LOADBALANCER_IPPOOL range
 # Find the actual IP: kubectl get ingress -A
-192.168.1.193  argocd.k8s.local grafana.k8s.local prometheus.k8s.local thanos.k8s.local hubble.k8s.local matrix.k8s.local
+192.168.1.193  argocd.k8s.local grafana.k8s.local prometheus.k8s.local thanos.k8s.local hubble.k8s.local matrix.k8s.local keycloak.k8s.local
 ```
 
 If you can reach the cluster via `kubectl` but can't open any web UI, this is almost certainly the issue.
@@ -157,6 +157,18 @@ See the individual application docs for diagnostic commands and common issues:
 ## cert-manager / TLS Certificates
 
 See [cert-manager — Troubleshooting](../applications/security/cert-manager.md#troubleshooting) for diagnostic commands and common issues (ClusterIssuer not ready, certificates stuck in Pending, webhook validation errors, browser trust warnings).
+
+---
+
+## Keycloak / Identity Management
+
+See [Keycloak — Troubleshooting](../applications/security/keycloak.md#troubleshooting) for diagnostic commands and common issues (CrashLoopBackOff, CNPG Cluster provisioning, PostgreSQL TLS, admin login, Ingress TLS).
+
+---
+
+## CloudNativePG / PostgreSQL Operator
+
+See [CloudNativePG — Troubleshooting](../applications/storage/cloudnative-pg.md#troubleshooting) for diagnostic commands and common issues (operator startup, Cluster stuck in Creating, connection refused, credentials not available).
 
 ---
 

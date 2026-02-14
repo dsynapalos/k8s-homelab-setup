@@ -1,0 +1,119 @@
+{
+  "realm": "homelab",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "bruteForceProtected": true,
+  "maxFailureWaitSeconds": 900,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "permanentLockout": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginTheme": "keycloak",
+  "accountTheme": "keycloak.v3",
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      {
+        "name": "cluster-reviewers",
+        "description": "Read-only access to cluster services"
+      },
+      {
+        "name": "cluster-users",
+        "description": "Standard access to cluster services",
+        "composite": true,
+        "composites": {
+          "realm": ["cluster-reviewers"]
+        }
+      },
+      {
+        "name": "cluster-admins",
+        "description": "Full administrative access to cluster services",
+        "composite": true,
+        "composites": {
+          "realm": ["cluster-users"]
+        }
+      }
+    ]
+  },
+  "defaultRoles": ["cluster-reviewers"],
+  "scopeMappings": [],
+  "clients": [
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "grafana-keycloak-secret",
+      "redirectUris": ["https://grafana.k8s.local/*"],
+      "webOrigins": ["https://grafana.k8s.local"],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "argocd",
+      "name": "ArgoCD",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "argocd-keycloak-secret",
+      "redirectUris": ["https://argocd.k8s.local/*"],
+      "webOrigins": ["https://argocd.k8s.local"],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "internationalizationEnabled": false
+}

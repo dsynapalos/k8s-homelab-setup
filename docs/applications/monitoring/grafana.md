@@ -27,6 +27,16 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 
 **Access**: Exposed via Cilium Ingress at `https://grafana.k8s.local` (HTTP requests are redirected to HTTPS via `ingress.cilium.io/force-https`).
 
+**Authentication**: Keycloak OIDC via the `grafana` client in the `homelab` realm. Configured through `GF_AUTH_GENERIC_OAUTH_*` environment variables in the Deployment. Role mapping uses a JMESPath expression on the `roles` claim:
+
+| Keycloak Role | Grafana Org Role |
+|---------------|------------------|
+| `cluster-admins` | Admin |
+| `cluster-users` | Editor |
+| `cluster-reviewers` | Viewer |
+
+The default local admin (`admin`/`admin`) still works as a fallback. TLS verification is skipped for backend OIDC calls (`GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE`) since both services share the same self-signed CA.
+
 ## Dashboard Notes
 
 - GPU dashboard queries use `max() by (gpu, Hostname)` aggregation to deduplicate per-pod time series from DCGM Exporter
@@ -40,6 +50,7 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 | [Prometheus](prometheus.md) | Indirect — metrics flow through Thanos |
 | [DCGM Exporter](dcgm-exporter.md) | GPU metrics rendered in NVIDIA GPU Dashboard |
 | [Node Exporter](node-exporter.md) | Host metrics rendered in K8s Cluster Dashboard |
+| [Keycloak](../security/keycloak.md) | OIDC provider — SSO authentication via `grafana` client in homelab realm |
 
 ## Troubleshooting
 

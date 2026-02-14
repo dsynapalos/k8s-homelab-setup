@@ -39,10 +39,12 @@ docs/
     │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
     │   └── metrics-server.md        ← kubectl top / HPA metrics aggregator
     ├── storage/
+    │   ├── cloudnative-pg.md        ← PostgreSQL operator (CNPG) lifecycle & CRDs
     │   ├── rook-operator.md         ← Rook operator lifecycle & CRDs
     │   └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
     └── security/
-        └── cert-manager.md          ← TLS certificate automation, CA chain, ingress integration
+        ├── cert-manager.md          ← TLS certificate automation, CA chain, ingress integration
+        └── keycloak.md              ← Identity & access management, OIDC/SSO provider
 ```
 
 ### Key principle: `applications/` mirrors `argocd_applications/`
@@ -52,8 +54,11 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | Manifest directory | Documentation |
 |---|---|
 | `argocd_applications/monitoring/prometheus/` | `docs/applications/monitoring/prometheus.md` |
+| `argocd_applications/storage/cloudnative-pg/` | `docs/applications/storage/cloudnative-pg.md` |
 | `argocd_applications/storage/rook-cluster/` | `docs/applications/storage/rook-cluster.md` |
 | `argocd_applications/security/cert-manager/` | `docs/applications/security/cert-manager.md` |
+| `argocd_applications/security/argocd-oidc/` | `docs/applications/security/keycloak.md` (OIDC Client Integration section) |
+| `argocd_applications/security/keycloak/` | `docs/applications/security/keycloak.md` |
 
 ---
 
@@ -151,6 +156,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 
 | Document | Purpose |
 |---|---|
+| [cloudnative-pg.md](applications/storage/cloudnative-pg.md) | CloudNativePG operator. Kubernetes-native PostgreSQL management — HA, backups, cert-manager TLS, metrics, Rook integration. |
 | [rook-operator.md](applications/storage/rook-operator.md) | Rook operator deployment. CRDs, RBAC, CSI drivers, discovery daemon, operator ConfigMap patches. |
 | [rook-cluster.md](applications/storage/rook-cluster.md) | CephCluster CR definition. MON/MGR/OSD/MDS/RGW components, block/filesystem/object pools, StorageClasses, health status. |
 
@@ -159,6 +165,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | Document | Purpose |
 |---|---|
 | [cert-manager.md](applications/security/cert-manager.md) | TLS certificate automation. Self-signed CA chain, ingress-shim integration, ArgoCD TLS termination, Istio mTLS boundary. |
+| [keycloak.md](applications/security/keycloak.md) | Identity & access management. OIDC/OAuth 2.0 provider, SSO for cluster services, CloudNativePG-managed PostgreSQL, three-tier role model (cluster-admins/users/reviewers), configMapGenerator-based realm import. |
 
 ---
 

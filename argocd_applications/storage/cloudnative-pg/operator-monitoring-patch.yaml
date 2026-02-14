@@ -1,0 +1,14 @@
+# Adds Prometheus annotations so OTel Collector can auto-discover and scrape
+# the CloudNativePG operator metrics endpoint.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnpg-controller-manager
+  namespace: cnpg-system
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"

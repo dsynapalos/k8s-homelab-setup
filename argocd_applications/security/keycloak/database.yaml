@@ -1,0 +1,81 @@
+# cert-manager Certificate for PostgreSQL server TLS.
+# Issued by homelab-ca-issuer, used by the CNPG Cluster for encrypted connections.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-db-server
+  namespace: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  secretName: keycloak-db-server-tls
+  issuerRef:
+    name: homelab-ca-issuer
+    kind: ClusterIssuer
+  usages:
+    - server auth
+  dnsNames:
+    - keycloak-db-rw
+    - keycloak-db-rw.security.svc
+    - keycloak-db-rw.security.svc.cluster.local
+    - keycloak-db-ro
+    - keycloak-db-ro.security.svc
+    - keycloak-db-ro.security.svc.cluster.local
+    - keycloak-db-r
+    - keycloak-db-r.security.svc
+    - keycloak-db-r.security.svc.cluster.local
+  duration: 8760h    # 1 year
+  renewBefore: 720h  # 30 days before expiry
+---
+# CloudNativePG Cluster — managed PostgreSQL for Keycloak.
+# The operator provisions the database, generates credentials in the
+# keycloak-db-app Secret, and creates -rw/-ro/-r Services automatically.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: keycloak-db
+  namespace: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  instances: 1
+
+  # cert-manager TLS — server certificate from homelab CA chain.
+  # The same Secret contains tls.crt, tls.key, and ca.crt.
+  certificates:
+    serverTLSSecret: keycloak-db-server-tls
+    serverCASecret: keycloak-db-server-tls
+
+  # Rook-Ceph persistent storage (requires ENABLE_ROOK=true).
+  # Change storageClass or remove it to use the default if Rook is not enabled.
+  storage:
+    storageClass: rook-ceph-block
+    size: 2Gi
+
+  # Database bootstrap — creates the keycloak database and owner user.
+  # Credentials are auto-generated and stored in the keycloak-db-app Secret.
+  bootstrap:
+    initdb:
+      database: keycloak
+      owner: keycloak
+
+  # Prometheus annotations for OTel Collector auto-discovery.
+  # Propagated to pods, services, and PVCs created by the operator.
+  inheritedMetadata:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9187"
+      prometheus.io/path: "/metrics"
+
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "128MB"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"

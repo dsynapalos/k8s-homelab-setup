@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: security
+
+resources:
+  - rbac.yaml
+  - database.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: keycloak-realm-homelab
+    files:
+      - homelab-realm.json
+    options:
+      labels:
+        app: keycloak

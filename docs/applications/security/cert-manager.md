@@ -114,6 +114,8 @@ Istio's built-in CA (istiod/citadel) manages SPIFFE identities and workload cert
 | `prometheus-tls` | `monitoring` | `prometheus.k8s.local` | Prometheus UI |
 | `thanos-query-tls` | `monitoring` | `thanos.k8s.local` | Thanos Query |
 | `hubble-ui-tls` | `kube-system` | `hubble.k8s.local` | Hubble UI |
+| `keycloak-tls` | `security` | `keycloak.k8s.local` | Keycloak IAM |
+| `keycloak-db-server-tls` | `security` | `keycloak-db-rw.security.svc` | Keycloak PostgreSQL (CNPG) |
 
 ## Troubleshooting
 
