@@ -75,7 +75,7 @@ Labels are only updated when a key is missing or its value differs from what's i
 
 | Role | Runs On | Purpose |
 |------|---------|---------|
-| `bootstrap_cillium` | k8s (all) | Deploys Cilium CNI with eBPF, WireGuard, L2 announcements |
+| `bootstrap_cillium` | k8s (all) | Deploys Cilium CNI with eBPF, WireGuard, L2 announcements, CoreDNS rewrite |
 | `bootstrap_istio_ambient` | k8s-control | Deploys Istio Ambient mesh with ztunnel (optional) |
 **Post-install actions**: After Cilium is deployed, the role restarts CRI-O on each node for proper CNI integration, then finds and deletes all non-hostNetwork pods across all namespaces so they restart with Cilium networking applied. For Istio, there's a 10-second pause after CRD installation, then each component waits for rollout (300s timeout) before proceeding.
 ### Platform Layer

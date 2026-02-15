@@ -1,0 +1,22 @@
+# Synapse OIDC configuration for Keycloak integration.
+# Mounted as a supplementary config file via --config-path.
+# See: https://element-hq.github.io/synapse/latest/openid.html
+
+oidc_providers:
+  - idp_id: keycloak
+    idp_name: "Keycloak"
+    discover: true
+    issuer: "https://keycloak.k8s.local/realms/homelab"
+    client_id: "synapse"
+    client_secret: "synapse-keycloak-secret"
+    scopes: ["openid", "profile"]
+    authorization_endpoint: "https://keycloak.k8s.local/realms/homelab/protocol/openid-connect/auth"
+    token_endpoint: "https://keycloak.k8s.local/realms/homelab/protocol/openid-connect/token"
+    userinfo_endpoint: "https://keycloak.k8s.local/realms/homelab/protocol/openid-connect/userinfo"
+    jwks_uri: "https://keycloak.k8s.local/realms/homelab/protocol/openid-connect/certs"
+    allow_existing_users: true
+    backchannel_logout_enabled: true
+    user_mapping_provider:
+      config:
+        localpart_template: "{{ user.preferred_username }}"
+        display_name_template: "{{ user.name }}"

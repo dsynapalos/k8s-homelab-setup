@@ -1,0 +1,161 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: matrix-data
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app: matrix
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: rook-ceph-block
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: matrix
+  template:
+    metadata:
+      labels:
+        app: matrix
+    spec:
+      serviceAccountName: matrix
+      initContainers:
+      - name: generate-config
+        image: matrixdotorg/synapse:v1.98.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Generate base config on first boot only
+          if [ ! -f /data/homeserver.yaml ]; then
+            echo "Generating Matrix Synapse configuration..."
+            /start.py generate
+          fi
+
+          # Write database override config (refreshed every startup to pick up
+          # credential rotations from the CNPG-managed matrix-db-app Secret).
+          cat > /data/database-override.yaml << EOF
+          database:
+            name: psycopg2
+            args:
+              user: "${POSTGRES_USER}"
+              password: "${POSTGRES_PASSWORD}"
+              database: "${POSTGRES_DB}"
+              host: "${POSTGRES_HOST}"
+              port: 5432
+              cp_min: 5
+              cp_max: 10
+
+          public_baseurl: "https://matrix.k8s.local/"
+          EOF
+
+          echo "Configuration ready"
+        env:
+        - name: SYNAPSE_SERVER_NAME
+          value: matrix.k8s.local
+        - name: SYNAPSE_REPORT_STATS
+          value: "no"
+        - name: SYNAPSE_CONFIG_DIR
+          value: /data
+        - name: SYNAPSE_CONFIG_PATH
+          value: /data/homeserver.yaml
+        - name: SYNAPSE_DATA_DIR
+          value: /data
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db-app
+              key: host
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db-app
+              key: dbname
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db-app
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: matrix-db-app
+              key: password
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      containers:
+      - name: synapse
+        image: matrixdotorg/synapse:v1.98.0
+        command: ["python", "-m", "synapse.app.homeserver"]
+        env:
+        - name: SSL_CERT_FILE
+          value: "/etc/ssl/certs/homelab/ca-certificates.crt"
+        - name: REQUESTS_CA_BUNDLE
+          value: "/etc/ssl/certs/homelab/ca-certificates.crt"
+        args:
+          - "--config-path"
+          - "/data/homeserver.yaml"
+          - "--config-path"
+          - "/data/database-override.yaml"
+          - "--config-path"
+          - "/config/oidc.yaml"
+        ports:
+        - name: http
+          containerPort: 8008
+        - name: federation
+          containerPort: 8448
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: oidc-config
+          mountPath: /config/oidc.yaml
+          subPath: synapse-oidc.yaml
+        - name: homelab-ca
+          mountPath: /etc/ssl/certs/homelab
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: matrix-data
+      - name: oidc-config
+        configMap:
+          name: matrix-oidc-config
+      - name: homelab-ca
+        configMap:
+          name: homelab-ca-bundle

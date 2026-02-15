@@ -44,6 +44,7 @@ docs/
     │   └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
     └── security/
         ├── cert-manager.md          ← TLS certificate automation, CA chain, ingress integration
+        ├── trust-manager.md         ← CA trust bundle distribution across namespaces
         └── keycloak.md              ← Identity & access management, OIDC/SSO provider
 ```
 
@@ -59,6 +60,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | `argocd_applications/security/cert-manager/` | `docs/applications/security/cert-manager.md` |
 | `argocd_applications/security/argocd-oidc/` | `docs/applications/security/keycloak.md` (OIDC Client Integration section) |
 | `argocd_applications/security/keycloak/` | `docs/applications/security/keycloak.md` |
+| `argocd_applications/security/trust-manager/` | `docs/applications/security/trust-manager.md` |
 
 ---
 
@@ -165,6 +167,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | Document | Purpose |
 |---|---|
 | [cert-manager.md](applications/security/cert-manager.md) | TLS certificate automation. Self-signed CA chain, ingress-shim integration, ArgoCD TLS termination, Istio mTLS boundary. |
+| [trust-manager.md](applications/security/trust-manager.md) | CA trust bundle distribution. Propagates homelab CA certificate to all namespaces via Bundle CRs, enabling proper TLS verification for OIDC backchannel calls. |
 | [keycloak.md](applications/security/keycloak.md) | Identity & access management. OIDC/OAuth 2.0 provider, SSO for cluster services, CloudNativePG-managed PostgreSQL, three-tier role model (cluster-admins/users/reviewers), configMapGenerator-based realm import. |
 
 ---

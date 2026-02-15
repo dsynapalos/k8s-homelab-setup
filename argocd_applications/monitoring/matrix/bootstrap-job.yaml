@@ -41,7 +41,7 @@ spec:
           fi
           
           # Extract registration_shared_secret from homeserver.yaml
-          REGISTRATION_SECRET=$(kubectl exec matrix-0 -n monitoring -c synapse -- grep "^registration_shared_secret:" /data/homeserver.yaml | cut -d'"' -f2)
+          REGISTRATION_SECRET=$(kubectl exec deploy/matrix -n monitoring -c synapse -- grep "^registration_shared_secret:" /data/homeserver.yaml | cut -d'"' -f2)
           
           # Get nonce
           NONCE=$(curl -s http://matrix:8008/_synapse/admin/v1/register | grep -o '"nonce":"[^"]*"' | cut -d'"' -f4)

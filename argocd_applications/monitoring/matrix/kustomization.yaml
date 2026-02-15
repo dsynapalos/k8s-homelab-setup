@@ -4,9 +4,17 @@ kind: Kustomization
 namespace: monitoring
 
 resources:
-  - secret-init.yaml
   - rbac.yaml
-  - statefulset.yaml
+  - database.yaml
+  - deployment.yaml
   - service.yaml
   - ingress.yaml
   - bootstrap-job.yaml
+
+configMapGenerator:
+  - name: matrix-oidc-config
+    files:
+      - synapse-oidc.yaml
+    options:
+      labels:
+        app: matrix

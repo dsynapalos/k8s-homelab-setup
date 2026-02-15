@@ -123,6 +123,7 @@ argocd_applications/
 │   └── rook-cluster/
 └── security/
     ├── cert-manager/      ← TLS certificate automation
+    ├── trust-manager/     ← CA trust bundle distribution
     ├── keycloak/           ← Identity & access management
     └── argocd-oidc/        ← ArgoCD OIDC + RBAC config (patches argocd-cm)
 
@@ -132,6 +133,7 @@ roles/bootstrap_applications/files/
 ├── cert-manager_manifest.yaml
 ├── cloudnative-pg_manifest.yaml
 ├── keycloak_manifest.yaml
+├── trust-manager_manifest.yaml
 ├── argocd-oidc_manifest.yaml
 ├── alertmanager_manifest.yaml
 ├── matrix_manifest.yaml
@@ -145,7 +147,7 @@ Applications deploy in a specific order via ArgoCD sync waves to respect depende
 
 | Wave | Applications | Why This Order |
 |------|-------------|---------------|
-| 1 | cert-manager (CRDs + controller + CA chain), CloudNativePG (CRDs + operator), Matrix (Synapse homeserver), Rook Operator (CRDs + operator) | Infrastructure services must be running before dependent resources |
+| 1 | cert-manager (CRDs + controller + CA chain), trust-manager (CA distribution), CloudNativePG (CRDs + operator), Matrix (Synapse homeserver), Rook Operator (CRDs + operator) | Infrastructure services must be running before dependent resources |
 | 2 | Alertmanager, Prometheus, Thanos, Keycloak, Grafana, Rook Cluster (CephCluster CR + pools), OTel Collector | Core monitoring + storage + identity, after operator/Matrix ready |
 | 3 | Matrix bootstrap job, ArgoCD OIDC config | Matrix: creates bot user + `matrix-bot` Secret. ArgoCD OIDC: patches `argocd-cm` + `argocd-rbac-cm` (requires Keycloak from wave 2) |
 | 4 | Alertmanager-Matrix-Bridge | Reads `matrix-bot` Secret from wave 3 |

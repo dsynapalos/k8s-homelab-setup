@@ -149,6 +149,7 @@ Deploys Cilium CNI via Helm with full kube-proxy replacement:
 - Both modes enable: WireGuard encryption, Hubble observability with TLS, L2 announcements
 - Creates a `CiliumLoadBalancerIPPool` from the configured CIDR
 - Creates per-node `CiliumL2AnnouncementPolicy` on worker nodes (ARP/NDP for LoadBalancer IPs)
+- Patches CoreDNS with a `*.k8s.local` rewrite rule to resolve Ingress hostnames to the Cilium Ingress ClusterIP internally (enables OIDC backchannel calls without separate internal URLs)
 - Restarts all non-hostNetwork pods to pick up Cilium networking
 
 ### Phase 6 — Istio Ambient (Optional)
@@ -218,7 +219,7 @@ Uploads all ArgoCD Application manifests:
 - ArgoCD then takes over lifecycle management, syncing from Git
 
 Currently deployed manifests:
-`alertmanager`, `alertmanager-matrix-bridge`, `cert-manager`, `dcgm-exporter`, `grafana`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`
+`alertmanager`, `alertmanager-matrix-bridge`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `keycloak`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
 
 ---
 

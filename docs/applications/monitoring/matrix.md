@@ -2,7 +2,7 @@
 
 ## What It Does
 
-Matrix Synapse is a self-hosted Matrix homeserver that provides the messaging infrastructure for alert notifications. It hosts the `#alerts` chat room where Alertmanager notifications appear, accessible from any Matrix client like Element on mobile or desktop.
+Matrix Synapse is a self-hosted Matrix homeserver that provides the messaging infrastructure for alert notifications. It hosts the `#alerts` chat room where Alertmanager notifications appear, accessible from any Matrix client like Element on mobile or desktop. Authentication is handled via Keycloak OIDC — users sign in with their cluster identity.
 
 ## Why It's Here
 
@@ -10,58 +10,109 @@ The alerting stack needs a destination that supports push notifications to your 
 
 ## How It's Configured
 
-**Deployment**: StatefulSet (`matrixdotorg/synapse:v1.98.0`) with a PostgreSQL 15 sidecar for persistence. Uses `rook-ceph-block` PVC (10Gi) for Synapse data.
+**Deployment**: Deployment (`matrixdotorg/synapse:v1.98.0`) backed by a CloudNativePG-managed PostgreSQL database. Uses `rook-ceph-block` PVC (10Gi) for Synapse data (signing keys, media, generated config). The Deployment uses `Recreate` strategy since the PVC is RWO.
 
-> **⚠️ PostgreSQL data is ephemeral**: The PostgreSQL sidecar uses `emptyDir` storage — its data is lost when the pod restarts. Only the Synapse data directory (homeserver config, media, signing keys) is on the persistent PVC. In practice, this means a pod restart loses the message database. For a homelab alerting bot this is acceptable (the bot and room are re-created by the bootstrap job), but be aware that chat history does not survive restarts.
+### CloudNativePG Database
+
+PostgreSQL is managed by the CloudNativePG operator via a `Cluster` CRD in `database.yaml`. The operator handles:
+
+- **Provisioning**: Creates a single PostgreSQL instance with the `synapse` database, `C` locale (required by Synapse), and owner user
+- **Credentials**: Auto-generates the `matrix-db-app` Secret containing `host`, `port`, `dbname`, `username`, `password`, `uri`, and `jdbc-uri`
+- **Persistent storage**: Uses `rook-ceph-block` StorageClass (2Gi) for durable data (requires `ENABLE_ROOK=true`)
+- **TLS**: Server certificate issued by cert-manager's `homelab-ca-issuer`, covering the `-rw`, `-ro`, and `-r` service DNS names
+- **Metrics**: Prometheus annotations propagated to pods/services via `inheritedMetadata` for OTel Collector scraping (port 9187, path `/metrics`)
+
+### Synapse Configuration
+
+Synapse loads three config files via multiple `--config-path` arguments (later files override earlier ones):
+
+| Config file | Source | Purpose |
+|---|---|---|
+| `/data/homeserver.yaml` | Generated on first boot by `/start.py generate` | Base Synapse settings (server name, signing keys, `registration_shared_secret`) |
+| `/data/database-override.yaml` | Written by init container every startup | PostgreSQL connection (credentials from CNPG `matrix-db-app` Secret) |
+| `/config/oidc.yaml` | Mounted from `matrix-oidc-config` ConfigMap | Keycloak OIDC provider configuration |
+
+The init container writes the database override on every startup so credential rotations from CNPG are picked up automatically. The OIDC config is managed declaratively via Kustomize's `configMapGenerator` — changes to `synapse-oidc.yaml` trigger a ConfigMap hash change → StatefulSet rollout.
+
+### OIDC Integration (Keycloak)
+
+Synapse uses its native `oidc_providers` config to authenticate users via Keycloak:
+
+- **Client**: `synapse` in the `homelab` realm (defined in `homelab-realm.json`)
+- **Redirect URI**: `https://matrix.k8s.local/_synapse/client/oidc/callback`
+- **Back-channel logout**: Enabled — Keycloak notifies Synapse when users log out
+- **User mapping**: `preferred_username` → Matrix localpart, `name` → display name
+- **Endpoints**: All OIDC endpoints use the external Keycloak URL (`https://keycloak.k8s.local/...`). In-cluster resolution works via a CoreDNS rewrite rule (see [Networking](../../infrastructure/networking.md#coredns-rewrite)) that maps `*.k8s.local` to the Cilium Ingress ClusterIP. TLS verification uses the homelab CA certificate from [trust-manager](../../security/trust-manager.md) (mounted via `homelab-ca-bundle` ConfigMap with `SSL_CERT_FILE` and `REQUESTS_CA_BUNDLE` env vars).
+
+Public registration is disabled. Users authenticate via Keycloak SSO. The `alertbot` user is created by the bootstrap job using the admin registration API (`registration_shared_secret`), which operates independently of the public registration setting.
 
 **Server name**: `matrix.k8s.local`
-
-**Init containers**:
-1. **`matrix-init-secret`** (sync-wave 0): Pre-Sync Job that generates the PostgreSQL credentials as a Kubernetes Secret (`matrix-db`), skipping if it already exists.
-2. **`generate-config`**: Runs `synapse generate` on first boot, then ensures registration is enabled on every start (handles PVC persistence).
 
 **Bootstrap job** (sync-wave 3, PostSync hook):
 - Waits for Synapse to be healthy
 - Checks if `matrix-bot` Secret already exists (idempotent)
 - Extracts `registration_shared_secret` from `homeserver.yaml` inside the running pod
-- Registers a bot user (`alertbot-TIMESTAMP`) using HMAC-SHA1 authentication
+- Registers a bot user (`alertbot-TIMESTAMP`) using HMAC-SHA1 admin registration
 - Creates public `#alerts` room with world-readable history
 - Saves all credentials to `matrix-bot` Secret (used by [alertmanager-matrix-bridge](alertmanager-matrix-bridge.md))
 
-**Access**: Exposed via Cilium Ingress at `https://matrix.k8s.local` (HTTP requests are redirected to HTTPS). Synapse listens on port 8008 internally; TLS is terminated at the ingress.
+**Access**: Exposed via Cilium Ingress at `https://matrix.k8s.local` with cert-manager TLS. Synapse listens on port 8008 internally; TLS is terminated at the ingress.
 
-**ArgoCD sync-wave**: 1 (deploys first so the bootstrap job can run before dependent components).
+### Sync Wave Ordering
 
-## Deployment Order
+| Wave | Resource | Purpose |
+|------|----------|---------|
+| 0 | `matrix-db-server` Certificate | cert-manager issues TLS cert for PostgreSQL server |
+| 1 | `matrix-db` CNPG Cluster | Provisions PostgreSQL, generates `matrix-db-app` Secret |
+| 2 | Deployment | Synapse starts (reads database creds from CNPG Secret, OIDC config from ConfigMap) |
+| 3 | `matrix-bootstrap` Job (PostSync) | Creates bot user, `#alerts` room, `matrix-bot` Secret |
 
-```
-Wave 0: matrix-init-secret Job → creates matrix-db Secret
-Wave 2: StatefulSet starts (Synapse + PostgreSQL)
-Wave 3: matrix-bootstrap Job → creates bot user, #alerts room, matrix-bot Secret
-Wave 4: alertmanager-matrix-bridge reads matrix-bot Secret
-```
+The ArgoCD Application itself uses sync-wave 2 (after the CNPG operator and cert-manager at wave 1) with `ServerSideApply=true` and retry settings to handle CRD availability timing.
+
+### Secret Management
+
+All database credentials are auto-generated by CloudNativePG — no manual Secret creation or init Jobs needed.
+
+| Secret | Source | Purpose |
+|--------|--------|---------|
+| `matrix-db-app` | CNPG operator | Database connection credentials for Synapse |
+| `matrix-db-server-tls` | cert-manager | PostgreSQL server TLS certificate |
+| `matrix-bot` | Bootstrap Job | Bot user credentials for alertmanager-matrix-bridge |
 
 ## Connecting as a User
 
 1. Open Element (or any Matrix client)
 2. Set homeserver to `https://matrix.k8s.local`
-3. Register a new account (registration is enabled)
+3. Click "Sign in" → SSO button → authenticate via Keycloak
 4. Join the `#alerts` room
 
 ## Integration Points
 
 | Component | Relationship |
 |-----------|-------------|
+| [Keycloak](../../security/keycloak.md) | OIDC provider — `synapse` client in `homelab` realm |
 | [Alertmanager-Matrix-Bridge](alertmanager-matrix-bridge.md) | Uses `matrix-bot` Secret to post alert messages |
-| [Rook-Ceph Block Storage](../storage/rook-cluster.md) | Synapse data stored on `rook-ceph-block` PVC |
+| [CloudNativePG](../../storage/cloudnative-pg.md) | Manages PostgreSQL database lifecycle and credentials |
+| [trust-manager](../../security/trust-manager.md) | Distributes homelab CA certificate for Keycloak OIDC TLS verification |
+| [Rook-Ceph Block Storage](../storage/rook-cluster.md) | Persistent storage for both Synapse data PVC and CNPG database PVC |
+| [cert-manager](../../security/cert-manager.md) | Issues TLS certs for Ingress and PostgreSQL server |
 
 ## Troubleshooting
 
 ```bash
 # Check Synapse pod status
 kubectl get pods -n monitoring -l app=matrix
-kubectl logs -n monitoring matrix-0 -c synapse --tail=30
-kubectl logs -n monitoring matrix-0 -c postgres --tail=30
+kubectl logs -n monitoring -l app=matrix -c synapse --tail=30
+
+# Check init container logs (config generation + database override)
+kubectl logs -n monitoring -l app=matrix -c generate-config
+
+# Check CNPG database cluster status
+kubectl get clusters.postgresql.cnpg.io -n monitoring
+kubectl get pods -n monitoring -l cnpg.io/cluster=matrix-db
+
+# Check CNPG credentials Secret
+kubectl get secret matrix-db-app -n monitoring
 
 # Check bootstrap job status
 kubectl get jobs -n monitoring -l app=matrix-bootstrap
@@ -69,14 +120,15 @@ kubectl logs -n monitoring -l job-name=matrix-bootstrap --tail=50
 
 # Check matrix-bot Secret (created by bootstrap)
 kubectl get secret matrix-bot -n monitoring
-kubectl get secret matrix-bot -n monitoring -o jsonpath='{.data}' | python3 -m json.tool
-
-# Check PostgreSQL credentials Secret
-kubectl get secret matrix-db -n monitoring
 
 # Test Synapse health
-kubectl exec -n monitoring matrix-0 -c synapse -- curl -s http://localhost:8008/_matrix/client/versions
+kubectl exec -n monitoring deploy/matrix -c synapse -- curl -s http://localhost:8008/_matrix/client/versions
+
+# Verify OIDC config is loaded
+kubectl exec -n monitoring deploy/matrix -c synapse -- cat /config/oidc.yaml
 ```
+
+**OIDC login fails with TLS errors**: Synapse uses external HTTPS URLs for all OIDC endpoints, resolved internally via CoreDNS rewrite. Verify the `homelab-ca-bundle` ConfigMap is mounted and the CA certificate is valid: `kubectl exec -n monitoring deploy/matrix -c synapse -- cat /etc/ssl/certs/homelab/ca-certificates.crt | openssl x509 -text -noout`. Also verify CoreDNS can resolve: `kubectl exec -n monitoring deploy/matrix -c synapse -- curl -s https://keycloak.k8s.local/realms/homelab/.well-known/openid-configuration`.
 
 **Bootstrap job fails with `M_USER_IN_USE`**: The bot user already exists from a previous run. Delete the stale resources and re-sync:
 ```bash
@@ -85,14 +137,16 @@ kubectl delete job matrix-bootstrap -n monitoring
 ```
 Then re-sync the Matrix application in ArgoCD.
 
-**Bootstrap job can't read `registration_shared_secret`**: The job exec's into the running `matrix-0` pod to read `homeserver.yaml`. Ensure the Synapse pod is Running first.
+**CNPG cluster not ready**: Check the operator logs: `kubectl logs -n cnpg-system deploy/cnpg-controller-manager --tail=30`. Ensure cert-manager has issued the `matrix-db-server-tls` certificate: `kubectl get certificate matrix-db-server -n monitoring`.
 
-**Chat history lost after restart**: Expected — PostgreSQL uses `emptyDir`. The bootstrap job re-creates the bot and room automatically.
+**Existing deployment migration**: If upgrading from the old StatefulSet + PostgreSQL sidecar setup, delete the old StatefulSet and its PVC (`kubectl delete statefulset matrix -n monitoring && kubectl delete pvc data-matrix-0 -n monitoring`) before syncing. The new Deployment creates a standalone `matrix-data` PVC. The old sidecar used `emptyDir` storage, so no database data was persisted across restarts anyway.
 
-**Element client can't connect**: Ensure `/etc/hosts` has `matrix.k8s.local` pointing to a LoadBalancer IP. The homeserver is HTTP only (port 8008).
+**Element client SSO not showing**: Ensure Synapse can reach the Keycloak JWKS endpoint. Check that the `synapse-oidc.yaml` ConfigMap is correctly mounted at `/config/oidc.yaml`.
 
 ## Links
 
 - [Matrix Synapse Documentation](https://element-hq.github.io/synapse/latest/)
+- [Synapse OIDC Configuration](https://element-hq.github.io/synapse/latest/openid.html)
+- [CloudNativePG Documentation](https://cloudnative-pg.io/docs/)
 - [Matrix Specification](https://spec.matrix.org/)
 - [Element Client](https://element.io/)

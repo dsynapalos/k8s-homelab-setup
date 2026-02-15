@@ -15,5 +15,3 @@ data:
       - profile
       - email
       - roles
-    rootCA: ""
-    insecureSkipTLSVerify: true

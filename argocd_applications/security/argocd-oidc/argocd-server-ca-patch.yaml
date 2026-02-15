@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  template:
+    spec:
+      containers:
+        - name: argocd-server
+          volumeMounts:
+            - name: homelab-ca
+              mountPath: /etc/ssl/certs/homelab
+              readOnly: true
+          env:
+            - name: SSL_CERT_DIR
+              value: "/etc/ssl/certs:/etc/ssl/certs/homelab"
+      volumes:
+        - name: homelab-ca
+          configMap:
+            name: homelab-ca-bundle

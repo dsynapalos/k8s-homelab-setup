@@ -184,6 +184,44 @@
   when: cilium_installed.changed  # Only restart when Cilium was installed/upgraded
   become: true
 
+# CoreDNS rewrite - resolve *.k8s.local to the shared Cilium Ingress service ClusterIP
+# This avoids hardcoding LoadBalancer IPs; pods reach ingress services via the internal service name
+- name: read current CoreDNS config
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    name: coredns
+    namespace: kube-system
+  register: coredns_config
+  when: inventory_hostname == 'k8s-control-1'
+  delegate_to: localhost
+  become: false
+
+- name: check if CoreDNS rewrite rule already exists
+  ansible.builtin.set_fact:
+    coredns_needs_rewrite: "{{ inventory_hostname == 'k8s-control-1' and 'cilium-ingress' not in coredns_config.resources[0].data.Corefile }}"
+  when: inventory_hostname == 'k8s-control-1'
+
+- name: patch CoreDNS with k8s.local rewrite rule
+  kubernetes.core.k8s:
+    state: patched
+    api_version: v1
+    kind: ConfigMap
+    name: coredns
+    namespace: kube-system
+    definition:
+      data:
+        Corefile: "{{ coredns_config.resources[0].data.Corefile | regex_replace('(ready\\n)', 'ready\\n        rewrite name regex (.*)\\\\.k8s\\\\.local cilium-ingress.kube-system.svc.cluster.local answer auto\\n') }}"
+  when: coredns_needs_rewrite | default(false) | bool
+  delegate_to: localhost
+  become: false
+
+- name: restart CoreDNS to pick up rewrite rule
+  ansible.builtin.command: kubectl rollout restart deployment coredns -n kube-system
+  when: coredns_needs_rewrite | default(false) | bool
+  delegate_to: localhost
+  become: false
+
 - name: create Hubble Ingress
   kubernetes.core.k8s:
     state: present

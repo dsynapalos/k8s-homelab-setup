@@ -112,8 +112,39 @@
             "userinfo.token.claim": "true"
           }
         }
-      ]
-    }
+      ]    },
+    {
+      "clientId": "synapse",
+      "name": "Matrix Synapse",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "synapse-keycloak-secret",
+      "redirectUris": ["https://matrix.k8s.local/_synapse/client/oidc/callback"],
+      "webOrigins": ["https://matrix.k8s.local"],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "attributes": {
+        "backchannel.logout.url": "http://matrix.monitoring.svc.cluster.local:8008/_synapse/client/oidc/backchannel_logout",
+        "backchannel.logout.session.required": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]    }
   ],
   "internationalizationEnabled": false
 }

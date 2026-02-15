@@ -44,6 +44,20 @@ Traditional Kubernetes networking stacks (kube-proxy + Flannel/Calico with iptab
 
 **Post-install actions**: After Cilium is deployed, CRI-O is restarted on each node for proper CNI integration. Then all non-hostNetwork pods across all namespaces are deleted so they restart with Cilium networking applied. This ensures pods that started before Cilium (e.g., CoreDNS) get proper eBPF-based networking.
 
+### CoreDNS Rewrite
+
+After Cilium is deployed, the `bootstrap_cillium` role patches CoreDNS with a rewrite rule that resolves `*.k8s.local` hostnames to the shared Cilium Ingress service ClusterIP (`cilium-ingress.kube-system.svc.cluster.local`). This allows pods inside the cluster to reach Ingress-served endpoints (e.g., `https://keycloak.k8s.local`) using the same URLs as external clients — without hardcoding LoadBalancer IPs or maintaining separate internal/external endpoint configurations.
+
+The rewrite uses a regex rule inserted into the CoreDNS `Corefile`:
+
+```
+rewrite name regex (.*)\\.k8s\\.local cilium-ingress.kube-system.svc.cluster.local answer auto
+```
+
+This is critical for OIDC flows where services like Grafana, ArgoCD, and Matrix Synapse need to call Keycloak endpoints at `https://keycloak.k8s.local/...` from within the cluster. Combined with the homelab CA certificate distributed by [trust-manager](../applications/security/trust-manager.md), this enables proper TLS verification without using internal HTTP endpoints or skipping TLS.
+
+The patch is idempotent — it checks whether `k8s.local` is already in the Corefile before applying, and only restarts CoreDNS when changes are made.
+
 ### IP Addressing
 
 | Range | Purpose | Default |

@@ -13,7 +13,7 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["get", "create", "patch"]
-  resourceNames: ["matrix-db", "matrix-bot", "matrix-admin", "matrix-registration"]
+  resourceNames: ["matrix-bot"]
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["create"]

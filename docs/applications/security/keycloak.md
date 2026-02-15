@@ -82,7 +82,8 @@ The Keycloak container is configured via environment variables:
 | `KC_DB_PASSWORD` | `keycloak-db-app` Secret (`password`) | Database password (auto-generated) |
 | `KC_PROXY_HEADERS` | Hardcoded `xforwarded` | Trust proxy headers from Cilium Ingress |
 | `KC_HTTP_ENABLED` | Hardcoded `true` | Serve HTTP (TLS terminated at Ingress) |
-| `KC_HOSTNAME_STRICT` | Hardcoded `false` | Accept requests on any hostname (homelab flexibility) |
+| `KC_HOSTNAME` | Hardcoded `https://keycloak.k8s.local` | External hostname for issuer URLs and redirects |
+| `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` | Hardcoded `true` | Use request host for backchannel endpoints (allows internal service resolution) |
 | `KC_HEALTH_ENABLED` | Hardcoded `true` | Enable health endpoints on port 9000 |
 
 ### Realm Import
@@ -145,8 +146,10 @@ Keycloak exposes health endpoints on management port 9000:
 | ← Rook-Ceph | CNPG PVC | Provides `rook-ceph-block` persistent storage for PostgreSQL data |
 | → Cilium Ingress | External clients | Routes HTTPS traffic to Keycloak |
 | → OTel Collector | PostgreSQL metrics | Scrapes CNPG instance metrics (port 9187) via prometheus annotations |
+| → trust-manager | CA distribution | Distributes homelab CA to namespaces so OIDC clients can verify Keycloak TLS |
 | → Grafana | OIDC provider | SSO via `grafana` client in homelab realm (role → org role mapping) |
 | → ArgoCD | OIDC provider | SSO via `argocd` client in homelab realm (role → RBAC policy mapping) |
+| → Matrix Synapse | OIDC provider | SSO via `synapse` client in homelab realm (backchannel logout enabled) |
 
 ### OIDC Client Integration
 
@@ -156,12 +159,13 @@ OIDC clients are declared in `homelab-realm.json` and imported automatically wit
 |--------|-------|------------------|--------------|
 | `grafana` | homelab | `roles` (realm roles → `roles` claim) | `cluster-admins` → Admin, `cluster-users` → Editor, `cluster-reviewers` → Viewer |
 | `argocd` | homelab | `roles` + `groups` (realm roles → both claims) | `cluster-admins` → `role:admin`, others → `role:readonly` |
+| `synapse` | homelab | `roles` (realm roles → `roles` claim) | Authentication only (no role mapping — bot user created via admin API) |
 
 **Grafana** reads the `roles` claim via `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` (JMESPath expression) to map Keycloak roles to Grafana org roles. Configuration is in env vars in the Grafana Deployment.
 
 **ArgoCD** OIDC config is managed by the `argocd-oidc` Application (sync wave 3, after Keycloak), which patches `argocd-cm` and `argocd-rbac-cm` ConfigMaps via `ServerSideApply`. This approach avoids modifying the day-0 bootstrap role — ArgoCD starts with local auth and gains OIDC after Keycloak is available.
 
-Both services use `insecureSkipTLSVerify` / `tls_skip_verify_insecure` for backend OIDC calls since all endpoints share the same self-signed CA.
+Grafana, ArgoCD, and Synapse all use external HTTPS URLs (`https://keycloak.k8s.local/...`) for OIDC endpoints. In-cluster resolution works via a CoreDNS rewrite rule (see [Networking](../../infrastructure/networking.md#coredns-rewrite)) that maps `*.k8s.local` to the Cilium Ingress ClusterIP. TLS verification uses the homelab CA certificate distributed by [trust-manager](trust-manager.md) — each service mounts the `homelab-ca-bundle` ConfigMap. No TLS verification is skipped.
 
 **To add a new OIDC client**: Add an entry to the `clients` array in `homelab-realm.json`, configure the service's OIDC settings, and sync via ArgoCD. If the homelab realm already exists, delete it first so `--import-realm` recreates it with the new client.
 

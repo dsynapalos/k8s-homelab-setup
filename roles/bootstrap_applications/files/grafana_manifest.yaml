@@ -10,7 +10,7 @@ spec:
   source:
     path: argocd_applications/monitoring/grafana
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
-    targetRevision: 24-onboard-keycloak
+    targetRevision: main
   sources: []
   project: homelab
   syncPolicy:

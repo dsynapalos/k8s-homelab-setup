@@ -102,6 +102,7 @@ Istio's built-in CA (istiod/citadel) manages SPIFFE identities and workload cert
 | ← ArgoCD | cert-manager | Deploys and syncs cert-manager via Application CR |
 | → Ingress resources | All `*.k8s.local` services | Provisions TLS certificates via annotations |
 | → Kubernetes Secrets | Per-namespace | Stores TLS certs (e.g., `grafana-tls`, `argocd-tls`) |
+| → trust-manager | CA distribution | trust-manager reads `homelab-ca-secret` to distribute CA across namespaces |
 | ∅ Istio | No interaction | Separate PKI — Istio manages its own workload certs |
 
 ### Certificates Managed
@@ -116,6 +117,7 @@ Istio's built-in CA (istiod/citadel) manages SPIFFE identities and workload cert
 | `hubble-ui-tls` | `kube-system` | `hubble.k8s.local` | Hubble UI |
 | `keycloak-tls` | `security` | `keycloak.k8s.local` | Keycloak IAM |
 | `keycloak-db-server-tls` | `security` | `keycloak-db-rw.security.svc` | Keycloak PostgreSQL (CNPG) |
+| `matrix-db-server-tls` | `monitoring` | `matrix-db-rw.monitoring.svc` | Matrix PostgreSQL (CNPG) |
 
 ## Troubleshooting
 

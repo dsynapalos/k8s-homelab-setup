@@ -1,0 +1,82 @@
+# cert-manager Certificate for PostgreSQL server TLS.
+# Issued by homelab-ca-issuer, used by the CNPG Cluster for encrypted connections.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: matrix-db-server
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  secretName: matrix-db-server-tls
+  issuerRef:
+    name: homelab-ca-issuer
+    kind: ClusterIssuer
+  usages:
+    - server auth
+  dnsNames:
+    - matrix-db-rw
+    - matrix-db-rw.monitoring.svc
+    - matrix-db-rw.monitoring.svc.cluster.local
+    - matrix-db-ro
+    - matrix-db-ro.monitoring.svc
+    - matrix-db-ro.monitoring.svc.cluster.local
+    - matrix-db-r
+    - matrix-db-r.monitoring.svc
+    - matrix-db-r.monitoring.svc.cluster.local
+  duration: 8760h    # 1 year
+  renewBefore: 720h  # 30 days before expiry
+---
+# CloudNativePG Cluster — managed PostgreSQL for Matrix Synapse.
+# The operator provisions the database, generates credentials in the
+# matrix-db-app Secret, and creates -rw/-ro/-r Services automatically.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: matrix-db
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  instances: 1
+
+  # cert-manager TLS — server certificate from homelab CA chain.
+  # The same Secret contains tls.crt, tls.key, and ca.crt.
+  certificates:
+    serverTLSSecret: matrix-db-server-tls
+    serverCASecret: matrix-db-server-tls
+
+  # Rook-Ceph persistent storage (requires ENABLE_ROOK=true).
+  storage:
+    storageClass: rook-ceph-block
+    size: 2Gi
+
+  # Database bootstrap — creates the synapse database and owner user.
+  # Credentials are auto-generated and stored in the matrix-db-app Secret.
+  # Synapse requires C locale for proper collation support.
+  bootstrap:
+    initdb:
+      database: synapse
+      owner: synapse
+      encoding: UTF8
+      localeCType: C
+      localeCollate: C
+
+  # Prometheus annotations for OTel Collector auto-discovery.
+  inheritedMetadata:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9187"
+      prometheus.io/path: "/metrics"
+
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "128MB"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"

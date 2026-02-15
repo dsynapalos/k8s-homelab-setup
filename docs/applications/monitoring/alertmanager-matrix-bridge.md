@@ -34,7 +34,7 @@ Messages include alert annotations, and filtered labels (`alertname`, `severity`
 This is the last component in the alerting pipeline and has strict ordering requirements:
 
 ```
-Wave 1: Matrix homeserver starts
+Wave 2: Matrix homeserver starts
 Wave 2: Alertmanager + Prometheus deploy
 Wave 3: Matrix bootstrap job creates bot user + #alerts room → matrix-bot Secret
 Wave 4: This bridge reads matrix-bot Secret and starts

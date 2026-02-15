@@ -172,6 +172,12 @@ See [CloudNativePG — Troubleshooting](../applications/storage/cloudnative-pg.m
 
 ---
 
+## trust-manager / CA Distribution
+
+See [trust-manager — Troubleshooting](../applications/security/trust-manager.md#troubleshooting) for diagnostic commands and common issues (ConfigMap not appearing, ArgoCD OIDC TLS errors, Bundle not ready).
+
+---
+
 ## ArgoCD
 
 See [ArgoCD GitOps — Troubleshooting](../cicd/gitops.md#troubleshooting) for sync failures, SSH deploy key issues, and repository access errors.

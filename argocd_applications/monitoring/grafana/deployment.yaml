@@ -46,9 +46,13 @@ spec:
             - name: GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN
               value: "true"
             - name: GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE
-              value: "true"
-            - name: GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN
               value: "false"
+            - name: GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA
+              value: "/etc/ssl/certs/homelab/ca-certificates.crt"
+            - name: GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN
+              value: "true"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
           ports:
             - containerPort: 3000
               name: http-grafana
@@ -103,6 +107,9 @@ spec:
             - name: grafana-datasource-config
               mountPath: /etc/grafana/provisioning/datasources/prometheus-datasource.yaml
               subPath: prometheus-datasource.yaml
+            - name: homelab-ca
+              mountPath: /etc/ssl/certs/homelab
+              readOnly: true
       volumes:
         - name: grafana-dashboard-provider
           configMap:
@@ -128,4 +135,7 @@ spec:
         - name: grafana-datasource-config
           configMap:
             name: grafana-prometheus-datasource
+        - name: homelab-ca
+          configMap:
+            name: homelab-ca-bundle
 

@@ -35,7 +35,7 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 | `cluster-users` | Editor |
 | `cluster-reviewers` | Viewer |
 
-The default local admin (`admin`/`admin`) still works as a fallback. TLS verification is skipped for backend OIDC calls (`GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE`) since both services share the same self-signed CA.
+The default local admin (`admin`/`admin`) no longer works as a fallback — the login form is disabled (`GF_AUTH_DISABLE_LOGIN_FORM`) and OIDC auto-login is enabled (`GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN`). TLS verification for backend OIDC calls uses the homelab CA certificate distributed by [trust-manager](../security/trust-manager.md) (mounted from the `homelab-ca-bundle` ConfigMap at `/etc/ssl/certs/homelab/ca-certificates.crt`).
 
 ## Dashboard Notes
 
@@ -51,6 +51,7 @@ The default local admin (`admin`/`admin`) still works as a fallback. TLS verific
 | [DCGM Exporter](dcgm-exporter.md) | GPU metrics rendered in NVIDIA GPU Dashboard |
 | [Node Exporter](node-exporter.md) | Host metrics rendered in K8s Cluster Dashboard |
 | [Keycloak](../security/keycloak.md) | OIDC provider — SSO authentication via `grafana` client in homelab realm |
+| [trust-manager](../security/trust-manager.md) | Distributes homelab CA certificate for OIDC TLS verification |
 
 ## Troubleshooting
 
