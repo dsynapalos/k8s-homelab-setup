@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: alertmanager
   namespace: argocd
+  labels:
+    category: monitoring
   annotations:
     argocd.argoproj.io/sync-wave: "2"
 spec:

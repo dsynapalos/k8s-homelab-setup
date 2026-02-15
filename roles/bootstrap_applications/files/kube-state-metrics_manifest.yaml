@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: kube-state-metrics
   namespace: argocd
+  labels:
+    category: monitoring
 spec:
   destination:
     namespace: monitoring
