@@ -121,11 +121,13 @@ argocd_applications/
 │   ├── cloudnative-pg/
 │   ├── rook-operator/
 │   └── rook-cluster/
-└── security/
-    ├── cert-manager/      ← TLS certificate automation
-    ├── trust-manager/     ← CA trust bundle distribution
-    ├── keycloak/           ← Identity & access management
-    └── argocd-oidc/        ← ArgoCD OIDC + RBAC config (patches argocd-cm)
+├── security/
+│   ├── cert-manager/      ← TLS certificate automation
+│   ├── trust-manager/     ← CA trust bundle distribution
+│   ├── keycloak/           ← Identity & access management
+│   └── argocd-oidc/        ← ArgoCD OIDC + RBAC config (patches argocd-cm)
+└── infrastructure/
+    └── harbor/             ← Container registry & proxy cache
 
 roles/bootstrap_applications/files/
 ├── prometheus_manifest.yaml     ← ArgoCD Application CRs
@@ -135,6 +137,7 @@ roles/bootstrap_applications/files/
 ├── keycloak_manifest.yaml
 ├── trust-manager_manifest.yaml
 ├── argocd-oidc_manifest.yaml
+├── harbor_manifest.yaml
 ├── alertmanager_manifest.yaml
 ├── matrix_manifest.yaml
 ├── thanos_manifest.yaml
@@ -147,10 +150,11 @@ Applications deploy in a specific order via ArgoCD sync waves to respect depende
 
 | Wave | Applications | Why This Order |
 |------|-------------|---------------|
-| 1 | cert-manager (CRDs + controller + CA chain), trust-manager (CA distribution), CloudNativePG (CRDs + operator), Matrix (Synapse homeserver), Rook Operator (CRDs + operator) | Infrastructure services must be running before dependent resources |
-| 2 | Alertmanager, Prometheus, Thanos, Keycloak, Grafana, Rook Cluster (CephCluster CR + pools), OTel Collector | Core monitoring + storage + identity, after operator/Matrix ready |
-| 3 | Matrix bootstrap job, ArgoCD OIDC config | Matrix: creates bot user + `matrix-bot` Secret. ArgoCD OIDC: patches `argocd-cm` + `argocd-rbac-cm` (requires Keycloak from wave 2) |
-| 4 | Alertmanager-Matrix-Bridge | Reads `matrix-bot` Secret from wave 3 |
+| 1 | cert-manager (CA issuer), trust-manager (CA distribution), CloudNativePG (CRDs + operator) | Infrastructure services must be running before dependent resources |
+| 2 | Harbor (registry + proxy cache) | Container registry and proxy cache — must be operational before apps with `harbor.k8s.local` image references deploy |
+| 3 | Keycloak (identity provider), ArgoCD OIDC config | Keycloak after Harbor (image pulled from `harbor.k8s.local/quay-cache`). ArgoCD OIDC patches `argocd-cm` + `argocd-rbac-cm` |
+| 6 | Alertmanager, Prometheus, Thanos, Grafana, Matrix, OTel Collector, kube-state-metrics, node-exporter, dcgm-exporter, metrics-server | Monitoring and application stack, after platform services are ready |
+| 8 | Alertmanager-Matrix-Bridge | Reads `matrix-bot` Secret created by the Matrix bootstrap job |
 
 ## Configuration
 

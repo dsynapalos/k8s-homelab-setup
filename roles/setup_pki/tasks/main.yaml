@@ -1,0 +1,119 @@
+---
+# PKI Generation Role
+# Generates root CA and intermediate CA on the control node.
+# Root key stays on control-1 filesystem, never leaves.
+# Intermediate cert+key are fetched to the Ansible controller so downstream
+# plays can distribute the root cert and create the K8s Secret.
+
+- name: create PKI directory
+  ansible.builtin.file:
+    path: /etc/pki/homelab
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+
+# ── Root CA ──────────────────────────────────────────────────────────────────
+
+- name: generate root CA private key
+  community.crypto.openssl_privatekey:
+    path: /etc/pki/homelab/root-ca.key
+    type: ECC
+    curve: secp384r1
+    mode: '0600'
+    force: false
+
+- name: create root CA CSR
+  community.crypto.openssl_csr:
+    path: /etc/pki/homelab/root-ca.csr
+    privatekey_path: /etc/pki/homelab/root-ca.key
+    common_name: Homelab Root CA
+    organization_name: Homelab
+    use_common_name_for_san: false
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+    force: false
+
+- name: sign root CA certificate
+  community.crypto.x509_certificate:
+    path: /etc/pki/homelab/root-ca.crt
+    csr_path: /etc/pki/homelab/root-ca.csr
+    privatekey_path: /etc/pki/homelab/root-ca.key
+    provider: selfsigned
+    selfsigned_not_after: "+3650d"
+    mode: '0644'
+    force: false
+
+# ── Intermediate CA ──────────────────────────────────────────────────────────
+
+- name: generate intermediate CA private key
+  community.crypto.openssl_privatekey:
+    path: /etc/pki/homelab/intermediate-ca.key
+    type: ECC
+    curve: secp384r1
+    mode: '0600'
+    force: false
+
+- name: create intermediate CA CSR
+  community.crypto.openssl_csr:
+    path: /etc/pki/homelab/intermediate-ca.csr
+    privatekey_path: /etc/pki/homelab/intermediate-ca.key
+    common_name: Homelab Intermediate CA
+    organization_name: Homelab
+    use_common_name_for_san: false
+    basic_constraints:
+      - "CA:TRUE"
+      - "pathlen:0"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+    force: false
+
+- name: sign intermediate CA with root CA
+  community.crypto.x509_certificate:
+    path: /etc/pki/homelab/intermediate-ca.crt
+    csr_path: /etc/pki/homelab/intermediate-ca.csr
+    ownca_path: /etc/pki/homelab/root-ca.crt
+    ownca_privatekey_path: /etc/pki/homelab/root-ca.key
+    ownca_not_after: "+1825d"
+    provider: ownca
+    mode: '0644'
+    force: false
+
+# ── Fetch certs to Ansible controller ────────────────────────────────────────
+# Root CA key stays on control-1. Only certs and intermediate key are fetched
+# so downstream plays (distribute_pki, bootstrap_pki_secret) can use them.
+
+- name: create local PKI directory on controller
+  ansible.builtin.file:
+    path: /tmp/homelab-pki
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  become: false
+
+- name: fetch root CA certificate to controller
+  ansible.builtin.fetch:
+    src: /etc/pki/homelab/root-ca.crt
+    dest: /tmp/homelab-pki/root-ca.crt
+    flat: true
+
+- name: fetch intermediate CA certificate to controller
+  ansible.builtin.fetch:
+    src: /etc/pki/homelab/intermediate-ca.crt
+    dest: /tmp/homelab-pki/intermediate-ca.crt
+    flat: true
+
+- name: fetch intermediate CA key to controller
+  ansible.builtin.fetch:
+    src: /etc/pki/homelab/intermediate-ca.key
+    dest: /tmp/homelab-pki/intermediate-ca.key
+    flat: true
+  no_log: true

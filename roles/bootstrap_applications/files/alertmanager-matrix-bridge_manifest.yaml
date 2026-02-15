@@ -6,7 +6,7 @@ metadata:
   labels:
     category: monitoring
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-wave: "8"
 spec:
   destination:
     namespace: monitoring

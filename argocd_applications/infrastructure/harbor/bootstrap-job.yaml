@@ -1,0 +1,126 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: harbor-bootstrap
+  namespace: harbor
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: harbor-bootstrap
+      restartPolicy: OnFailure
+      containers:
+      - name: bootstrap
+        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.19
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          apk add --no-cache curl jq
+
+          HARBOR_API="https://harbor.k8s.local/api/v2.0"
+          AUTH="admin:$HARBOR_ADMIN_PASSWORD"
+
+          # ── Wait for Harbor API ────────────────────────────────────────
+          echo "Waiting for Harbor API..."
+          until curl -sk -u "$AUTH" "$HARBOR_API/systeminfo" | jq -e '.harbor_version' > /dev/null 2>&1; do
+            echo "  Harbor not ready, retrying in 10s..."
+            sleep 10
+          done
+          echo "Harbor API is up: $(curl -sk -u "$AUTH" "$HARBOR_API/systeminfo" | jq -r '.harbor_version')"
+
+          # ── Helper: create registry endpoint + proxy cache project ─────
+          create_proxy_cache() {
+            local NAME="$1"
+            local UPSTREAM_URL="$2"
+            local DESCRIPTION="$3"
+
+            # Check if project already exists
+            if curl -sk -u "$AUTH" "$HARBOR_API/projects?name=$NAME" | jq -e '.[0].project_id' > /dev/null 2>&1; then
+              echo "Project '$NAME' already exists, skipping."
+              return 0
+            fi
+
+            # Create registry endpoint
+            echo "Creating registry endpoint for $UPSTREAM_URL..."
+            local REGISTRY_PAYLOAD=$(jq -n \
+              --arg name "$NAME-upstream" \
+              --arg url "$UPSTREAM_URL" \
+              '{name: $name, type: "docker-registry", url: $url, insecure: false}')
+
+            local REG_RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+              -X POST "$HARBOR_API/registries" \
+              -H "Content-Type: application/json" \
+              -d "$REGISTRY_PAYLOAD")
+
+            if [ "$REG_RESULT" = "201" ] || [ "$REG_RESULT" = "409" ]; then
+              echo "  Registry endpoint created (or exists): $REG_RESULT"
+            else
+              echo "  WARNING: Registry endpoint creation returned $REG_RESULT"
+            fi
+
+            # Get registry ID
+            local REGISTRY_ID=$(curl -sk -u "$AUTH" "$HARBOR_API/registries?name=$NAME-upstream" | jq -r '.[0].id')
+            if [ "$REGISTRY_ID" = "null" ] || [ -z "$REGISTRY_ID" ]; then
+              echo "  ERROR: Could not find registry endpoint ID for $NAME-upstream"
+              return 1
+            fi
+
+            # Create proxy cache project
+            echo "Creating proxy cache project '$NAME' (registry_id=$REGISTRY_ID)..."
+            local PROJECT_PAYLOAD=$(jq -n \
+              --arg name "$NAME" \
+              --argjson reg_id "$REGISTRY_ID" \
+              '{project_name: $name, metadata: {public: "true"}, registry_id: $reg_id}')
+
+            local PROJ_RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+              -X POST "$HARBOR_API/projects" \
+              -H "Content-Type: application/json" \
+              -d "$PROJECT_PAYLOAD")
+
+            if [ "$PROJ_RESULT" = "201" ]; then
+              echo "  Project '$NAME' created successfully."
+            elif [ "$PROJ_RESULT" = "409" ]; then
+              echo "  Project '$NAME' already exists."
+            else
+              echo "  WARNING: Project creation returned $PROJ_RESULT"
+            fi
+          }
+
+          # ── Create proxy cache projects for all upstream registries ────
+          create_proxy_cache "dockerhub-cache"     "https://hub.docker.com" "Docker Hub proxy cache"
+          create_proxy_cache "quay-cache"           "https://quay.io"       "Quay.io proxy cache"
+          create_proxy_cache "k8s-registry-cache"   "https://registry.k8s.io" "Kubernetes registry proxy cache"
+          create_proxy_cache "nvcr-cache"           "https://nvcr.io"       "NVIDIA Container Registry proxy cache"
+
+          # OIDC authentication is pre-configured at deploy time via
+          # CONFIG_OVERWRITE_JSON in the Harbor core container — no API
+          # call needed here.
+
+          echo "Harbor bootstrap complete."
+        env:
+          - name: HARBOR_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: harbor-admin-password
+                key: HARBOR_ADMIN_PASSWORD
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        volumeMounts:
+          - name: ca-certs
+            mountPath: /etc/ssl/certs/homelab
+            readOnly: true
+      volumes:
+        - name: ca-certs
+          configMap:
+            name: homelab-ca-bundle

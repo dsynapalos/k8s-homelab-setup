@@ -43,7 +43,7 @@ Within the Keycloak Application, ArgoCD sync waves ensure resources are created 
 | 1 | `keycloak-db` CNPG Cluster | Provisions PostgreSQL, generates `keycloak-db-app` Secret |
 | 2 | `keycloak` Deployment | Keycloak server, reads database credentials from CNPG Secret |
 
-The ArgoCD Application itself uses sync wave 2 (same as other core services like Thanos and Alertmanager), running after cert-manager and CloudNativePG operator (both wave 1) so that CRDs and issuers are available.
+The ArgoCD Application itself uses sync wave 3, running after cert-manager and CloudNativePG operator (wave 1) and Harbor (wave 2) so that CRDs, issuers, and the container registry proxy cache are available. The Keycloak container image is pulled from `harbor.k8s.local/quay-cache`, requiring Harbor to be operational first.
 
 ### CloudNativePG Database
 
@@ -150,6 +150,7 @@ Keycloak exposes health endpoints on management port 9000:
 | → Grafana | OIDC provider | SSO via `grafana` client in homelab realm (role → org role mapping) |
 | → ArgoCD | OIDC provider | SSO via `argocd` client in homelab realm (role → RBAC policy mapping) |
 | → Matrix Synapse | OIDC provider | SSO via `synapse` client in homelab realm (backchannel logout enabled) |
+| → Harbor | OIDC provider | SSO via `harbor` client in homelab realm (`cluster-admins` → admin) |
 
 ### OIDC Client Integration
 
@@ -160,10 +161,13 @@ OIDC clients are declared in `homelab-realm.json` and imported automatically wit
 | `grafana` | homelab | `roles` (realm roles → `roles` claim) | `cluster-admins` → Admin, `cluster-users` → Editor, `cluster-reviewers` → Viewer |
 | `argocd` | homelab | `roles` + `groups` (realm roles → both claims) | `cluster-admins` → `role:admin`, others → `role:readonly` |
 | `synapse` | homelab | `roles` (realm roles → `roles` claim) | Authentication only (no role mapping — bot user created via admin API) |
+| `harbor` | homelab | `realm-roles` (realm roles → `roles` claim) | `cluster-admins` → Harbor admin (via `oidc_admin_group`), others → standard user |
 
 **Grafana** reads the `roles` claim via `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` (JMESPath expression) to map Keycloak roles to Grafana org roles. Configuration is in env vars in the Grafana Deployment.
 
 **ArgoCD** OIDC config is managed by the `argocd-oidc` Application (sync wave 3, after Keycloak), which patches `argocd-cm` and `argocd-rbac-cm` ConfigMaps via `ServerSideApply`. This approach avoids modifying the day-0 bootstrap role — ArgoCD starts with local auth and gains OIDC after Keycloak is available.
+
+**Harbor** OIDC is pre-configured at deploy time via `CONFIG_OVERWRITE_JSON` on the Harbor core container. This sets OIDC as the primary auth mode with `oidc_admin_group: cluster-admins`, so Keycloak users with the `cluster-admins` role get Harbor admin privileges. No post-deploy API calls are needed. See [Harbor](../infrastructure/harbor.md) for details.
 
 Grafana, ArgoCD, and Synapse all use external HTTPS URLs (`https://keycloak.k8s.local/...`) for OIDC endpoints. In-cluster resolution works via a CoreDNS rewrite rule (see [Networking](../../infrastructure/networking.md#coredns-rewrite)) that maps `*.k8s.local` to the Cilium Ingress ClusterIP. TLS verification uses the homelab CA certificate distributed by [trust-manager](trust-manager.md) — each service mounts the `homelab-ca-bundle` ConfigMap. No TLS verification is skipped.
 

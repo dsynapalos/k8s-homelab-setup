@@ -10,12 +10,12 @@ Common failure modes and how to debug them, organized by component. Start with t
 
 ### Ingress Access (*.k8s.local hostnames)
 
-All web UIs (ArgoCD, Grafana, Prometheus, Hubble, Matrix, Thanos) are exposed via Cilium Ingress using `*.k8s.local` hostnames with TLS certificates from cert-manager. HTTP requests are automatically redirected to HTTPS (via `ingress.cilium.io/force-https`). These are **not real DNS names** — you must add them to your workstation's `/etc/hosts`:
+All web UIs (ArgoCD, Grafana, Harbor, Prometheus, Hubble, Matrix, Thanos) are exposed via Cilium Ingress using `*.k8s.local` hostnames with TLS certificates from cert-manager. HTTP requests are automatically redirected to HTTPS (via `ingress.cilium.io/force-https`). These are **not real DNS names** — you must add them to your workstation's `/etc/hosts`:
 
 ```bash
 # Replace the IP with one from your CILIUM_LOADBALANCER_IPPOOL range
 # Find the actual IP: kubectl get ingress -A
-192.168.1.193  argocd.k8s.local grafana.k8s.local prometheus.k8s.local thanos.k8s.local hubble.k8s.local matrix.k8s.local keycloak.k8s.local
+192.168.1.193  argocd.k8s.local grafana.k8s.local harbor.k8s.local prometheus.k8s.local thanos.k8s.local hubble.k8s.local matrix.k8s.local keycloak.k8s.local
 ```
 
 If you can reach the cluster via `kubectl` but can't open any web UI, this is almost certainly the issue.
@@ -163,6 +163,12 @@ See [cert-manager — Troubleshooting](../applications/security/cert-manager.md#
 ## Keycloak / Identity Management
 
 See [Keycloak — Troubleshooting](../applications/security/keycloak.md#troubleshooting) for diagnostic commands and common issues (CrashLoopBackOff, CNPG Cluster provisioning, PostgreSQL TLS, admin login, Ingress TLS).
+
+---
+
+## Harbor / Container Registry
+
+See [Harbor — Troubleshooting](../applications/infrastructure/harbor.md#troubleshooting) for diagnostic commands and common issues (proxy cache project creation, OIDC configuration, admin password retrieval, bootstrap Job failures, image pull through cache).
 
 ---
 

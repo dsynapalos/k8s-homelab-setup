@@ -21,7 +21,7 @@ spec:
         fsGroup: 65534
       initContainers:
       - name: config-init
-        image: busybox:1.36
+        image: harbor.k8s.local/dockerhub-cache/library/busybox:1.36
         command:
         - sh
         - -c
@@ -46,7 +46,7 @@ spec:
           readOnly: true
       containers:
       - name: thanos-store
-        image: quay.io/thanos/thanos:v0.36.1
+        image: harbor.k8s.local/quay-cache/thanos/thanos:v0.36.1
         args:
         - store
         - --log.level=info

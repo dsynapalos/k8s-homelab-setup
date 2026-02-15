@@ -1,0 +1,61 @@
+---
+# Distribute Root CA Role
+# Installs the root CA certificate on all K8s nodes so CRI-O (and all
+# system tools) trust TLS certificates issued by the homelab CA chain.
+# Also configures CRI-O registry mirrors to route pulls through Harbor.
+
+- name: install root CA certificate
+  ansible.builtin.copy:
+    src: /tmp/homelab-pki/root-ca.crt
+    dest: /usr/local/share/ca-certificates/homelab-root-ca.crt
+    mode: '0644'
+  register: root_ca_installed
+
+- name: update system CA trust store
+  ansible.builtin.command: update-ca-certificates
+  changed_when: root_ca_installed.changed
+  when: root_ca_installed.changed
+
+- name: configure CRI-O registry mirrors for Harbor
+  ansible.builtin.copy:
+    content: |
+      # Route image pulls through Harbor proxy cache.
+      # Mirrors are tried first; on failure CRI-O falls back to the
+      # original registry location (e.g. when Harbor is not yet up).
+
+      [[registry]]
+      prefix = "docker.io"
+      location = "docker.io"
+
+      [[registry.mirror]]
+      location = "harbor.k8s.local/dockerhub-cache"
+
+      [[registry]]
+      prefix = "quay.io"
+      location = "quay.io"
+
+      [[registry.mirror]]
+      location = "harbor.k8s.local/quay-cache"
+
+      [[registry]]
+      prefix = "registry.k8s.io"
+      location = "registry.k8s.io"
+
+      [[registry.mirror]]
+      location = "harbor.k8s.local/k8s-registry-cache"
+
+      [[registry]]
+      prefix = "nvcr.io"
+      location = "nvcr.io"
+
+      [[registry.mirror]]
+      location = "harbor.k8s.local/nvcr-cache"
+    dest: /etc/containers/registries.conf.d/harbor-mirror.conf
+    mode: '0644'
+  register: registry_mirror_config
+
+- name: restart CRI-O to pick up CA and registry changes
+  ansible.builtin.systemd_service:
+    name: crio.service
+    state: restarted
+  when: root_ca_installed.changed or registry_mirror_config.changed

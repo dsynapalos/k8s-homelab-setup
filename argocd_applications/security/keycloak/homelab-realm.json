@@ -144,7 +144,36 @@
             "userinfo.token.claim": "true"
           }
         }
-      ]    }
+      ]    },
+    {
+      "clientId": "harbor",
+      "name": "Harbor Registry",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "harbor-keycloak-secret",
+      "redirectUris": ["https://harbor.k8s.local/*"],
+      "webOrigins": ["https://harbor.k8s.local"],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
   ],
   "internationalizationEnabled": false
 }

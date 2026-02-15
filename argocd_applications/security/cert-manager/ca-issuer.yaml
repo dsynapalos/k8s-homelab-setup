@@ -3,7 +3,7 @@ kind: ClusterIssuer
 metadata:
   name: homelab-ca-issuer
   annotations:
-    argocd.argoproj.io/sync-wave: "7"
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   ca:
     secretName: homelab-ca-secret

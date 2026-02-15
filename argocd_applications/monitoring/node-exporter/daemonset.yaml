@@ -28,7 +28,7 @@ spec:
         - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/pods/.+)($|/)
         - --collector.netclass.ignored-devices=^(veth.*)$
         name: node-exporter
-        image: prom/node-exporter
+        image: harbor.k8s.local/dockerhub-cache/prom/node-exporter
         ports:
           - containerPort: 9100
             protocol: TCP

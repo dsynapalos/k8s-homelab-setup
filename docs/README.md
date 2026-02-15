@@ -42,10 +42,12 @@ docs/
     │   ├── cloudnative-pg.md        ← PostgreSQL operator (CNPG) lifecycle & CRDs
     │   ├── rook-operator.md         ← Rook operator lifecycle & CRDs
     │   └── rook-cluster.md          ← CephCluster CR, pools, StorageClasses
-    └── security/
+    ├── security/
         ├── cert-manager.md          ← TLS certificate automation, CA chain, ingress integration
         ├── trust-manager.md         ← CA trust bundle distribution across namespaces
         └── keycloak.md              ← Identity & access management, OIDC/SSO provider
+    └── infrastructure/
+        └── harbor.md               ← Container registry, proxy cache, OIDC, image management
 ```
 
 ### Key principle: `applications/` mirrors `argocd_applications/`
@@ -61,6 +63,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | `argocd_applications/security/argocd-oidc/` | `docs/applications/security/keycloak.md` (OIDC Client Integration section) |
 | `argocd_applications/security/keycloak/` | `docs/applications/security/keycloak.md` |
 | `argocd_applications/security/trust-manager/` | `docs/applications/security/trust-manager.md` |
+| `argocd_applications/infrastructure/harbor/` | `docs/applications/infrastructure/harbor.md` |
 
 ---
 
@@ -169,6 +172,12 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [cert-manager.md](applications/security/cert-manager.md) | TLS certificate automation. Self-signed CA chain, ingress-shim integration, ArgoCD TLS termination, Istio mTLS boundary. |
 | [trust-manager.md](applications/security/trust-manager.md) | CA trust bundle distribution. Propagates homelab CA certificate to all namespaces via Bundle CRs, enabling proper TLS verification for OIDC backchannel calls. |
 | [keycloak.md](applications/security/keycloak.md) | Identity & access management. OIDC/OAuth 2.0 provider, SSO for cluster services, CloudNativePG-managed PostgreSQL, three-tier role model (cluster-admins/users/reviewers), configMapGenerator-based realm import. |
+
+#### Infrastructure (`applications/infrastructure/`)
+
+| Document | Purpose |
+|---|---|
+| [harbor.md](applications/infrastructure/harbor.md) | Container registry & proxy cache. Pull-through cache for Docker Hub, Quay.io, registry.k8s.io, and NVCR. Rook-Ceph storage, cert-manager TLS, Keycloak OIDC, Trivy scanning. CRI-O mirror integration. |
 
 ---
 

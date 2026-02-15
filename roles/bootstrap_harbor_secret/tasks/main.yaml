@@ -1,0 +1,50 @@
+---
+# Bootstrap Harbor Secret Role
+# Pre-creates the harbor namespace and a randomly generated admin password
+# Secret before ArgoCD deploys Harbor. The Helm chart references this Secret
+# via existingSecretAdminPassword, and the bootstrap Job reads it to
+# authenticate API calls for proxy cache project creation.
+#
+# The password is generated once and persists across re-runs (idempotent).
+# Nobody needs to know or type this password — all human access goes
+# through Keycloak OIDC.
+
+- name: create harbor namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: harbor
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: check if harbor admin password secret exists
+  kubernetes.core.k8s_info:
+    kind: Secret
+    name: harbor-admin-password
+    namespace: harbor
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: harbor_admin_secret
+
+- name: generate random harbor admin password
+  ansible.builtin.set_fact:
+    harbor_admin_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+  when: harbor_admin_secret.resources | length == 0
+  no_log: true
+
+- name: create harbor admin password secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: harbor-admin-password
+        namespace: harbor
+      type: Opaque
+      data:
+        HARBOR_ADMIN_PASSWORD: "{{ harbor_admin_password | b64encode }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: harbor_admin_secret.resources | length == 0
+  no_log: true

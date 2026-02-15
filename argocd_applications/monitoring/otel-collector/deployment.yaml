@@ -21,7 +21,7 @@ spec:
       serviceAccountName: otel-collector
       containers:
       - name: otel-collector
-        image: otel/opentelemetry-collector-contrib:0.120.0
+        image: harbor.k8s.local/dockerhub-cache/otel/opentelemetry-collector-contrib:0.120.0
         args:
           - '--config=file:/etc/otelcol/otel-base-config.yaml'
           - '--config=file:/etc/otelcol/otel-metrics-pipeline.yaml'

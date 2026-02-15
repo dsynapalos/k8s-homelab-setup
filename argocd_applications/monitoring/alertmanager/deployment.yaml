@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: alertmanager
-        image: prom/alertmanager:v0.27.0
+        image: harbor.k8s.local/dockerhub-cache/prom/alertmanager:v0.27.0
         args:
           - '--config.file=/etc/alertmanager/alertmanager.yml'
           - '--storage.path=/alertmanager'

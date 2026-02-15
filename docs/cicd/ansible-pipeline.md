@@ -19,7 +19,7 @@ A third entry point, **`cleanup-clusters.py`**, reverses everything — destroyi
 
 ### `setup-clusters.py` — Full Provisioning
 
-Executes `setup_cluster.yaml` — the 10-play playbook that builds everything from scratch.
+Executes `setup_cluster.yaml` — the 14-play playbook that builds everything from scratch.
 
 ```bash
 python3 setup-clusters.py    # ~17 minutes
@@ -59,21 +59,25 @@ python3 cleanup-clusters.py
 
 ## Playbook: `setup_cluster.yaml`
 
-This is the main playbook. It runs 10 plays in sequence, each targeting specific host groups and executing one or more roles.
+This is the main playbook. It runs 14 plays in sequence, each targeting specific host groups and executing one or more roles.
 
 ### Execution Flow
 
 ```
-Play 1: localhost          → test_ansible_runner + setup_localhost
-Play 2: proxmox            → provision_infra
-Play 3: k8s-control        → setup_cluster_master (includes setup_os)
-Play 4: k8s-nodes          → setup_cluster_node (includes setup_os)
-Play 5: k8s (all nodes)    → bootstrap_cillium
-Play 6: k8s-control        → bootstrap_istio_ambient
-Play 7: localhost           → bootstrap_nvidia_device_plugin
-Play 8: localhost           → bootstrap_argocd
-Play 9: localhost           → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
-Play 10: localhost          → bootstrap_applications
+Play 1:  localhost          → test_ansible_runner + setup_localhost
+Play 2:  proxmox            → provision_infra
+Play 3:  k8s-control        → setup_cluster_master (includes setup_os)
+Play 4:  k8s-nodes          → setup_cluster_node (includes setup_os)
+Play 5:  k8s-control        → setup_pki
+Play 6:  k8s (all nodes)    → distribute_pki
+Play 7:  k8s (all nodes)    → bootstrap_cillium
+Play 8:  k8s-control        → bootstrap_istio_ambient
+Play 9:  localhost           → bootstrap_nvidia_device_plugin
+Play 10: localhost           → bootstrap_argocd
+Play 11: localhost           → bootstrap_pki_secret
+Play 12: localhost           → bootstrap_harbor_secret
+Play 13: localhost           → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
+Play 14: localhost           → bootstrap_applications
 ```
 
 ### Phase 1 — Local Preparation
@@ -137,7 +141,33 @@ Same OS preparation as the control plane, then joins each worker to the cluster:
 - Waits for the node to report Ready
 - Applies node labels, protecting system-managed labels (`kubernetes.io/*`, `nvidia.com/*`, `accelerator`, `gpu-type`)
 
-### Phase 5 — Cilium Networking
+### Phase 5 — PKI Generation
+
+**Hosts**: `k8s-control` · **Role**: `setup_pki`
+
+Generates a two-tier CA hierarchy on the control plane node:
+
+- **Root CA**: ECC secp384r1 key, self-signed certificate with 10-year validity. Private key stays on the control node filesystem and never leaves.
+- **Intermediate CA**: ECC secp384r1 key, signed by root CA with 5-year validity and `pathlen:0` (cannot sign further sub-CAs).
+- Fetches root CA certificate, intermediate certificate, and intermediate key to the Ansible controller (`/tmp/homelab-pki/`) for downstream plays.
+
+All key generation uses `force: false` — re-runs skip generation if the files already exist.
+
+### Phase 6 — PKI Distribution & Registry Mirrors
+
+**Hosts**: `k8s` (all nodes) · **Role**: `distribute_pki`
+
+Distributes the root CA and configures CRI-O registry mirrors on all cluster nodes:
+
+- Copies the root CA certificate to `/usr/local/share/ca-certificates/` and runs `update-ca-certificates` so CRI-O and all system tools trust the homelab CA chain
+- Writes a CRI-O registry mirror configuration (`/etc/containers/registries.conf.d/harbor-mirror.conf`) that routes image pulls through Harbor’s proxy cache projects:
+  - `docker.io` → `harbor.k8s.local/dockerhub-cache`
+  - `quay.io` → `harbor.k8s.local/quay-cache`
+  - `registry.k8s.io` → `harbor.k8s.local/k8s-registry-cache`
+  - `nvcr.io` → `harbor.k8s.local/nvcr-cache`
+- Restarts CRI-O only when the CA or mirror config actually changes
+
+### Phase 7 — Cilium Networking
 
 **Hosts**: `k8s` (all nodes) · **Role**: `bootstrap_cillium`
 
@@ -152,7 +182,7 @@ Deploys Cilium CNI via Helm with full kube-proxy replacement:
 - Patches CoreDNS with a `*.k8s.local` rewrite rule to resolve Ingress hostnames to the Cilium Ingress ClusterIP internally (enables OIDC backchannel calls without separate internal URLs)
 - Restarts all non-hostNetwork pods to pick up Cilium networking
 
-### Phase 6 — Istio Ambient (Optional)
+### Phase 8 — Istio Ambient (Optional)
 
 **Hosts**: `k8s-control` · **Role**: `bootstrap_istio_ambient` · **Condition**: `ENABLE_ISTIO=true`
 
@@ -165,7 +195,7 @@ Installs the sidecar-less Istio Ambient service mesh via four Helm charts:
 
 Includes post-install verification: waits for all pods Running, checks CNI and ztunnel pod counts match node count, verifies control plane health endpoint.
 
-### Phase 7 — NVIDIA Device Plugin (Optional)
+### Phase 9 — NVIDIA Device Plugin (Optional)
 
 **Hosts**: `localhost` · **Role**: `bootstrap_nvidia_device_plugin` · **Condition**: `ENABLE_CUDA=true`
 
@@ -176,7 +206,7 @@ Creates the `nvidia` RuntimeClass and deploys the NVIDIA device plugin:
 - Waits for pods to be Running, verifies `nvidia.com/gpu` resource appears on nodes
 - Labels GPU nodes with `accelerator: nvidia-gpu` and `gpu-type: gtx-1060`
 
-### Phase 8 — ArgoCD
+### Phase 10 — ArgoCD
 
 **Hosts**: `localhost` · **Role**: `bootstrap_argocd`
 
@@ -191,7 +221,31 @@ Installs ArgoCD and configures Git repository access:
 
 See [GitOps](gitops.md) for the full SSH key management flow.
 
-### Phase 9 — Storage (Optional)
+### Phase 11 — PKI Secret for cert-manager
+
+**Hosts**: `localhost` · **Role**: `bootstrap_pki_secret`
+
+Pre-creates the `homelab-ca-secret` Secret in the `cert-manager` namespace before ArgoCD deploys cert-manager:
+
+- Creates the `cert-manager` namespace
+- Creates a `kubernetes.io/tls` Secret containing the intermediate CA certificate, intermediate CA private key, and root CA certificate (as `ca.crt`)
+- When cert-manager deploys (via ArgoCD), the `homelab-ca-issuer` ClusterIssuer immediately finds its signing material — no self-signed bootstrap chain needed
+
+This Secret is the same one that trust-manager reads to distribute the CA across namespaces.
+
+### Phase 12 — Harbor Admin Secret
+
+**Hosts**: `localhost` · **Role**: `bootstrap_harbor_secret`
+
+Pre-creates a randomly generated admin password for Harbor before ArgoCD deploys it:
+
+- Creates the `harbor` namespace
+- Checks if the `harbor-admin-password` Secret already exists (idempotent)
+- If missing, generates a 32-character random password and stores it in an Opaque Secret with key `HARBOR_ADMIN_PASSWORD`
+- The Harbor Helm chart reads this via `existingSecretAdminPassword`, and the bootstrap Job reads it via `secretKeyRef` to authenticate API calls
+- Nobody needs to know this password — all human access goes through Keycloak OIDC
+
+### Phase 13 — Storage (Optional)
 
 **Hosts**: `localhost` · **Roles**: `bootstrap_cephfs_storage_class`, `bootstrap_rook_ceph`
 
@@ -208,7 +262,7 @@ Two mutually independent storage options:
 - Waits for operator Deployment to be Available (5 min timeout)
 - Waits for CephCluster CR to reach `phase: Ready` (15 min timeout)
 
-### Phase 10 — Applications
+### Phase 14 — Applications
 
 **Hosts**: `localhost` · **Role**: `bootstrap_applications`
 
@@ -219,13 +273,13 @@ Uploads all ArgoCD Application manifests:
 - ArgoCD then takes over lifecycle management, syncing from Git
 
 Currently deployed manifests:
-`alertmanager`, `alertmanager-matrix-bridge`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `keycloak`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
+`alertmanager`, `alertmanager-matrix-bridge`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `harbor`, `keycloak`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
 
 ---
 
 ## Playbook: `setup_applications.yaml`
 
-A single-play subset of the main playbook — runs only Phase 10 (bootstrap_applications).
+A single-play subset of the main playbook — runs only Phase 14 (bootstrap_applications).
 
 ```yaml
 - name: setup applications

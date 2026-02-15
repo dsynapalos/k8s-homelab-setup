@@ -10,7 +10,7 @@ The project has two independent entry points with very different risk profiles:
 
 ### Full Provisioning (`setup-clusters.py`)
 
-Runs `setup_cluster.yaml` — the 10-play playbook that builds everything from bare metal to a running cluster with applications.
+Runs `setup_cluster.yaml` — the 14-play playbook that builds everything from bare metal to a running cluster with applications.
 
 - **Duration**: ~17 minutes
 - **What it touches**: Proxmox VMs, OS configuration, Kubernetes cluster, networking, storage, GitOps, applications
@@ -71,6 +71,17 @@ The automation is organized into Ansible roles, each responsible for one concern
 
 Labels are only updated when a key is missing or its value differs from what's in inventory.
 
+### PKI Layer
+
+| Role | Runs On | Purpose |
+|------|---------|---------|
+| `setup_pki` | k8s-control | Generates Root CA (ECC secp384r1, 10-year) and Intermediate CA (5-year, pathlen:0), fetches certs to controller |
+| `distribute_pki` | k8s (all) | Installs root CA in system trust store, configures CRI-O registry mirrors for Harbor proxy cache |
+| `bootstrap_pki_secret` | localhost | Pre-creates the `homelab-ca-secret` Secret in `cert-manager` namespace (intermediate cert+key, root CA) |
+| `bootstrap_harbor_secret` | localhost | Pre-creates the `harbor-admin-password` Secret with a random 32-char password (idempotent) |
+
+**PKI chain**: Root CA → Intermediate CA → cert-manager leaf certificates. The root CA private key never leaves the control plane node. Only the certificates and the intermediate key are fetched to the Ansible controller for distribution. CRI-O mirrors route image pulls through Harbor's proxy cache (`harbor.k8s.local/{registry}-cache`).
+
 ### Networking Layer
 
 | Role | Runs On | Purpose |
@@ -99,19 +110,23 @@ The role also has two optional sub-task files that run conditionally:
 
 ## Execution Order
 
-The main playbook runs these 10 plays in sequence. Each play targets a specific host group:
+The main playbook runs these 14 plays in sequence. Each play targets a specific host group:
 
 ```
  1. localhost        →  test_ansible_runner + setup_localhost
  2. proxmox          →  provision_infra
  3. k8s-control      →  setup_cluster_master (includes setup_os)
  4. k8s-nodes        →  setup_cluster_node (includes setup_os)
- 5. k8s (all nodes)  →  bootstrap_cillium
- 6. k8s-control      →  bootstrap_istio_ambient
- 7. localhost         →  bootstrap_nvidia_device_plugin
- 8. localhost         →  bootstrap_argocd
- 9. localhost         →  bootstrap_cephfs_storage_class / bootstrap_rook_ceph
-10. localhost         →  bootstrap_applications
+ 5. k8s-control      →  setup_pki
+ 6. k8s (all nodes)  →  distribute_pki
+ 7. k8s (all nodes)  →  bootstrap_cillium
+ 8. k8s-control      →  bootstrap_istio_ambient
+ 9. localhost         →  bootstrap_nvidia_device_plugin
+10. localhost         →  bootstrap_argocd
+11. localhost         →  bootstrap_pki_secret
+12. localhost         →  bootstrap_harbor_secret
+13. localhost         →  bootstrap_cephfs_storage_class / bootstrap_rook_ceph
+14. localhost         →  bootstrap_applications
 ```
 
 Optional roles (Istio, CUDA, CephFS, Rook) are gated by environment variables and skip cleanly when disabled.
@@ -174,7 +189,7 @@ cat artifacts/*/stderr
 | `roles/*/tasks/` | Ansible task files — `main.yaml` orchestrates, sub-tasks included conditionally |
 | `roles/*/templates/` | Jinja2 templates (e.g., `netplan.j2` for static IP configuration) |
 | `roles/*/files/` | Static files — Python scripts (`create_vm.py`, `discover_storage.py`), ArgoCD manifests |
-| `argocd_applications/{category}/{app}/` | Kustomize manifests organized by category (monitoring, storage) |
+| `argocd_applications/{category}/{app}/` | Kustomize manifests organized by category (monitoring, storage, security, infrastructure) |
 | `roles/bootstrap_applications/files/` | ArgoCD Application CRs — `*_manifest.yaml` files uploaded to the cluster |
 | `inventory/` | `k8s.yaml` (cluster nodes) + `localhost.yaml` (control machine) |
 | `env/envvars` | Ansible Runner environment variables (auto-generated) |

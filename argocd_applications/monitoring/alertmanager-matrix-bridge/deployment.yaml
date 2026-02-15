@@ -15,7 +15,7 @@ spec:
     spec:
       initContainers:
       - name: config-generator
-        image: busybox:1.36
+        image: harbor.k8s.local/dockerhub-cache/library/busybox:1.36
         command:
         - /bin/sh
         - -c
@@ -104,7 +104,7 @@ spec:
           mountPath: /config
       containers:
       - name: receiver
-        image: docker.io/metio/matrix-alertmanager-receiver:2025.11.5
+        image: harbor.k8s.local/dockerhub-cache/metio/matrix-alertmanager-receiver:2025.11.5
         args:
         - "--config-path"
         - "/config/config.yaml"

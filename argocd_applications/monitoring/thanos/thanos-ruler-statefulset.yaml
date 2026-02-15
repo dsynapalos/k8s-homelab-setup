@@ -21,7 +21,7 @@ spec:
         fsGroup: 65534
       containers:
       - name: thanos-ruler
-        image: quay.io/thanos/thanos:v0.36.1
+        image: harbor.k8s.local/quay-cache/thanos/thanos:v0.36.1
         args:
         - rule
         - --log.level=info

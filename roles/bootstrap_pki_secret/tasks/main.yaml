@@ -1,0 +1,32 @@
+---
+# Bootstrap PKI Secret Role
+# Pre-creates the cert-manager namespace and the intermediate CA Secret
+# so that when cert-manager deploys via ArgoCD, the homelab-ca-issuer
+# ClusterIssuer immediately finds its signing material.
+
+- name: create cert-manager namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: cert-manager
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
+- name: create intermediate CA Secret for cert-manager
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: homelab-ca-secret
+        namespace: cert-manager
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ lookup('file', '/tmp/homelab-pki/intermediate-ca.crt') | b64encode }}"
+        tls.key: "{{ lookup('file', '/tmp/homelab-pki/intermediate-ca.key') | b64encode }}"
+        ca.crt: "{{ lookup('file', '/tmp/homelab-pki/root-ca.crt') | b64encode }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  no_log: true

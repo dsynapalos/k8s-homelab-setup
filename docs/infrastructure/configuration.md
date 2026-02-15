@@ -231,7 +231,7 @@ For networking internals and Cilium integration, see [Networking](networking.md)
 
 ### What It Does
 
-Automates TLS certificate provisioning for all Ingress endpoints using a self-signed CA chain. Deployed as an ArgoCD Application — no feature flag required (always-on).
+Automates TLS certificate provisioning for all Ingress endpoints using an Ansible-generated CA chain. Deployed as an ArgoCD Application — no feature flag required (always-on).
 
 ### Configuration
 
@@ -239,10 +239,13 @@ cert-manager has no `.env` variables. The version is pinned directly in the Kust
 
 ### How It Works
 
-1. cert-manager deploys from upstream static manifest via ArgoCD (sync-wave 1)
-2. A self-signed CA chain is bootstrapped (selfsigned-issuer → homelab-ca Certificate → homelab-ca-issuer ClusterIssuer)
-3. Every Ingress annotated with `cert-manager.io/cluster-issuer: homelab-ca-issuer` gets an automatic TLS certificate
-4. ArgoCD runs in insecure mode with TLS terminated at the Cilium Ingress
+1. The `setup_pki` role generates a two-tier PKI chain on the control plane (Root CA → Intermediate CA)
+2. The `distribute_pki` role installs the root CA certificate on all cluster nodes (system trust + CRI-O)
+3. The `bootstrap_pki_secret` role pre-creates the `homelab-ca-secret` Secret in the `cert-manager` namespace (intermediate cert+key, root CA)
+4. cert-manager deploys from upstream static manifest via ArgoCD (sync wave 1)
+5. The `homelab-ca-issuer` ClusterIssuer references the pre-existing `homelab-ca-secret` and immediately starts signing leaf certificates
+6. Every Ingress annotated with `cert-manager.io/cluster-issuer: homelab-ca-issuer` gets an automatic TLS certificate
+7. ArgoCD runs in insecure mode with TLS terminated at the Cilium Ingress
 
 For full details, see [cert-manager](../applications/security/cert-manager.md). For networking integration, see [Networking — TLS Certificate Management](networking.md#tls-certificate-management).
 

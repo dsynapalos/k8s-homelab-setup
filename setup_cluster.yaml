@@ -29,6 +29,20 @@
   roles:
     - setup_cluster_node
 
+- name: generate homelab PKI
+  hosts: k8s-control
+  gather_facts: false
+  become: true
+  roles:
+    - setup_pki
+
+- name: distribute root CA and configure registry mirrors
+  hosts: k8s
+  gather_facts: false
+  become: true
+  roles:
+    - distribute_pki
+
 - name: setup cillium networking
   hosts: k8s
   gather_facts: false
@@ -56,6 +70,20 @@
   become: true
   roles:
     - bootstrap_argocd
+
+- name: bootstrap PKI secret for cert-manager
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - bootstrap_pki_secret
+
+- name: bootstrap Harbor admin secret
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - bootstrap_harbor_secret
 
 - name: setup storage classes
   hosts: localhost
