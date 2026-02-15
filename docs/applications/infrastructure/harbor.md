@@ -27,16 +27,18 @@ Harbor is a CNCF-graduated container registry that acts as a **pull-through prox
 
 Created automatically by the bootstrap Job after Harbor is up:
 
-| Project | Upstream Registry | Used By |
-|---------|------------------|---------|
-| `dockerhub-cache` | `hub.docker.com` | alertmanager, grafana, prometheus, synapse, postgres, busybox, alpine, otel-collector, node-exporter, alertmanager-matrix-bridge |
-| `quay-cache` | `quay.io` | thanos (×5), keycloak, ceph |
-| `k8s-registry-cache` | `registry.k8s.io` | kube-state-metrics, metrics-server |
-| `nvcr-cache` | `nvcr.io` | dcgm-exporter |
+| Project | Upstream Registry | Harbor Adapter Type | Used By |
+|---------|------------------|--------------------|---------|
+| `dockerhub-cache` | `hub.docker.com` | `docker-hub` | alertmanager, grafana, prometheus, synapse, postgres, busybox, alpine, otel-collector, node-exporter, alertmanager-matrix-bridge |
+| `quay-cache` | `quay.io` | `quay` | thanos (×5), keycloak |
+| `k8s-registry-cache` | `registry.k8s.io` | `docker-registry` | kube-state-metrics, metrics-server |
+| `nvcr-cache` | `nvcr.io` | `docker-registry` | dcgm-exporter |
+
+> **Adapter types matter.** Harbor's API requires the correct adapter type per upstream (e.g., `docker-hub` for Docker Hub, `quay` for Quay.io). Using the generic `docker-registry` type for registries that have a dedicated adapter will return HTTP 400.
 
 ### Image Reference Format
 
-All image references in `argocd_applications/` are rewritten to pull through Harbor:
+Most image references in `argocd_applications/` are rewritten to pull through Harbor. **Exception:** images involved in bootstrapping Harbor itself (e.g., the bootstrap Job's alpine image, the Rook Ceph image) use direct upstream references to avoid a circular dependency — Harbor must be running before it can proxy pulls.
 
 ```
 # Docker Hub (library/ namespace for official images)
@@ -135,6 +137,9 @@ kubectl logs job/harbor-bootstrap -n harbor
 # - Harbor not ready yet → Job retries automatically
 # - CA trust issue → Check homelab-ca-bundle ConfigMap in harbor namespace
 # - Admin password Secret missing → Verify bootstrap_harbor_secret role ran
+# - Registry endpoint 400 → Wrong adapter type (must use docker-hub, quay, etc.)
+# - Image pull error on bootstrap pod → Must use direct upstream image,
+#   not harbor.k8s.local (circular dependency)
 ```
 
 ## Links

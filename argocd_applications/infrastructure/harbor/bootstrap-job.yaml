@@ -38,7 +38,8 @@ spec:
           create_proxy_cache() {
             local NAME="$1"
             local UPSTREAM_URL="$2"
-            local DESCRIPTION="$3"
+            local REG_TYPE="$3"
+            local DESCRIPTION="$4"
 
             # Check if project already exists
             if curl -sk -u "$AUTH" "$HARBOR_API/projects?name=$NAME" | jq -e '.[0].project_id' > /dev/null 2>&1; then
@@ -51,7 +52,8 @@ spec:
             local REGISTRY_PAYLOAD=$(jq -n \
               --arg name "$NAME-upstream" \
               --arg url "$UPSTREAM_URL" \
-              '{name: $name, type: "docker-registry", url: $url, insecure: false}')
+              --arg type "$REG_TYPE" \
+              '{name: $name, type: $type, url: $url, insecure: false}')
 
             local REG_RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
               -X POST "$HARBOR_API/registries" \
@@ -93,10 +95,10 @@ spec:
           }
 
           # ── Create proxy cache projects for all upstream registries ────
-          create_proxy_cache "dockerhub-cache"     "https://hub.docker.com" "Docker Hub proxy cache"
-          create_proxy_cache "quay-cache"           "https://quay.io"       "Quay.io proxy cache"
-          create_proxy_cache "k8s-registry-cache"   "https://registry.k8s.io" "Kubernetes registry proxy cache"
-          create_proxy_cache "nvcr-cache"           "https://nvcr.io"       "NVIDIA Container Registry proxy cache"
+          create_proxy_cache "dockerhub-cache"     "https://hub.docker.com"  "docker-hub"       "Docker Hub proxy cache"
+          create_proxy_cache "quay-cache"           "https://quay.io"        "quay"              "Quay.io proxy cache"
+          create_proxy_cache "k8s-registry-cache"   "https://registry.k8s.io" "docker-registry"  "Kubernetes registry proxy cache"
+          create_proxy_cache "nvcr-cache"           "https://nvcr.io"        "docker-registry"  "NVIDIA Container Registry proxy cache"
 
           # OIDC authentication is pre-configured at deploy time via
           # CONFIG_OVERWRITE_JSON in the Harbor core container — no API
