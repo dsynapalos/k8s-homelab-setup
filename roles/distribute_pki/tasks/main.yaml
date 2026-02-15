@@ -2,7 +2,9 @@
 # Distribute Root CA Role
 # Installs the root CA certificate on all K8s nodes so CRI-O (and all
 # system tools) trust TLS certificates issued by the homelab CA chain.
-# Also configures CRI-O registry mirrors to route pulls through Harbor.
+# Also configures CRI-O registry mirrors to route pulls through Harbor
+# and sets up systemd-resolved to forward *.k8s.local queries to
+# kube-dns (CoreDNS), which rewrites them to the Cilium Ingress service.
 
 - name: install root CA certificate
   ansible.builtin.copy:
@@ -59,3 +61,43 @@
     name: crio.service
     state: restarted
   when: root_ca_installed.changed or registry_mirror_config.changed
+
+# --- Node DNS: forward *.k8s.local to kube-dns (CoreDNS) ---
+# CoreDNS rewrites *.k8s.local → cilium-ingress.kube-system.svc.cluster.local
+# so all *.k8s.local ingress hostnames resolve without hardcoded IPs.
+# The kube-dns ClusterIP is read from kubelet's own config (no hardcoding).
+
+- name: read kube-dns ClusterIP from kubelet config
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -A1 'clusterDNS:' /var/lib/kubelet/config.yaml | tail -1 | tr -d ' -'
+  args:
+    executable: /bin/bash
+  register: kube_dns_ip
+  changed_when: false
+
+- name: create systemd-resolved drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: '0755'
+
+- name: configure systemd-resolved to forward k8s.local to kube-dns
+  ansible.builtin.copy:
+    content: |
+      # Forward *.k8s.local DNS queries to kube-dns (CoreDNS).
+      # CoreDNS rewrites them to the Cilium Ingress service ClusterIP,
+      # so CRI-O and other host-level tools can resolve ingress hostnames
+      # (e.g. harbor.k8s.local) without hardcoded /etc/hosts entries.
+      [Resolve]
+      DNS={{ kube_dns_ip.stdout }}
+      Domains=~k8s.local
+    dest: /etc/systemd/resolved.conf.d/k8s-local.conf
+    mode: '0644'
+  register: resolved_config
+
+- name: restart systemd-resolved to pick up k8s.local forwarding
+  ansible.builtin.systemd_service:
+    name: systemd-resolved.service
+    state: restarted
+  when: resolved_config.changed

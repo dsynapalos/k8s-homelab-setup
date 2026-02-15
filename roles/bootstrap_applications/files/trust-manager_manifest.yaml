@@ -19,6 +19,12 @@ spec:
           app:
             trust:
               namespace: cert-manager
+          # Enable Secret targets so trust-manager can create Secrets
+          # (e.g. harbor-ca-bundle) in addition to ConfigMaps.
+          secretTargets:
+            enabled: true
+            authorizedSecrets:
+              - harbor-ca-bundle
     - repoURL: "git@gitlab.com:dsynapalos/cluster-setup.git"
       targetRevision: main
       path: argocd_applications/security/trust-manager

@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - ca-bundle.yaml
   - argocd-tls-bundle.yaml
+  - harbor-ca-bundle.yaml

@@ -75,6 +75,10 @@ spec:
           # needed to switch auth mode. The local admin account still exists for
           # headless API calls (proxy cache project creation) but is never used
           # for human login.
+          # Mount homelab CA into all Harbor components (core, jobservice,
+          # registry, trivy) so they trust *.k8s.local certificates.
+          # The Secret is created by trust-manager via the harbor-ca-bundle Bundle.
+          caBundleSecretName: harbor-ca-bundle
           core:
             extraEnvVars:
               - name: CONFIG_OVERWRITE_JSON
