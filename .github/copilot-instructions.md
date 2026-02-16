@@ -15,7 +15,7 @@
 
 | Script | Playbook | Duration | Destructive? | When to use |
 |--------|----------|----------|-------------|-------------|
-| `setup-clusters.py` | `setup_cluster.yaml` (10 plays) | ~17 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
+| `setup-clusters.py` | `setup_cluster.yaml` (14 plays) | ~17 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
 | `setup-applications.py` | `setup_applications.yaml` (1 play) | Seconds | No | App manifest changes, GitOps iteration |
 | `cleanup-clusters.py` | `cleanup_cluster.yaml` | ~2 min | Yes (destroys everything) | Full teardown, start over |
 
@@ -70,15 +70,19 @@ Play  1: localhost     → test_ansible_runner + setup_localhost
 Play  2: proxmox       → provision_infra              (strategy: free)
 Play  3: k8s-control   → setup_cluster_master         (includes setup_os)
 Play  4: k8s-nodes     → setup_cluster_node           (includes setup_os)
-Play  5: k8s (all)     → bootstrap_cillium
-Play  6: k8s-control   → bootstrap_istio_ambient
-Play  7: localhost      → bootstrap_nvidia_device_plugin
-Play  8: localhost      → bootstrap_argocd
-Play  9: localhost      → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
-Play 10: localhost      → bootstrap_applications
+Play  5: k8s-control   → setup_pki
+Play  6: k8s (all)     → distribute_pki
+Play  7: k8s (all)     → bootstrap_cillium
+Play  8: k8s-control   → bootstrap_istio_ambient
+Play  9: localhost      → bootstrap_nvidia_device_plugin
+Play 10: localhost      → bootstrap_argocd
+Play 11: localhost      → bootstrap_pki_secret
+Play 12: localhost      → bootstrap_harbor_secret
+Play 13: localhost      → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
+Play 14: localhost      → bootstrap_applications
 ```
 
-Plays 6-9 are conditional on `ENABLE_*` flags. Plays 7-10 use `delegate_to: localhost` with kubeconfig for K8s API calls.
+Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `ENABLE_CEPH`/`ENABLE_ROOK`. Plays 9-14 target `localhost` for K8s API calls via kubeconfig.
 
 → Full execution flow: `docs/cicd/ansible-pipeline.md`
 
@@ -91,8 +95,11 @@ Plays 6-9 are conditional on `ENABLE_*` flags. Plays 7-10 use `delegate_to: loca
 ├── inventory/                       ← Ansible inventories (k8s.yaml, localhost.yaml)
 ├── roles/                           ← Ansible roles (one per function)
 ├── argocd_applications/             ← Kustomize manifests deployed via ArgoCD
+│   ├── cluster-apps/                ← App-of-app-of-apps hierarchy (platform + services)
 │   ├── monitoring/                  ← Prometheus, Grafana, Thanos, Alertmanager, Matrix, etc.
-│   └── storage/                     ← Rook operator + cluster
+│   ├── security/                    ← cert-manager, trust-manager, Keycloak, ArgoCD OIDC
+│   ├── infrastructure/              ← Harbor container registry
+│   └── storage/                     ← CloudNativePG, Rook operator + cluster
 ├── library/                         ← Custom Ansible modules
 ├── artifacts/                       ← Ansible Runner output (auto-cleaned each run)
 └── docs/                            ← Project documentation (see below)
@@ -110,15 +117,19 @@ docs/
 │   ├── networking.md        ← Cilium, Istio Ambient, ingress
 │   ├── storage.md           ← CephFS CSI vs Rook-Ceph
 │   ├── gpu-support.md       ← NVIDIA passthrough, drivers, RuntimeClass
+│   ├── security.md          ← Vulnerability scanning, CVE reporting, image signing
 │   └── troubleshooting.md   ← Debug entry point (links to per-app sections)
 ├── cicd/
 │   ├── ansible-pipeline.md  ← Python entry points, playbook phases, artifacts
-│   └── gitops.md            ← ArgoCD, SSH keys, sync waves, deploy keys
+│   └── gitops.md            ← ArgoCD, app-of-apps, sync waves, deploy keys
 └── applications/            ← One doc per component (mirrors argocd_applications/)
     ├── monitoring/           (prometheus, grafana, thanos, alertmanager,
-    │                          matrix, matrix-bridge,
-    │                          dcgm-exporter, node-exporter)
-    └── storage/              (rook-operator, rook-cluster)
+    │                          matrix, matrix-bridge, otel-collector,
+    │                          dcgm-exporter, node-exporter,
+    │                          kube-state-metrics, metrics-server)
+    ├── storage/              (cloudnative-pg, rook-operator, rook-cluster)
+    ├── security/             (cert-manager, trust-manager, keycloak)
+    └── infrastructure/       (harbor)
 ```
 
 **Every application doc** follows the same structure: What It Does → Why It's Here → How It's Configured → Integration Points → Troubleshooting → Links.
@@ -154,8 +165,11 @@ docs/
 **ArgoCD applications**:
 - Kustomize-based manifests in `argocd_applications/{category}/{app}/`
 - Each app needs: `kustomization.yaml`, workload definition, `service.yaml`
-- Manifest file in `roles/bootstrap_applications/files/{app}_manifest.yaml`
-- Sync waves control deployment order (1 → operators, 2 → core apps, 3 → bootstrap jobs, 4 → dependents)
+- Application CR manifests live in `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`
+- Three-tier app-of-app-of-apps: parent (`cluster-apps`) → tiers (`cluster-platform` wave 1, `cluster-services` wave 2) → individual apps
+- Sync waves within the platform tier enforce ordering (1 → CRDs/operators, 2 → Harbor, 3 → Keycloak/OIDC)
+- Service-tier apps deploy simultaneously after the entire platform tier is Healthy
+- Application health check (Lua script in `argocd-cm`) required for sync waves to block on child apps
 
 **Environment variables**:
 - All config comes from `.env` via `{{ lookup("env", "VAR_NAME") }}`
@@ -180,7 +194,7 @@ docs/
 
 ### When making changes
 
-- **New application**: Create manifests in `argocd_applications/`, add `*_manifest.yaml` to `roles/bootstrap_applications/files/`, create doc in `docs/applications/`, update `docs/README.md` catalog
+- **New application**: Create manifests in `argocd_applications/`, add Application CR to `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`, create doc in `docs/applications/`, update `docs/README.md` catalog
 - **New node**: Update `.env` and `inventory/k8s.yaml`, run `setup-clusters.py`
 - **New optional feature**: Add `ENABLE_*` flag to `example.env`, use conditionals in roles, document in `docs/infrastructure/configuration.md`
 - **Config change**: Update `.env`, decide which entry point to run based on what changed

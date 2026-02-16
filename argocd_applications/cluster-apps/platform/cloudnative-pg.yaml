@@ -18,7 +18,7 @@ spec:
     namespace: cnpg-system
   syncPolicy:
     automated:
-      prune: false  # Don't auto-prune operator
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true

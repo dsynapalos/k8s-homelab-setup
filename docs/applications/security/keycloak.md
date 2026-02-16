@@ -43,7 +43,7 @@ Within the Keycloak Application, ArgoCD sync waves ensure resources are created 
 | 1 | `keycloak-db` CNPG Cluster | Provisions PostgreSQL, generates `keycloak-db-app` Secret |
 | 2 | `keycloak` Deployment | Keycloak server, reads database credentials from CNPG Secret |
 
-The ArgoCD Application itself uses sync wave 3, running after cert-manager and CloudNativePG operator (wave 1) and Harbor (wave 2) so that CRDs, issuers, and the container registry proxy cache are available. The Keycloak container image is pulled from `harbor.k8s.local/quay-cache`, requiring Harbor to be operational first.
+The ArgoCD Application lives in the platform tier of the app-of-app-of-apps hierarchy at sync wave 3, running after cert-manager and CloudNativePG operator (wave 1) and Harbor (wave 2) so that CRDs, issuers, and the container registry proxy cache are available. The Keycloak container image is pulled from `harbor.k8s.local/quay-cache`, requiring Harbor to be operational first.
 
 ### CloudNativePG Database
 
@@ -165,7 +165,7 @@ OIDC clients are declared in `homelab-realm.json` and imported automatically wit
 
 **Grafana** reads the `roles` claim via `GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH` (JMESPath expression) to map Keycloak roles to Grafana org roles. Configuration is in env vars in the Grafana Deployment.
 
-**ArgoCD** OIDC config is managed by the `argocd-oidc` Application (sync wave 3, after Keycloak), which patches `argocd-cm` and `argocd-rbac-cm` ConfigMaps via `ServerSideApply`. This approach avoids modifying the day-0 bootstrap role — ArgoCD starts with local auth and gains OIDC after Keycloak is available.
+**ArgoCD** OIDC config is managed by the `argocd-oidc` Application (platform tier, sync wave 3 — same as Keycloak), which patches `argocd-cm` and `argocd-rbac-cm` ConfigMaps via `ServerSideApply`. This approach avoids modifying the day-0 bootstrap role — ArgoCD starts with local auth and gains OIDC after Keycloak is available.
 
 **Harbor** OIDC is pre-configured at deploy time via `CONFIG_OVERWRITE_JSON` on the Harbor core container. This sets OIDC as the primary auth mode with `oidc_admin_group: cluster-admins`, so Keycloak users with the `cluster-admins` role get Harbor admin privileges. No post-deploy API calls are needed. See [Harbor](../infrastructure/harbor.md) for details.
 

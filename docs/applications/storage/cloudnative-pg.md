@@ -37,7 +37,7 @@ The ArgoCD Application uses `ServerSideApply=true` (required for large CRDs) and
 |------|----------|---------|
 | 1 | CloudNativePG operator | CRDs, controller, webhook — must be running before any `Cluster` CR |
 
-The operator deploys at sync wave 1, alongside cert-manager and the Rook operator. Applications that create CNPG `Cluster` resources deploy at sync wave 2 or later.
+The operator deploys at sync wave 1 in the platform tier of the app-of-app-of-apps hierarchy, alongside cert-manager and trust-manager. Applications that create CNPG `Cluster` resources (Keycloak, Matrix) deploy at later sync waves or in the services tier.
 
 ### Version Management
 

@@ -24,7 +24,7 @@ docs/
 │
 ├── cicd/                            ← Automation & deployment pipeline
 │   ├── ansible-pipeline.md          ← Python entry points, Ansible Runner, playbooks
-│   └── gitops.md                    ← ArgoCD, deploy keys, Application manifests
+│   └── gitops.md                    ← ArgoCD, app-of-apps, deploy keys, sync waves
 │
 └── applications/                    ← Per-application docs (mirrors argocd_applications/)
     ├── monitoring/
@@ -81,7 +81,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | Understand how Ansible runs | [cicd/ansible-pipeline.md](cicd/ansible-pipeline.md) |
 | Understand how apps get deployed | [cicd/gitops.md](cicd/gitops.md) |
 | Learn how a specific application works | `applications/<category>/<app>.md` |
-| Add a new application to the cluster | [cicd/gitops.md](cicd/gitops.md) (manifest pattern), then create a matching app doc |
+| Add a new application to the cluster | [cicd/gitops.md](cicd/gitops.md) (app-of-apps pattern), then create a matching app doc |
 
 ### By layer
 
@@ -138,7 +138,7 @@ How code and configuration get from your machine into the cluster.
 | Document | Purpose |
 |---|---|
 | [ansible-pipeline.md](cicd/ansible-pipeline.md) | The three Python entry points (`setup-clusters.py`, `setup-applications.py`, `cleanup-clusters.py`), Ansible Runner mechanics, playbook structure, artifact debugging. |
-| [gitops.md](cicd/gitops.md) | ArgoCD setup — SSH deploy keys, AppProject, Application manifests, sync waves, Kustomize integration. |
+| [gitops.md](cicd/gitops.md) | ArgoCD setup — app-of-app-of-apps deployment ordering, SSH deploy keys, sync waves, Application health checks. |
 
 ### Applications (`applications/`)
 
@@ -238,7 +238,7 @@ Infrastructure docs are longer-form and may have additional sections (e.g., subs
 
 ### When to create a new doc
 
-1. A new ArgoCD application is added → create `docs/applications/<category>/<app>.md` following the skeleton above.
+1. A new ArgoCD application is added → create `docs/applications/<category>/<app>.md` following the skeleton above, add the Application manifest to the appropriate tier in `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`.
 2. A new infrastructure concern is added (e.g., a backup system) → create `docs/infrastructure/<topic>.md`.
 3. A new CI/CD mechanism is added → create `docs/cicd/<mechanism>.md`.
 4. Update this index (`docs.md`) with the new entry in the catalog table.

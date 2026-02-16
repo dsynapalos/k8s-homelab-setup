@@ -156,7 +156,7 @@ The first run takes approximately 17 minutes, most of which is spent downloading
 | Local setup | ~2 min | Installs kubectl, Helm, Cilium CLI on your machine |
 | VM provisioning | ~8 min | Creates VMs, boots from autoinstall ISO, configures networking |
 | Kubernetes init | ~3 min | kubeadm init/join, Cilium CNI, node labeling |
-| Platform services | ~4 min | ArgoCD, storage drivers, GPU plugin, applications |
+| Platform services | ~4 min | ArgoCD, storage drivers, GPU plugin, app-of-apps hierarchy |
 
 ### Subsequent Runs and Partial Execution
 

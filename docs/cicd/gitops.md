@@ -97,24 +97,70 @@ The automation auto-detects the Git provider from the SSH URL:
 
 ## Application Deployment Flow
 
-Once ArgoCD is running, applications are deployed through the `bootstrap_applications` role:
+Applications are deployed through a **three-tier app-of-app-of-apps** pattern that gives ArgoCD full control over deployment ordering.
 
-1. Developer creates Kustomize manifests in `argocd_applications/<category>/<app>/`
-2. Developer creates an ArgoCD Application manifest in `roles/bootstrap_applications/files/<app>_manifest.yaml`
-3. Running `setup-applications.py` uploads all `*_manifest.yaml` files to Kubernetes
-4. ArgoCD reads each Application CR, syncs from the Git repository, and manages the resources
+### How It Works
 
-**Implementation detail**: The role uses `kubernetes.core.k8s` with `definition: "{{ lookup('file', item) }}"` and iterates via `loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) }}"`. This means any file matching `*_manifest.yaml` in the role's `files/` directory is automatically applied — no explicit task needed per application.
+1. The `bootstrap_applications` role applies a single parent manifest (`cluster-apps_manifest.yaml`) to the cluster
+2. This creates the **first-order** Application (`cluster-apps`) which reads `argocd_applications/cluster-apps/` with `directory.recurse: false`
+3. ArgoCD discovers two **second-order** Applications inside that directory: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 2)
+4. Each second-order Application points to a subdirectory containing **third-order** Application manifests — the actual apps
+5. Sync waves at the second order ensure all platform apps are Healthy before any service apps begin deploying
+6. Within the platform tier, sync waves on individual apps enforce fine-grained ordering (cert-manager before Harbor before Keycloak)
+
+**Implementation detail**: The role uses `kubernetes.core.k8s` with `definition: "{{ lookup('file', item) }}"` and iterates via `loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) }}"`. Currently there is only one manifest (`cluster-apps_manifest.yaml`), but the glob pattern keeps the role extensible.
+
+### Application Health Check
+
+For sync waves to block on child Applications becoming Healthy, ArgoCD must have an Application health check enabled. This was removed as a default in ArgoCD 1.8. The `bootstrap_argocd` role re-enables it by patching `argocd-cm` with a Lua health check script:
+
+```lua
+resource.customizations.health.argoproj.io_Application: |
+  hs = {}
+  hs.status = "Progressing"
+  hs.message = ""
+  if obj.status ~= nil then
+    if obj.status.health ~= nil then
+      hs.status = obj.status.health.status
+      if obj.status.health.message ~= nil then
+        hs.message = obj.status.health.message
+      end
+    end
+  end
+  return hs
+```
+
+This script is also maintained in `argocd_applications/security/argocd-oidc/argocd-cm.yaml` so it persists across ArgoCD syncs.
 
 ### Application Manifest Structure
 
 ```
 argocd_applications/
-├── monitoring/
-│   ├── prometheus/        ← Kustomize manifests
+├── cluster-apps/                          ← App-of-app-of-apps hierarchy
+│   ├── platform.yaml                      ← 2nd order: sync wave 1 (cluster-platform)
+│   ├── platform/                          ← 3rd order: platform apps
+│   │   ├── cert-manager.yaml              (wave 1)
+│   │   ├── trust-manager.yaml             (wave 1)
+│   │   ├── cloudnative-pg.yaml            (wave 1)
+│   │   ├── harbor.yaml                    (wave 2)
+│   │   ├── keycloak.yaml                  (wave 3)
+│   │   └── argocd-oidc.yaml               (wave 3)
+│   ├── services.yaml                      ← 2nd order: sync wave 2 (cluster-services)
+│   └── services/                          ← 3rd order: service apps (no waves)
+│       ├── alertmanager.yaml
+│       ├── dcgm-exporter.yaml
+│       ├── grafana.yaml
+│       ├── kube-state-metrics.yaml
+│       ├── matrix.yaml
+│       ├── matrix-bridge.yaml
+│       ├── metrics-server.yaml
+│       ├── node-exporter.yaml
+│       ├── otel-collector.yaml
+│       └── thanos.yaml
+├── monitoring/                            ← Kustomize manifests (actual resources)
+│   ├── prometheus/
 │   ├── grafana/
 │   ├── alertmanager/
-│   ├── matrix/
 │   ├── thanos/
 │   └── ...
 ├── storage/
@@ -122,39 +168,53 @@ argocd_applications/
 │   ├── rook-operator/
 │   └── rook-cluster/
 ├── security/
-│   ├── cert-manager/      ← TLS certificate automation
-│   ├── trust-manager/     ← CA trust bundle distribution
-│   ├── keycloak/           ← Identity & access management
-│   └── argocd-oidc/        ← ArgoCD OIDC + RBAC config (patches argocd-cm)
+│   ├── cert-manager/
+│   ├── trust-manager/
+│   ├── keycloak/
+│   └── argocd-oidc/
 └── infrastructure/
-    └── harbor/             ← Container registry & proxy cache
+    └── harbor/
 
 roles/bootstrap_applications/files/
-├── prometheus_manifest.yaml     ← ArgoCD Application CRs
-├── grafana_manifest.yaml
-├── cert-manager_manifest.yaml
-├── cloudnative-pg_manifest.yaml
-├── keycloak_manifest.yaml
-├── trust-manager_manifest.yaml
-├── argocd-oidc_manifest.yaml
-├── harbor_manifest.yaml
-├── alertmanager_manifest.yaml
-├── matrix_manifest.yaml
-├── thanos_manifest.yaml
-└── ...
+└── cluster-apps_manifest.yaml             ← Single parent Application CR
 ```
 
-### Sync Wave Ordering
+### Deployment Ordering
 
-Applications deploy in a specific order via ArgoCD sync waves to respect dependencies:
+The three-tier structure enforces dependencies through sync waves at two levels:
+
+**Second-order** (between tiers):
+
+| Wave | Application | Purpose |
+|------|-------------|---------|
+| 1 | `cluster-platform` | Platform dependencies must all be Healthy first |
+| 2 | `cluster-services` | Monitoring and application stack, deploys only after platform is ready |
+
+**Third-order** (within platform tier):
 
 | Wave | Applications | Why This Order |
 |------|-------------|---------------|
-| 1 | cert-manager (CA issuer), trust-manager (CA distribution), CloudNativePG (CRDs + operator) | Infrastructure services must be running before dependent resources |
-| 2 | Harbor (registry + proxy cache) | Container registry and proxy cache — must be operational before apps with `harbor.k8s.local` image references deploy |
-| 3 | Keycloak (identity provider), ArgoCD OIDC config | Keycloak after Harbor (image pulled from `harbor.k8s.local/quay-cache`). ArgoCD OIDC patches `argocd-cm` + `argocd-rbac-cm` |
-| 6 | Alertmanager, Prometheus, Thanos, Grafana, Matrix, OTel Collector, kube-state-metrics, node-exporter, dcgm-exporter, metrics-server | Monitoring and application stack, after platform services are ready |
-| 8 | Matrix Bridge | Reads `matrix-bot` Secret created by the Matrix bootstrap job |
+| 1 | cert-manager, trust-manager, CloudNativePG | Infrastructure CRDs + operators must exist before dependents |
+| 2 | Harbor | Registry + proxy cache — must be operational before apps pulling from `harbor.k8s.local` |
+| 3 | Keycloak, ArgoCD OIDC | Identity provider after Harbor (image pulled from cache). OIDC patches `argocd-cm` + `argocd-rbac-cm` |
+
+Service-tier apps (wave 2 at the second order) have no internal ordering — they deploy simultaneously once the entire platform tier is Healthy.
+
+### ignoreDifferences and RespectIgnoreDifferences
+
+Parent Applications (first-order and second-order) include `ignoreDifferences` for child Application CRDs to prevent the parent from going OutOfSync when ArgoCD mutates child resources during sync operations:
+
+```yaml
+ignoreDifferences:
+  - group: "*"
+    kind: "Application"
+    jsonPointers:
+      - /spec/syncPolicy/automated    # ArgoCD removes this during sync
+      - /metadata/annotations/argocd.argoproj.io~1refresh  # Transient refresh annotation
+      - /operation                     # In-progress sync operation field
+```
+
+The `RespectIgnoreDifferences=true` syncOption ensures the diffing engine honors these exclusions.
 
 ## Configuration
 

@@ -1,18 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: grafana
+  name: matrix
   namespace: argocd
   labels:
     category: monitoring
-  annotations:
-    argocd.argoproj.io/sync-wave: "6"
 spec:
   destination:
     namespace: monitoring
-    server:  https://kubernetes.default.svc
+    server: https://kubernetes.default.svc
   source:
-    path: argocd_applications/monitoring/grafana
+    path: argocd_applications/monitoring/matrix
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
     targetRevision: main
   sources: []
@@ -20,7 +18,13 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false
-      enabled: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

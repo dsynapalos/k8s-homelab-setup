@@ -1,6 +1,6 @@
-- name: upload argocd manifests
+- name: upload argocd app-of-apps manifest
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('file', item) }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
-  loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) | reject('search', 'prometheus_manifest.yaml') | list }}"
+  loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) | list }}"

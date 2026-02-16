@@ -40,7 +40,7 @@ python3 setup-applications.py    # Seconds
 
 - Same cleanup/timing pattern as above
 - No infrastructure changes, safe to run repeatedly
-- Picks up any new or modified `*_manifest.yaml` files
+- Applies the app-of-apps parent manifest; ArgoCD handles all downstream syncing
 
 ### `cleanup-clusters.py` — Teardown
 
@@ -218,6 +218,7 @@ Installs ArgoCD and configures Git repository access:
 - Removes legacy dual-ingress resources (HTTP + HTTPS passthrough) if they exist
 - Generates SSH keypair (if not already stored in ConfigMap), registers as deploy key on GitLab
 - Creates the `homelab` AppProject allowing all repos, namespaces, and resource types
+- Enables the Application health check in `argocd-cm` (Lua script that reports child Application health status, required for app-of-apps sync wave ordering)
 
 See [GitOps](gitops.md) for the full SSH key management flow.
 
@@ -266,14 +267,12 @@ Two mutually independent storage options:
 
 **Hosts**: `localhost` · **Role**: `bootstrap_applications`
 
-Uploads all ArgoCD Application manifests:
+Uploads the ArgoCD app-of-apps parent manifest:
 
-- Globs `roles/bootstrap_applications/files/*_manifest.yaml`
-- Applies each manifest to Kubernetes via `kubernetes.core.k8s`
-- ArgoCD then takes over lifecycle management, syncing from Git
-
-Currently deployed manifests:
-`alertmanager`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `harbor`, `keycloak`, `kube-state-metrics`, `matrix`, `matrix-bridge`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
+- Applies `roles/bootstrap_applications/files/cluster-apps_manifest.yaml` to Kubernetes via `kubernetes.core.k8s`
+- This single Application CR (`cluster-apps`) points to `argocd_applications/cluster-apps/` and discovers two second-order Applications: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 2)
+- ArgoCD then cascades through the hierarchy, deploying platform apps in dependency order before service apps
+- See [GitOps](../cicd/gitops.md) for the full app-of-app-of-apps architecture and sync wave ordering
 
 ---
 
@@ -288,7 +287,7 @@ A single-play subset of the main playbook — runs only Phase 14 (bootstrap_appl
     - bootstrap_applications
 ```
 
-Use this for fast iteration on application manifests without touching infrastructure.
+Use this for fast iteration on application manifests without touching infrastructure. The role applies the app-of-apps parent manifest, and ArgoCD picks up any changes from the Git repository.
 
 ---
 

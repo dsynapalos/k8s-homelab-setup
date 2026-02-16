@@ -97,7 +97,7 @@ Labels are only updated when a key is missing or its value differs from what's i
 | `bootstrap_nvidia_device_plugin` | localhost | Creates RuntimeClass, deploys GPU device plugin (optional) |
 | `bootstrap_cephfs_storage_class` | localhost | Deploys CephFS CSI driver for external Ceph (optional) |
 | `bootstrap_rook_ceph` | localhost | Deploys Rook-Ceph operator and cluster via ArgoCD (optional) |
-| `bootstrap_applications` | localhost | Uploads all ArgoCD Application manifests |
+| `bootstrap_applications` | localhost | Uploads the app-of-apps parent manifest (ArgoCD cascades to all apps) |
 | `cleanup_cluster` | localhost | Destroys VMs, removes storage pools, wipes disks |
 
 ### How `setup_os` Fits In
@@ -190,7 +190,8 @@ cat artifacts/*/stderr
 | `roles/*/templates/` | Jinja2 templates (e.g., `netplan.j2` for static IP configuration) |
 | `roles/*/files/` | Static files — Python scripts (`create_vm.py`, `discover_storage.py`), ArgoCD manifests |
 | `argocd_applications/{category}/{app}/` | Kustomize manifests organized by category (monitoring, storage, security, infrastructure) |
-| `roles/bootstrap_applications/files/` | ArgoCD Application CRs — `*_manifest.yaml` files uploaded to the cluster |
+| `argocd_applications/cluster-apps/` | App-of-app-of-apps hierarchy — parent, platform, and service Application manifests |
+| `roles/bootstrap_applications/files/` | ArgoCD app-of-apps parent manifest (`cluster-apps_manifest.yaml`) |
 | `inventory/` | `k8s.yaml` (cluster nodes) + `localhost.yaml` (control machine) |
 | `env/envvars` | Ansible Runner environment variables (auto-generated) |
 | `artifacts/` | Ansible Runner output — cleaned and repopulated on each run |

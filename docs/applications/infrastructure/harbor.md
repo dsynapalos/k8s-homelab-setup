@@ -16,7 +16,7 @@ Harbor is a CNCF-graduated container registry that acts as a **pull-through prox
 
 ### Deployment
 
-- **Delivery**: ArgoCD Application (sync-wave 2) via Helm chart `harbor` from `helm.goharbor.io`
+- **Delivery**: ArgoCD Application (platform tier, sync-wave 2) via Helm chart `harbor` from `helm.goharbor.io`
 - **Namespace**: `harbor`
 - **Storage**: All PVCs use `rook-ceph-block` StorageClass (registry 50Gi, database 5Gi, redis 1Gi, jobservice 1Gi, trivy 5Gi)
 - **TLS**: Ingress with `cert-manager.io/cluster-issuer: homelab-ca-issuer` annotation

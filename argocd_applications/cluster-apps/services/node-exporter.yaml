@@ -5,12 +5,10 @@ metadata:
   namespace: argocd
   labels:
     category: monitoring
-  annotations:
-    argocd.argoproj.io/sync-wave: "6"
 spec:
   destination:
     namespace: monitoring
-    server:  https://kubernetes.default.svc
+    server: https://kubernetes.default.svc
   source:
     path: argocd_applications/monitoring/node-exporter
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git

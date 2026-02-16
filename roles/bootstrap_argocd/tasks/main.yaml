@@ -29,6 +29,31 @@
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   register: argocd_insecure_config
 
+- name: enable Application health check for app-of-apps sync-wave ordering
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cm
+        namespace: argocd
+      data:
+        resource.customizations.health.argoproj.io_Application: |
+          hs = {}
+          hs.status = "Progressing"
+          hs.message = ""
+          if obj.status ~= nil then
+            if obj.status.health ~= nil then
+              hs.status = obj.status.health.status
+              if obj.status.health.message ~= nil then
+                hs.message = obj.status.health.message
+              end
+            end
+          end
+          return hs
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+
 - name: restart argocd-server to apply insecure mode
   kubernetes.core.k8s:
     state: present

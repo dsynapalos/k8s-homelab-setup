@@ -67,7 +67,7 @@ Public registration is disabled. Users authenticate via Keycloak SSO. The `alert
 | 2 | Deployment | Synapse starts (reads database creds from CNPG Secret, OIDC config from ConfigMap) |
 | 3 | `matrix-bootstrap` Job (PostSync) | Creates bot user, `#alerts` room, `matrix-bot` Secret |
 
-The ArgoCD Application itself uses sync-wave 2 (after the CNPG operator and cert-manager at wave 1) with `ServerSideApply=true` and retry settings to handle CRD availability timing.
+The ArgoCD Application lives in the services tier of the app-of-app-of-apps hierarchy (`argocd_applications/cluster-apps/services/matrix.yaml`), which deploys only after all platform-tier apps (including CNPG operator and cert-manager) are Healthy. Uses `ServerSideApply=true` and retry settings to handle CRD availability timing.
 
 ### Secret Management
 

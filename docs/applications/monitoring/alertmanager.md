@@ -19,7 +19,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 - Single receiver: `matrix` → webhook at `http://matrix-bridge:3000/alerts/default`
 - `send_resolved: true` — sends recovery notifications when alerts clear
 
-**ArgoCD sync-wave**: 2 (deploys after Matrix homeserver is ready at wave 1).
+**ArgoCD deployment**: Services tier of the app-of-app-of-apps hierarchy. Deploys simultaneously with other service-tier apps after all platform-tier apps are Healthy.
 
 ## Alert Flow
 
