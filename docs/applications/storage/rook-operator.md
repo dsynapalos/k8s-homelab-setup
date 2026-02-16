@@ -12,12 +12,15 @@ This is a prerequisite for all in-cluster persistent storage: block volumes, sha
 
 ## How It's Configured
 
-**Deployment**: Pulled directly from upstream Rook v1.19.1 manifests (CRDs, common resources, operator) with a single ConfigMap patch for cluster-specific tuning.
+**Deployment**: Pulled directly from upstream Rook v1.19.1 example manifests (CRDs, common resources, CSI operator, Rook operator) with a single ConfigMap patch for cluster-specific tuning.
+
+> **Note**: The `deploy/examples/` manifests are reference/starter files, not production-grade configs. They ship with generic defaults and bundle entire CRD sets, RBAC, and Deployments into single large files. This is fine for a homelab, but for production use consider migrating to the official [Rook Helm Charts](#future-upgrade-path-helm-charts) which provide templated configuration, cleaner upgrade diffs, and `values.yaml`-based customization.
 
 **Kustomize sources** (from GitHub):
 - `rook/rook/v1.19.1/deploy/examples/crds.yaml` — Custom Resource Definitions
 - `rook/rook/v1.19.1/deploy/examples/common.yaml` — RBAC, ServiceAccounts, namespaces
-- `rook/rook/v1.19.1/deploy/examples/operator.yaml` — Operator Deployment
+- `rook/rook/v1.19.1/deploy/examples/csi-operator.yaml` — Ceph CSI Operator CRDs, RBAC, and Deployment (required since v1.16+; the Rook operator delegates CSI management to this component via `ROOK_USE_CSI_OPERATOR: "true"`)
+- `rook/rook/v1.19.1/deploy/examples/operator.yaml` — Rook Operator Deployment and default ConfigMap
 
 **Operator config overrides** (`operator-config-patch.yaml`):
 
@@ -81,3 +84,78 @@ kubectl get application rook-operator -n argocd
 - [Rook Operator Configuration](https://rook.io/docs/rook/latest/Storage-Configuration/Advanced/ceph-configuration/)
 - [Rook GitHub Repository](https://github.com/rook/rook)
 - [Ceph Documentation](https://docs.ceph.com/en/latest/)
+- [Rook Operator Helm Chart](https://rook.io/docs/rook/latest/Helm-Charts/operator-chart/)
+- [Rook Cluster Helm Chart](https://rook.io/docs/rook/latest/Helm-Charts/ceph-cluster-chart/)
+
+## Future Upgrade Path: Helm Charts
+
+The current deployment uses raw upstream example manifests via Kustomize remote URLs. To migrate to the official Helm charts for better upgrade management:
+
+### 1. Add the Rook Helm repository
+
+```bash
+helm repo add rook-release https://charts.rook.io/release
+helm repo update
+```
+
+### 2. Replace the operator Kustomize deployment with Helm
+
+Replace the ArgoCD Application source in `roles/bootstrap_rook_ceph/files/rook_operator_manifest.yaml`:
+
+```yaml
+spec:
+  source:
+    chart: rook-ceph
+    repoURL: https://charts.rook.io/release
+    targetRevision: v1.19.1  # or latest
+    helm:
+      valuesObject:
+        csi:
+          provisionerReplicas: 1
+          enableCephfsSnapshotter: true
+          enableRBDSnapshotter: true
+        enableDiscoveryDaemon: true
+```
+
+This replaces the Kustomize `resources:` + `patches:` approach entirely.
+
+### 3. Replace the cluster Kustomize deployment with Helm
+
+Replace the ArgoCD Application source in `roles/bootstrap_rook_ceph/files/rook_cluster_manifest.yaml`:
+
+```yaml
+spec:
+  source:
+    chart: rook-ceph-cluster
+    repoURL: https://charts.rook.io/release
+    targetRevision: v1.19.1  # or latest
+    helm:
+      valuesObject:
+        cephClusterSpec:
+          cephVersion:
+            image: quay.io/ceph/ceph:v19.2.0
+          mon:
+            count: 1
+            allowMultiplePerNode: false
+          mgr:
+            count: 1
+          storage:
+            useAllNodes: false
+            useAllDevices: false
+            nodes:
+              - name: k8s-node-1
+                deviceFilter: "^sd[b-z]"
+```
+
+### 4. Remove the Kustomize manifests
+
+After confirming the Helm-based deployment works, remove:
+- `argocd_applications/storage/rook-operator/` (entire directory)
+- `argocd_applications/storage/rook-cluster/` (entire directory)
+
+### Benefits of migration
+
+- **Version upgrades**: Change `targetRevision` in one place; Helm handles CRD/RBAC changes
+- **Cleaner diffs**: `values.yaml` shows only your overrides, not the full upstream manifest
+- **Rollback**: Helm tracks release history for easy rollbacks
+- **Validation**: Helm charts include schema validation for values
