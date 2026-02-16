@@ -1,0 +1,26 @@
+# Allow harbor-bootstrap SA (harbor namespace) to read matrix-bot Secret
+# for the CVE reporter CronJob that posts biweekly summaries to #alerts
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: harbor-matrix-bot-reader
+  namespace: monitoring
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["matrix-bot"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: harbor-matrix-bot-reader
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: harbor-matrix-bot-reader
+subjects:
+  - kind: ServiceAccount
+    name: harbor-bootstrap
+    namespace: harbor

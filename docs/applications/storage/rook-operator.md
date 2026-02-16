@@ -12,12 +12,12 @@ This is a prerequisite for all in-cluster persistent storage: block volumes, sha
 
 ## How It's Configured
 
-**Deployment**: Pulled directly from upstream Rook v1.16.0 manifests (CRDs, common resources, operator) with a single ConfigMap patch for cluster-specific tuning.
+**Deployment**: Pulled directly from upstream Rook v1.19.1 manifests (CRDs, common resources, operator) with a single ConfigMap patch for cluster-specific tuning.
 
 **Kustomize sources** (from GitHub):
-- `rook/rook/v1.16.0/deploy/examples/crds.yaml` — Custom Resource Definitions
-- `rook/rook/v1.16.0/deploy/examples/common.yaml` — RBAC, ServiceAccounts, namespaces
-- `rook/rook/v1.16.0/deploy/examples/operator.yaml` — Operator Deployment
+- `rook/rook/v1.19.1/deploy/examples/crds.yaml` — Custom Resource Definitions
+- `rook/rook/v1.19.1/deploy/examples/common.yaml` — RBAC, ServiceAccounts, namespaces
+- `rook/rook/v1.19.1/deploy/examples/operator.yaml` — Operator Deployment
 
 **Operator config overrides** (`operator-config-patch.yaml`):
 

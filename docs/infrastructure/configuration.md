@@ -28,7 +28,7 @@ ArgoCD watches your Git repository and automatically syncs Kubernetes manifests 
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ARGOCD_VERSION` | ArgoCD version to install | `3.1.7` |
+| `ARGOCD_VERSION` | ArgoCD version to install | `3.3.0` |
 | `REPOSITORY_SSH_URL` | Git repo SSH URL | `git@gitlab.com:user/repo.git` |
 | `REPOSITORY_TOKEN` | Personal Access Token with `api` scope | `glpat-xxxxxxxxxxxx` |
 
@@ -133,7 +133,7 @@ Passes a physical GPU from the Proxmox host through to a worker VM, installs NVI
 |----------|-------------|---------|
 | `ENABLE_CUDA` | Feature flag | `true` |
 | `GPU_PCI_ADDRESS` | PCI address of GPU on Proxmox host | `0000:01:00` |
-| `NVIDIA_DEVICE_PLUGIN_VERSION` | Device plugin version | `v0.14.5` |
+| `NVIDIA_DEVICE_PLUGIN_VERSION` | Device plugin version | `v0.18.2` |
 
 ### Setup
 

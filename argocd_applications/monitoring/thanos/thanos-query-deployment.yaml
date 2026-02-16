@@ -18,7 +18,7 @@ spec:
       serviceAccountName: thanos
       containers:
       - name: thanos-query
-        image: harbor.k8s.local/quay-cache/thanos/thanos:v0.36.1
+        image: harbor.k8s.local/quay-cache/thanos/thanos:v0.41.0
         args:
         - query
         - --log.level=info

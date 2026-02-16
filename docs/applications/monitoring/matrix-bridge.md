@@ -25,7 +25,7 @@ Generates the Alertmanager receiver config file from the `matrix-bot` Secret:
 
 ### Container 1: `alertmanager` (port 3000)
 
-- Image: `metio/matrix-alertmanager-receiver:2025.11.5`
+- Image: `metio/matrix-alertmanager-receiver:2026.2.11`
 - Invoked with `--config-path /config/config.yml` CLI argument
 - Reads config from the init container's generated `/config/config.yml`
 - Translates Alertmanager webhook payloads into emoji-formatted HTML messages

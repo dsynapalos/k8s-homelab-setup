@@ -4,7 +4,7 @@ all:
       ansible_connection: local
       ansible_python_interpreter: '{{ playbook_dir }}/.venv/bin/python'
       K8S_VERSION: '{{ lookup("env", "K8S_VERSION") | default("1.34") }}'
-      ARGOCD_VERSION: '{{ lookup("env", "ARGOCD_VERSION") | default("3.1.7") }}'
+      ARGOCD_VERSION: '{{ lookup("env", "ARGOCD_VERSION") | default("3.3.0") }}'
       REPOSITORY_SSH_URL: '{{ lookup("env", "REPOSITORY_SSH_URL") }}'
       REPOSITORY_TOKEN: '{{ lookup("env", "REPOSITORY_TOKEN") }}'
       ENABLE_CEPH: '{{ lookup("env", "ENABLE_CEPH") | default("false") }}'
@@ -18,7 +18,7 @@ all:
       CEPH_ADMIN_KEY: '{{ lookup("env", "CEPH_ADMIN_KEY") | default("") }}'
       ENABLE_CUDA: '{{ lookup("env", "ENABLE_CUDA") | default("false") }}'
       ENABLE_ISTIO: '{{ lookup("env", "ENABLE_ISTIO") | default("false") }}'
-      NVIDIA_DEVICE_PLUGIN_VERSION: '{{ lookup("env", "NVIDIA_DEVICE_PLUGIN_VERSION") | default("v0.14.5") }}'
+      NVIDIA_DEVICE_PLUGIN_VERSION: '{{ lookup("env", "NVIDIA_DEVICE_PLUGIN_VERSION") | default("v0.18.2") }}'
   vars:
     labels:
       cluster: homelab

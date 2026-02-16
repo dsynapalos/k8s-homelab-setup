@@ -22,7 +22,7 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: kube-state-metrics
-        image: harbor.k8s.local/k8s-registry-cache/kube-state-metrics/kube-state-metrics:v2.13.0
+        image: harbor.k8s.local/k8s-registry-cache/kube-state-metrics/kube-state-metrics:v2.18.0
         ports:
         - containerPort: 8080
           name: http-metrics

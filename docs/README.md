@@ -19,6 +19,7 @@ docs/
 │   ├── networking.md                ← Cilium CNI, Istio Ambient, ingress
 │   ├── storage.md                   ← CephFS CSI & Rook-Ceph options
 │   ├── gpu-support.md               ← NVIDIA PCI passthrough & drivers
+│   ├── security.md                  ← Vulnerability scanning, CVE reporting, image signing
 │   └── troubleshooting.md           ← Cross-cutting debug guide (links to app docs)
 │
 ├── cicd/                            ← Automation & deployment pipeline
@@ -94,7 +95,8 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 ├─────────────────────────────────────┤
 │  infrastructure/                    │  ← "How is the cluster built?"
 │    architecture, configuration,     │
-│    networking, storage, gpu-support │
+│    networking, storage, gpu-support,│
+│    security                         │
 ├─────────────────────────────────────┤
 │  applications/                      │  ← "What runs inside the cluster?"
 │    monitoring/*, storage/*          │
@@ -126,6 +128,7 @@ Platform-level concerns that exist regardless of which applications are deployed
 | [networking.md](infrastructure/networking.md) | Cilium CNI (eBPF, WireGuard, L2 announcements, Gateway API), Istio Ambient (ztunnel, HBONE, mTLS), ingress routing. |
 | [storage.md](infrastructure/storage.md) | Two storage paths: external CephFS CSI driver and in-cluster Rook-Ceph. Comparison, configuration, kernel module setup. |
 | [gpu-support.md](infrastructure/gpu-support.md) | NVIDIA PCI passthrough from Proxmox, LTS driver selection logic, CRI-O runtime handler, RuntimeClass, device plugin. |
+| [security.md](infrastructure/security.md) | Vulnerability scanning (Trivy), signature verification (Cosign), CVE reporting CronJob (weekly CSV to Matrix), real-time webhook notifications. |
 | [troubleshooting.md](infrastructure/troubleshooting.md) | Cross-cutting debug guide. Owns General Debugging, VM Provisioning, Kubernetes Cluster, and ArgoCD sections. Links to per-app troubleshooting sections for everything else. |
 
 ### CI/CD (`cicd/`)

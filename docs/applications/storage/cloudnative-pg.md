@@ -45,7 +45,7 @@ The CloudNativePG version is pinned in the Kustomize resource URL (`kustomizatio
 
 ```yaml
 resources:
-  - https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.26.0/cnpg-1.26.0.yaml
+  - https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.28.1/cnpg-1.28.1.yaml
 ```
 
 ### Operator Metrics

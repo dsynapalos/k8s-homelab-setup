@@ -4,9 +4,9 @@ kind: Kustomization
 namespace: rook-ceph
 
 resources:
-  - https://raw.githubusercontent.com/rook/rook/v1.16.0/deploy/examples/crds.yaml
-  - https://raw.githubusercontent.com/rook/rook/v1.16.0/deploy/examples/common.yaml
-  - https://raw.githubusercontent.com/rook/rook/v1.16.0/deploy/examples/operator.yaml
+  - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/crds.yaml
+  - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/common.yaml
+  - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/operator.yaml
 
 patches:
   - path: operator-config-patch.yaml

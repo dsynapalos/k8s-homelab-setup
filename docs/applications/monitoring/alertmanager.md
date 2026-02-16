@@ -10,7 +10,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 
 ## How It's Configured
 
-**Deployment**: Single replica (`prom/alertmanager:v0.27.0`) in the `monitoring` namespace with `emptyDir` storage. This means alert state (silences, notification log) is lost on pod restart — acceptable for a homelab where alerts are transient.
+**Deployment**: Single replica (`prom/alertmanager:v0.31.1`) in the `monitoring` namespace with `emptyDir` storage. This means alert state (silences, notification log) is lost on pod restart — acceptable for a homelab where alerts are transient.
 
 **Routing**:
 - All alerts are grouped by `alertname`, `cluster`, and `service`

@@ -32,7 +32,7 @@ The ArgoCD Application uses a multi-source configuration — the Helm chart from
 
 | Source | Type | Purpose |
 |--------|------|---------|
-| `charts.jetstack.io/trust-manager` v0.14.0 | Helm | Operator deployment |
+| `charts.jetstack.io/trust-manager` v0.20.3 | Helm | Operator deployment |
 | `argocd_applications/security/trust-manager/` | Git | Bundle CRs |
 
 The operator is deployed into the `cert-manager` namespace with `app.trust.namespace: cert-manager` so it can read the CA Secret created by cert-manager.

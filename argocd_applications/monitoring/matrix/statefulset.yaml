@@ -19,7 +19,7 @@ spec:
       serviceAccountName: matrix
       initContainers:
       - name: generate-config
-        image: harbor.k8s.local/dockerhub-cache/matrixdotorg/synapse:v1.98.0
+        image: harbor.k8s.local/dockerhub-cache/matrixdotorg/synapse:v1.147.1
         command:
         - /bin/sh
         - -c
@@ -55,7 +55,7 @@ spec:
           mountPath: /data
       containers:
       - name: synapse
-        image: harbor.k8s.local/dockerhub-cache/matrixdotorg/synapse:v1.98.0
+        image: harbor.k8s.local/dockerhub-cache/matrixdotorg/synapse:v1.147.1
         ports:
         - name: http
           containerPort: 8008

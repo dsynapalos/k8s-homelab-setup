@@ -18,7 +18,7 @@ The OTel Collector solves both problems:
 
 ## How It's Configured
 
-**Deployment**: Single replica (`otel/opentelemetry-collector-contrib:0.120.0`) in the `monitoring` namespace.
+**Deployment**: Single replica (`otel/opentelemetry-collector-contrib:0.145.0`) in the `monitoring` namespace.
 
 **Modular configuration**: The collector loads multiple config files via explicit `--config=file:/etc/otelcol/<name>.yaml` flags in the Deployment args. The collector deep-merges every file at startup — map keys (`receivers`, `processors`, `exporters`, `service.pipelines.<name>`) from different files are combined into a single effective config. This means each pipeline can live in its own self-contained file.
 

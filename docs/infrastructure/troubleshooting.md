@@ -172,6 +172,12 @@ See [Harbor — Troubleshooting](../applications/infrastructure/harbor.md#troubl
 
 ---
 
+## Vulnerability Scanning & CVE Reporting
+
+See [Security — Troubleshooting](security.md#troubleshooting) for diagnostic commands and common issues (CVE reporter not posting, empty scan results, signature verification failures).
+
+---
+
 ## CloudNativePG / PostgreSQL Operator
 
 See [CloudNativePG — Troubleshooting](../applications/storage/cloudnative-pg.md#troubleshooting) for diagnostic commands and common issues (operator startup, Cluster stuck in Creating, connection refused, credentials not available).

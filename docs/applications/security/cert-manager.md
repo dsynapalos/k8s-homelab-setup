@@ -85,7 +85,7 @@ The cert-manager version is pinned in the Kustomize resource URL (`kustomization
 
 ```yaml
 resources:
-  - https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.19.3/cert-manager.yaml
 ```
 
 ### ArgoCD Server TLS

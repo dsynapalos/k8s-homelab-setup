@@ -21,7 +21,7 @@ spec:
       serviceAccountName: prometheus
       containers:
       - name: prometheus
-        image: harbor.k8s.local/dockerhub-cache/prom/prometheus:v2.48.0
+        image: harbor.k8s.local/dockerhub-cache/prom/prometheus:v3.5.1
         args:
           - '--config.file=/etc/prometheus/prometheus.yml'
           - '--storage.tsdb.path=/prometheus/'

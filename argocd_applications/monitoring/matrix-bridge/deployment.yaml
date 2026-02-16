@@ -110,7 +110,7 @@ spec:
       containers:
       # ── Alertmanager webhook receiver ──────────────────────────────
       - name: alertmanager
-        image: harbor.k8s.local/dockerhub-cache/metio/matrix-alertmanager-receiver:2025.11.5
+        image: harbor.k8s.local/dockerhub-cache/metio/matrix-alertmanager-receiver:2026.2.11
         args:
         - "--config-path"
         - "/config/config.yml"
@@ -129,14 +129,12 @@ spec:
             memory: "64Mi"
             cpu: "100m"
         livenessProbe:
-          httpGet:
-            path: /healthz
+          tcpSocket:
             port: 3000
           initialDelaySeconds: 5
           periodSeconds: 30
         readinessProbe:
-          httpGet:
-            path: /healthz
+          tcpSocket:
             port: 3000
           initialDelaySeconds: 3
           periodSeconds: 10

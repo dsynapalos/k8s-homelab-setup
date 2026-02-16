@@ -96,7 +96,7 @@ If you don't have external Ceph infrastructure and want a fully self-contained s
 
 **Two-phase deployment** via ArgoCD sync waves:
 
-1. **Operator (wave 1)**: CRDs, RBAC, and the Rook operator Deployment from upstream v1.16.0 manifests
+1. **Operator (wave 1)**: CRDs, RBAC, and the Rook operator Deployment from upstream v1.19.1 manifests
 2. **Cluster (wave 2)**: CephCluster CR, storage pools, and StorageClasses
 
 **Ceph version**: v19.2.0 (Squid stable release)

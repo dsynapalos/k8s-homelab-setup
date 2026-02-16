@@ -4,8 +4,8 @@ kind: Kustomization
 # namespaces across cert-manager and kube-system (for leader election RBAC).
 # Overriding with namespace: cert-manager breaks cainjector leader election.
 resources:
-  # cert-manager v1.17.2 — update version here when upgrading
-  - https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
+  # cert-manager v1.19.3 — update version here when upgrading
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.19.3/cert-manager.yaml
   # The homelab-ca-secret (intermediate CA cert+key, root CA cert) is pre-created
   # by the bootstrap_pki_secret Ansible role before ArgoCD deploys this Application.
   # self-signed-issuer and ca-certificate are no longer needed — the CA chain is

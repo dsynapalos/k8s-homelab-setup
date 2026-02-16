@@ -10,7 +10,7 @@ The alerting stack needs a destination that supports push notifications to your 
 
 ## How It's Configured
 
-**Deployment**: Deployment (`matrixdotorg/synapse:v1.98.0`) backed by a CloudNativePG-managed PostgreSQL database. Uses `rook-ceph-block` PVC (10Gi) for Synapse data (signing keys, media, generated config). The Deployment uses `Recreate` strategy since the PVC is RWO.
+**Deployment**: Deployment (`matrixdotorg/synapse:v1.147.1`) backed by a CloudNativePG-managed PostgreSQL database. Uses `rook-ceph-block` PVC (10Gi) for Synapse data (signing keys, media, generated config). The Deployment uses `Recreate` strategy since the PVC is RWO.
 
 ### CloudNativePG Database
 

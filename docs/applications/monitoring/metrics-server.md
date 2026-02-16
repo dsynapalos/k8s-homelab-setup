@@ -15,7 +15,7 @@ Without Metrics Server, the Kubernetes API has no concept of actual resource con
 
 ## How It's Configured
 
-**Deployment**: Single replica (`registry.k8s.io/metrics-server/metrics-server:v0.7.2`) in the `kube-system` namespace with `system-cluster-critical` priority class.
+**Deployment**: Single replica (`registry.k8s.io/metrics-server/metrics-server:v0.8.1`) in the `kube-system` namespace with `system-cluster-critical` priority class.
 
 **RBAC**: Dedicated ServiceAccount with a ClusterRole (`system:metrics-server`) granting access to `nodes/metrics`, `pods`, and `nodes`. Additional bindings for API aggregation: `system:auth-delegator` ClusterRoleBinding and `extension-apiserver-authentication-reader` RoleBinding in `kube-system`.
 

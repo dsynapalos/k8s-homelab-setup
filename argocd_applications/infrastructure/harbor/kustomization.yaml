@@ -7,3 +7,11 @@ resources:
   - rbac.yaml
   - bootstrap-job.yaml
   - artifact-indexer-cronjob.yaml
+  - cve-reporter-cronjob.yaml
+
+configMapGenerator:
+  - name: cve-reporter
+    files:
+      - cve-reporter.py
+    options:
+      disableNameSuffixHash: true

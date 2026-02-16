@@ -10,7 +10,7 @@ Without kube-state-metrics, the monitoring stack has no visibility into Kubernet
 
 ## How It's Configured
 
-**Deployment**: Single replica (`registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0`) in the `monitoring` namespace.
+**Deployment**: Single replica (`registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.18.0`) in the `monitoring` namespace.
 
 **RBAC**: Dedicated ServiceAccount with a ClusterRole granting read-only (`list`, `watch`) access to all standard Kubernetes resource types. This is required because kube-state-metrics needs cluster-wide visibility to generate accurate counts and status metrics.
 
