@@ -138,7 +138,7 @@ See [Storage — Troubleshooting > Rook-Ceph](storage.md#rook-ceph) for diagnost
 See the individual application docs for diagnostic commands and common issues:
 - [Matrix Synapse](../applications/monitoring/matrix.md#troubleshooting) — bootstrap job failures, bot registration, PostgreSQL state
 - [Alertmanager](../applications/monitoring/alertmanager.md#troubleshooting) — alert routing, webhook delivery, state persistence
-- [Alertmanager-Matrix-Bridge](../applications/monitoring/alertmanager-matrix-bridge.md#troubleshooting) — config generation, Secret dependency, message delivery
+- [Matrix Bridge](../applications/monitoring/matrix-bridge.md#troubleshooting) — config generation, Secret dependency, Alertmanager + Harbor webhook delivery
 
 ---
 

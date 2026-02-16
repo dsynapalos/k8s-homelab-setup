@@ -154,7 +154,7 @@ Applications deploy in a specific order via ArgoCD sync waves to respect depende
 | 2 | Harbor (registry + proxy cache) | Container registry and proxy cache — must be operational before apps with `harbor.k8s.local` image references deploy |
 | 3 | Keycloak (identity provider), ArgoCD OIDC config | Keycloak after Harbor (image pulled from `harbor.k8s.local/quay-cache`). ArgoCD OIDC patches `argocd-cm` + `argocd-rbac-cm` |
 | 6 | Alertmanager, Prometheus, Thanos, Grafana, Matrix, OTel Collector, kube-state-metrics, node-exporter, dcgm-exporter, metrics-server | Monitoring and application stack, after platform services are ready |
-| 8 | Alertmanager-Matrix-Bridge | Reads `matrix-bot` Secret created by the Matrix bootstrap job |
+| 8 | Matrix Bridge | Reads `matrix-bot` Secret created by the Matrix bootstrap job |
 
 ## Configuration
 

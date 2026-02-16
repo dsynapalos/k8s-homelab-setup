@@ -1,0 +1,193 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-bridge
+  namespace: monitoring
+  labels:
+    app: matrix-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matrix-bridge
+  template:
+    metadata:
+      labels:
+        app: matrix-bridge
+    spec:
+      initContainers:
+      - name: generate-config
+        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.19
+        command:
+        - /bin/sh
+        - -c
+        - |
+          cat > /config/config.yml << 'CONFIGEOF'
+          http:
+            port: 3000
+          matrix:
+            homeserver-url: ${MATRIX_HOMESERVER_URL}
+            user-id: ${MATRIX_USER_ID}
+            access-token: ${MATRIX_ACCESS_TOKEN}
+            room-mapping:
+              default: ${MATRIX_ROOM_ID}
+          templating:
+            computed-values:
+              - values:
+                  color: white
+                  title: INFO
+                  icon: ℹ️
+              - values:
+                  color: orange
+                  title: WARNING
+                  icon: ⚠️
+                when-matching-labels:
+                  severity: warning
+              - values:
+                  color: red
+                  title: CRITICAL
+                  icon: 🚨
+                when-matching-labels:
+                  severity: critical
+              - values:
+                  color: limegreen
+                  title: RESOLVED
+                  icon: ✅
+                when-matching-status: resolved
+            firing-template: |
+              <strong><font color="{{ .ComputedValues.color }}">{{ .ComputedValues.icon }} {{ .ComputedValues.title }}</font></strong><br>
+              {{- $$alert := .Alert }}
+              Annotations:
+              <ul>
+              {{- range $$alert.Annotations.SortedPairs }}
+              <li><em>{{ .Name }}</em>: {{ .Value }}</li>
+              {{- end }}
+              </ul>
+              Labels:
+              <ul>
+              {{- range $$alert.Labels.SortedPairs }}
+              {{- if or (eq .Name "alertname") (eq .Name "severity") (eq .Name "namespace") }}
+              <li><em>{{ .Name }}</em>: <code>{{ .Value }}</code></li>
+              {{- end }}
+              {{- end }}
+              </ul>
+          CONFIGEOF
+
+          sed -i "s|homeserver-url: \${MATRIX_HOMESERVER_URL}|homeserver-url: \"${MATRIX_HOMESERVER_URL}\"|g" /config/config.yml
+          sed -i "s|user-id: \${MATRIX_USER_ID}|user-id: \"${MATRIX_USER_ID}\"|g" /config/config.yml
+          sed -i "s|access-token: \${MATRIX_ACCESS_TOKEN}|access-token: \"${MATRIX_ACCESS_TOKEN}\"|g" /config/config.yml
+          sed -i "s|default: \${MATRIX_ROOM_ID}|default: \"${MATRIX_ROOM_ID}\"|g" /config/config.yml
+
+          echo "Config generated successfully"
+        env:
+        - name: MATRIX_HOMESERVER_URL
+          value: "http://matrix.monitoring.svc.cluster.local:8008"
+        - name: MATRIX_USER_ID
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: user-id
+        - name: MATRIX_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: access-token
+        - name: MATRIX_ROOM_ID
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: room-id
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+      containers:
+      # ── Alertmanager webhook receiver ──────────────────────────────
+      - name: alertmanager
+        image: harbor.k8s.local/dockerhub-cache/metio/matrix-alertmanager-receiver:2025.11.5
+        args:
+        - "--config-path"
+        - "/config/config.yml"
+        ports:
+        - containerPort: 3000
+          name: alertmanager
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+          initialDelaySeconds: 3
+          periodSeconds: 10
+      # ── Harbor vulnerability scan webhook receiver ─────────────────
+      - name: harbor
+        image: harbor.k8s.local/dockerhub-cache/library/python:3.12-alpine
+        command: ["python", "/app/harbor-webhook-handler.py"]
+        ports:
+        - containerPort: 3001
+          name: harbor
+        env:
+        - name: MATRIX_HOMESERVER
+          value: "http://matrix.monitoring.svc.cluster.local:8008"
+        - name: MATRIX_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: access-token
+        - name: MATRIX_ROOM_ID
+          valueFrom:
+            secretKeyRef:
+              name: matrix-bot
+              key: room-id
+        - name: HARBOR_WEBHOOK_PORT
+          value: "3001"
+        volumeMounts:
+        - name: harbor-handler
+          mountPath: /app
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3001
+          initialDelaySeconds: 3
+          periodSeconds: 10
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: harbor-handler
+        configMap:
+          name: harbor-webhook-handler

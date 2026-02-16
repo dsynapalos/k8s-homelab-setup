@@ -273,7 +273,7 @@ Uploads all ArgoCD Application manifests:
 - ArgoCD then takes over lifecycle management, syncing from Git
 
 Currently deployed manifests:
-`alertmanager`, `alertmanager-matrix-bridge`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `harbor`, `keycloak`, `kube-state-metrics`, `matrix`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
+`alertmanager`, `argocd-oidc`, `cert-manager`, `cloudnative-pg`, `dcgm-exporter`, `grafana`, `harbor`, `keycloak`, `kube-state-metrics`, `matrix`, `matrix-bridge`, `metrics-server`, `node-exporter`, `otel-collector`, `prometheus`, `thanos`, `trust-manager`
 
 ---
 

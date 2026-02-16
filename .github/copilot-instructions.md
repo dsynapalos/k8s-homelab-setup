@@ -116,7 +116,7 @@ docs/
 │   └── gitops.md            ← ArgoCD, SSH keys, sync waves, deploy keys
 └── applications/            ← One doc per component (mirrors argocd_applications/)
     ├── monitoring/           (prometheus, grafana, thanos, alertmanager,
-    │                          matrix, alertmanager-matrix-bridge,
+    │                          matrix, matrix-bridge,
     │                          dcgm-exporter, node-exporter)
     └── storage/              (rook-operator, rook-cluster)
 ```
@@ -164,7 +164,7 @@ docs/
 
 ### Naming conventions
 
-- **Files**: lowercase with hyphens (`alertmanager-matrix-bridge.md`, `rook-cluster.md`)
+- **Files**: lowercase with hyphens (`matrix-bridge.md`, `rook-cluster.md`)
 - **Folders**: match ArgoCD category (`monitoring/`, `storage/`)
 - **Roles**: snake_case matching function (`bootstrap_cillium`, `setup_cluster_master`)
 - **Labels**: inventory `labels:` dict propagates to K8s node labels

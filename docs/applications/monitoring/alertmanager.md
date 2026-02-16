@@ -2,7 +2,7 @@
 
 ## What It Does
 
-Alertmanager receives firing alerts from Prometheus, deduplicates them, groups related alerts together, and routes them to notification channels. In this environment, it routes all alerts to a Matrix chat room via the [alertmanager-matrix-bridge](alertmanager-matrix-bridge.md).
+Alertmanager receives firing alerts from Prometheus, deduplicates them, groups related alerts together, and routes them to notification channels. In this environment, it routes all alerts to a Matrix chat room via the [matrix-bridge](matrix-bridge.md).
 
 ## Why It's Here
 
@@ -16,7 +16,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 - All alerts are grouped by `alertname`, `cluster`, and `service`
 - Group wait: 10s (how long to buffer before sending a group)
 - Repeat interval: 12h (don't re-fire the same alert within this window)
-- Single receiver: `matrix` → webhook at `http://alertmanager-matrix:3000/alerts/default`
+- Single receiver: `matrix` → webhook at `http://matrix-bridge:3000/alerts/default`
 - `send_resolved: true` — sends recovery notifications when alerts clear
 
 **ArgoCD sync-wave**: 2 (deploys after Matrix homeserver is ready at wave 1).
@@ -25,7 +25,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 
 ```
 Thanos Ruler evaluates rules (via Thanos Query) → Alertmanager groups & deduplicates
-    → Webhook POST to alertmanager-matrix-bridge
+    → Webhook POST to matrix-bridge (alertmanager receiver)
     → Matrix message to #alerts room
     → Element app push notification on your phone
 ```
@@ -41,7 +41,7 @@ Thanos Ruler evaluates rules (via Thanos Query) → Alertmanager groups & dedupl
 | Component | Relationship |
 |-----------|-------------|
 | [Thanos Ruler](thanos.md#thanos-ruler-statefulset) | Sends firing/resolved alerts (replaced Prometheus rule evaluation) |
-| [Alertmanager-Matrix-Bridge](alertmanager-matrix-bridge.md) | Receives webhooks and translates to Matrix messages |
+| [Matrix Bridge](matrix-bridge.md) | Receives webhooks and translates to Matrix messages |
 
 ## Troubleshooting
 
@@ -61,12 +61,12 @@ curl -s http://localhost:9093/api/v2/alerts | python3 -m json.tool | head -40
 curl -s http://localhost:9093/api/v2/silences | python3 -m json.tool
 
 # Verify webhook receiver is reachable
-kubectl exec -n monitoring deploy/alertmanager -- wget -q -O- http://alertmanager-matrix:3000/healthz 2>&1 || echo "Bridge not reachable"
+kubectl exec -n monitoring deploy/alertmanager -- wget -q -O- http://matrix-bridge:3000/healthz 2>&1 || echo "Bridge not reachable"
 ```
 
 **Alerts not firing**: Check that Thanos Ruler is running (`kubectl get pods -n monitoring -l app=thanos-ruler`) and rules are loaded (Ruler UI on port 10902 → Rules). Ensure the alert condition is actually met — the threshold may not be exceeded yet.
 
-**Alerts firing but no Matrix notification**: Verify the `alertmanager-matrix-bridge` pod is running (sync-wave 4). Check the `matrix-bot` Secret exists. See [Alertmanager-Matrix-Bridge troubleshooting](alertmanager-matrix-bridge.md#troubleshooting).
+**Alerts firing but no Matrix notification**: Verify the `matrix-bridge` pod is running (sync-wave 8). Check the `matrix-bot` Secret exists. See [Matrix Bridge troubleshooting](matrix-bridge.md#troubleshooting).
 
 **Alert state lost after restart**: Expected — Alertmanager uses `emptyDir`, so silences and notification history don't survive pod restarts.
 

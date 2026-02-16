@@ -92,6 +92,14 @@ spec:
             else
               echo "  WARNING: Project creation returned $PROJ_RESULT"
             fi
+
+            # Enable Trivy auto-scan on push
+            echo "  Enabling auto-scan on push for '$NAME'..."
+            curl -sk -u "$AUTH" \
+              -X PUT "$HARBOR_API/projects/$NAME/metadatas/auto_scan" \
+              -H "Content-Type: application/json" \
+              -d '{"auto_scan": "true"}'
+            echo "  Auto-scan enabled."
           }
 
           # ── Create proxy cache projects for all upstream registries ────
@@ -99,6 +107,53 @@ spec:
           create_proxy_cache "quay-cache"           "https://quay.io"        "quay"              "Quay.io proxy cache"
           create_proxy_cache "k8s-registry-cache"   "https://registry.k8s.io" "docker-registry"  "Kubernetes registry proxy cache"
           create_proxy_cache "nvcr-cache"           "https://nvcr.io"        "docker-registry"  "NVIDIA Container Registry proxy cache"
+
+          # ── Helper: register webhook for scan notifications ────────────
+          register_scan_webhook() {
+            local PROJECT_NAME="$1"
+            local WEBHOOK_NAME="matrix-vulnerability-report"
+            local TARGET_URL="http://matrix-bridge.monitoring.svc.cluster.local:3001"
+
+            # Check if webhook already exists
+            local EXISTING=$(curl -sk -u "$AUTH" \
+              "$HARBOR_API/projects/$PROJECT_NAME/webhook/policies" | \
+              jq -r --arg name "$WEBHOOK_NAME" '.[] | select(.name == $name) | .id')
+
+            if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+              echo "Webhook '$WEBHOOK_NAME' already exists on '$PROJECT_NAME', skipping."
+              return 0
+            fi
+
+            echo "Registering scan webhook on '$PROJECT_NAME'..."
+            local WEBHOOK_PAYLOAD=$(jq -n \
+              --arg name "$WEBHOOK_NAME" \
+              --arg url "$TARGET_URL" \
+              '{
+                name: $name,
+                enabled: true,
+                targets: [{type: "http", address: $url, skip_cert_verify: false}],
+                event_types: ["SCANNING_COMPLETED"]
+              }')
+
+            local RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+              -X POST "$HARBOR_API/projects/$PROJECT_NAME/webhook/policies" \
+              -H "Content-Type: application/json" \
+              -d "$WEBHOOK_PAYLOAD")
+
+            if [ "$RESULT" = "201" ]; then
+              echo "  Webhook registered on '$PROJECT_NAME'."
+            elif [ "$RESULT" = "409" ]; then
+              echo "  Webhook already exists on '$PROJECT_NAME'."
+            else
+              echo "  WARNING: Webhook registration returned $RESULT"
+            fi
+          }
+
+          # ── Register scan webhooks on each proxy cache project ─────────
+          register_scan_webhook "dockerhub-cache"
+          register_scan_webhook "quay-cache"
+          register_scan_webhook "k8s-registry-cache"
+          register_scan_webhook "nvcr-cache"
 
           # OIDC authentication is pre-configured at deploy time via
           # CONFIG_OVERWRITE_JSON in the Harbor core container — no API

@@ -11,5 +11,5 @@ route:
 receivers:
   - name: 'matrix'
     webhook_configs:
-      - url: 'http://alertmanager-matrix:3000/alerts/default'
+      - url: 'http://matrix-bridge:3000/alerts/default'
         send_resolved: true

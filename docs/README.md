@@ -32,7 +32,7 @@ docs/
     │   ├── thanos.md                ← Long-term storage, Receive, Query, Compactor
     │   ├── alertmanager.md          ← Alert routing & deduplication
     │   ├── matrix.md                ← Matrix Synapse homeserver, bootstrap job
-    │   ├── alertmanager-matrix-bridge.md  ← Webhook → Matrix message translation
+    │   ├── matrix-bridge.md              ← Webhook → Matrix message translation (Alertmanager + Harbor)
     │   ├── dcgm-exporter.md         ← NVIDIA GPU metrics exporter
     │   ├── kube-state-metrics.md    ← Kubernetes object state metrics
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
@@ -148,9 +148,9 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [prometheus.md](applications/monitoring/prometheus.md) | *(Deprecated)* Standalone Prometheus deployment. Replaced by [OTel Collector](applications/monitoring/otel-collector.md). Manifests kept for reference. |
 | [grafana.md](applications/monitoring/grafana.md) | Dashboard visualization. Datasource provisioning (uid: prometheus), dashboard ConfigMaps, ingress. |
 | [thanos.md](applications/monitoring/thanos.md) | Long-term metric storage and alerting. Receive, Query, Store, Compactor, Ruler. S3 via Rook-Ceph ObjectStore. Ruler evaluates alert rules and fires to Alertmanager. |
-| [alertmanager.md](applications/monitoring/alertmanager.md) | Alert routing. Deduplication, grouping, webhook delivery to alertmanager-matrix-bridge. |
+| [alertmanager.md](applications/monitoring/alertmanager.md) | Alert routing. Deduplication, grouping, webhook delivery to matrix-bridge. |
 | [matrix.md](applications/monitoring/matrix.md) | Matrix Synapse homeserver. PostgreSQL sidecar, bootstrap job (bot user + Alerts room), Element client access. |
-| [alertmanager-matrix-bridge.md](applications/monitoring/alertmanager-matrix-bridge.md) | Webhook translator. Init container config generation from `matrix-bot` Secret, emoji-formatted HTML messages. |
+| [matrix-bridge.md](applications/monitoring/matrix-bridge.md) | Generic webhook → Matrix bridge. Alertmanager receiver (metio/matrix-alertmanager-receiver) + Harbor vulnerability scan handler (Critical-only filter). |
 | [dcgm-exporter.md](applications/monitoring/dcgm-exporter.md) | NVIDIA GPU metrics. Requires RuntimeClass nvidia + GPU allocation. Metric deduplication via `max() by (gpu, Hostname)`. |
 | [kube-state-metrics.md](applications/monitoring/kube-state-metrics.md) | Kubernetes object state metrics. Deployment/pod/node/job counts, conditions, resource requests. |
 | [node-exporter.md](applications/monitoring/node-exporter.md) | Host metrics DaemonSet. CPU, memory, disk I/O, network, filesystem utilization from every node. |
@@ -229,7 +229,7 @@ Infrastructure docs are longer-form and may have additional sections (e.g., subs
 
 ### Naming
 
-- **File names** match the component name in lowercase with hyphens: `alertmanager-matrix-bridge.md`, `rook-cluster.md`.
+- **File names** match the component name in lowercase with hyphens: `matrix-bridge.md`, `rook-cluster.md`.
 - **Folder names** match the ArgoCD application category: `monitoring/`, `storage/`.
 - **Anchors** for cross-doc linking use the `## Section Name` heading converted to lowercase with hyphens: `#troubleshooting`, `#rook-ceph`, `#istio-ambient`.
 

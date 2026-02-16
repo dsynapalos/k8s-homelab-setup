@@ -29,8 +29,8 @@ Created automatically by the bootstrap Job after Harbor is up:
 
 | Project | Upstream Registry | Harbor Adapter Type | Used By |
 |---------|------------------|--------------------|---------|
-| `dockerhub-cache` | `hub.docker.com` | `docker-hub` | alertmanager, grafana, prometheus, synapse, postgres, busybox, alpine, otel-collector, node-exporter, alertmanager-matrix-bridge |
-| `quay-cache` | `quay.io` | `quay` | thanos (×5), keycloak |
+| `dockerhub-cache` | `hub.docker.com` | `docker-hub` | alertmanager, grafana, prometheus, synapse, postgres, busybox, alpine, otel-collector, node-exporter, matrix-bridge |
+| `quay-cache` | `quay.io` | `quay` | thanos (×5), keycloak, ceph |
 | `k8s-registry-cache` | `registry.k8s.io` | `docker-registry` | kube-state-metrics, metrics-server |
 | `nvcr-cache` | `nvcr.io` | `docker-registry` | dcgm-exporter |
 
@@ -88,6 +88,17 @@ The artifact indexer CronJob performs upstream signature verification using [Cos
 
 Most upstream images don't use Sigstore keyless signing — they may use other mechanisms (Docker Content Trust, GPG) or not be signed at all. The `upstream-unverified` label indicates absence of Sigstore signatures specifically.
 
+### External Image Import (`cluster-images` project)
+
+Images running in the cluster that aren't pulled through Harbor proxy cache (e.g., Cilium, CoreDNS, etcd — pulled directly during kubeadm bootstrap) are imported into a local writable project called `cluster-images` by the artifact indexer CronJob:
+
+- **Discovery**: Queries the Kubernetes API for all pod images, splits into Harbor-proxied vs external
+- **Normalization**: Resolves implicit Docker Hub references (e.g., `busybox` → `docker.io/library/busybox`)
+- **Import**: Uses [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) to copy `linux/amd64` images into `harbor.k8s.local/cluster-images/<registry>/<repo>:<tag>`
+- **Auto-scan**: The project has `auto_scan: true` metadata, so Trivy scans images on push
+- **Webhook**: A `SCANNING_COMPLETED` webhook policy is registered on the project, sending results to the matrix-bridge for Critical vulnerability notifications
+- **Idempotent**: Skips images whose tags already exist in `cluster-images`
+
 ### Vulnerability Scanning & Maintenance Schedules
 
 Configured by the bootstrap Job on first deploy:
@@ -127,6 +138,7 @@ When Harbor is unavailable (e.g., during initial bootstrap before Harbor deploys
 - **Keycloak**: OIDC authentication (client registered in homelab realm)
 - **CRI-O**: Registry mirror configuration on all nodes
 - **PKI chain**: Nodes trust Harbor's TLS cert via root CA installed by `distribute_pki` role
+- **Matrix Bridge**: Webhook policies on each proxy cache project and the `cluster-images` project send `SCANNING_COMPLETED` events to `matrix-bridge.monitoring.svc.cluster.local:3001` for Critical vulnerability notifications
 
 ## Troubleshooting
 

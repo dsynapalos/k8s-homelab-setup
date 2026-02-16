@@ -1,26 +1,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: alertmanager-matrix-bridge
+  name: matrix-bridge
   namespace: argocd
   labels:
     category: monitoring
   annotations:
     argocd.argoproj.io/sync-wave: "8"
 spec:
-  destination:
-    namespace: monitoring
-    server: https://kubernetes.default.svc
+  project: homelab
   source:
-    path: argocd_applications/monitoring/alertmanager-matrix-bridge
     repoURL: git@gitlab.com:dsynapalos/cluster-setup.git
     targetRevision: main
-  sources: []
-  project: homelab
+    path: argocd_applications/monitoring/matrix-bridge
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false
-      enabled: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
