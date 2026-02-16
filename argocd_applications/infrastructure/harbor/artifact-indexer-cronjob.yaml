@@ -23,7 +23,16 @@ spec:
             - -c
             - |
               set -e
-              apk add --no-cache curl jq > /dev/null 2>&1
+              apk add --no-cache curl jq wget ca-certificates > /dev/null 2>&1
+
+              # Install Cosign for signature operations
+              COSIGN_VERSION="v2.4.1"
+              wget -q "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
+                -O /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
+              # Trust homelab CA for Harbor TLS
+              cp /etc/ssl/certs/homelab/*.crt /usr/local/share/ca-certificates/ 2>/dev/null || true
+              update-ca-certificates > /dev/null 2>&1
 
               HARBOR_API="https://harbor.k8s.local/api/v2.0"
               HARBOR_V2="https://harbor.k8s.local/v2"
@@ -204,10 +213,155 @@ spec:
                 done
               done
 
+              # ── Signature verification and signing ────────────────────
+              echo "Verifying and signing artifacts..."
+              VERIFY_OK=0
+              VERIFY_FAIL=0
+              SIGN_COUNT=0
+
+              # Ensure Cosign keypair exists (created once, reused thereafter)
+              if ! curl -s --cacert "$KUBE_CA" -H "Authorization: Bearer $KUBE_TOKEN" \
+                  "$KUBE_API/api/v1/namespaces/harbor/secrets/cosign-keypair" 2>/dev/null | \
+                  jq -e '.data["cosign.key"]' > /dev/null 2>&1; then
+                echo "  Generating Cosign keypair..."
+                COSIGN_PASSWORD="" cosign generate-key-pair k8s://harbor/cosign-keypair 2>/dev/null
+                echo "  Keypair created."
+              else
+                echo "  Cosign keypair exists."
+              fi
+
+              # Login to Harbor registry for pushing signatures
+              cosign login harbor.k8s.local -u admin -p "$HARBOR_ADMIN_PASSWORD" 2>/dev/null
+
+              # Map proxy cache project to upstream registry
+              upstream_registry() {
+                case "$1" in
+                  dockerhub-cache)     echo "docker.io" ;;
+                  quay-cache)          echo "quay.io" ;;
+                  k8s-registry-cache)  echo "registry.k8s.io" ;;
+                  nvcr-cache)          echo "nvcr.io" ;;
+                  *)                   echo "" ;;
+                esac
+              }
+
+              # Create verification labels (idempotent — 409 = already exists)
+              for LBL_NAME in upstream-verified upstream-unverified; do
+                case "$LBL_NAME" in
+                  upstream-verified)   LBL_COLOR="#2E8B57" LBL_DESC="Upstream Sigstore signature verified" ;;
+                  upstream-unverified) LBL_COLOR="#CD5C5C" LBL_DESC="No verifiable upstream signature found" ;;
+                esac
+                curl -sk -o /dev/null -w '' -u "$AUTH" \
+                  -X POST "$HARBOR_API/labels" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"name\":\"$LBL_NAME\",\"description\":\"$LBL_DESC\",\"color\":\"$LBL_COLOR\",\"scope\":\"g\"}" 2>/dev/null || true
+              done
+
+              # Fetch label IDs for later use
+              ALL_LABELS=$(curl -sk -u "$AUTH" "$HARBOR_API/labels?scope=g&page_size=100" 2>/dev/null)
+              LABEL_VERIFIED_ID=$(echo "$ALL_LABELS" | jq -r '.[] | select(.name=="upstream-verified") | .id')
+              LABEL_UNVERIFIED_ID=$(echo "$ALL_LABELS" | jq -r '.[] | select(.name=="upstream-unverified") | .id')
+
+              # ── Proxy cache: verify upstream signatures ────────────────
+              # Note: Harbor proxy cache projects are read-only (no push),
+              # so we cannot co-sign with a homelab key. Instead we verify
+              # upstream Sigstore signatures and record the result as a
+              # Harbor label on each artifact.
+              for IMAGE in $POD_IMAGES; do
+                IMAGE_PATH="${IMAGE#harbor.k8s.local/}"
+                PROJECT="${IMAGE_PATH%%/*}"
+                REMAINDER="${IMAGE_PATH#*/}"
+
+                case "$REMAINDER" in
+                  *@sha256:*) REPO="${REMAINDER%%@*}"; SIG_TAG="${REMAINDER##*@}" ;;
+                  *:*)        REPO="${REMAINDER%:*}";  SIG_TAG="${REMAINDER##*:}" ;;
+                  *)          REPO="$REMAINDER";       SIG_TAG="latest" ;;
+                esac
+
+                UPSTREAM=$(upstream_registry "$PROJECT")
+                [ -z "$UPSTREAM" ] && continue
+
+                REPO_ENCODED=$(echo "$REPO" | sed 's|/|%2F|g')
+                ART_DATA=$(curl -sk -u "$AUTH" \
+                  "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts?with_label=true&page_size=1" 2>/dev/null)
+                SIG_DIGEST=$(echo "$ART_DATA" | jq -r '.[0].digest // empty')
+                [ -z "$SIG_DIGEST" ] && continue
+
+                # Skip if already labelled (verified or unverified)
+                EXISTING_LABELS=$(echo "$ART_DATA" | jq -r '[.[0].labels // [] | .[].name] | join(",")' 2>/dev/null)
+                case "$EXISTING_LABELS" in
+                  *upstream-verified*|*upstream-unverified*) continue ;;
+                esac
+
+                # Verify upstream signature (keyless via Sigstore/Rekor)
+                UPSTREAM_REF="$UPSTREAM/$REPO:$SIG_TAG"
+                if cosign verify \
+                    --certificate-identity-regexp='.*' \
+                    --certificate-oidc-issuer-regexp='.*' \
+                    "$UPSTREAM_REF" > /dev/null 2>&1; then
+                  echo "  upstream-verified: $UPSTREAM_REF"
+                  VERIFY_OK=$((VERIFY_OK + 1))
+                  APPLY_LABEL_ID="$LABEL_VERIFIED_ID"
+                else
+                  echo "  upstream-unverified: $UPSTREAM_REF"
+                  VERIFY_FAIL=$((VERIFY_FAIL + 1))
+                  APPLY_LABEL_ID="$LABEL_UNVERIFIED_ID"
+                fi
+
+                # Apply verification label to artifact
+                if [ -n "$APPLY_LABEL_ID" ]; then
+                  curl -sk -o /dev/null -u "$AUTH" \
+                    -X POST "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts/$SIG_DIGEST/labels" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"id\":$APPLY_LABEL_ID}" 2>/dev/null || true
+                fi
+              done
+
+              # ── Non-proxy projects (CI/CD): sign with homelab key ──────
+              CICD_PROJECTS=$(curl -sk -u "$AUTH" \
+                "$HARBOR_API/projects?page_size=100" | \
+                jq -r '.[] | select((.registry_id == 0 or .registry_id == null) and .name != "library") | .name' 2>/dev/null || true)
+
+              for PROJECT in $CICD_PROJECTS; do
+                SIG_REPOS=$(curl -sk -u "$AUTH" \
+                  "$HARBOR_API/projects/$PROJECT/repositories?page_size=100" 2>/dev/null | \
+                  jq -r '.[] | select(.artifact_count > 0) | .name' 2>/dev/null || true)
+
+                for REPO_FULL in $SIG_REPOS; do
+                  [ -z "$REPO_FULL" ] && continue
+                  REPO="${REPO_FULL#*/}"
+                  REPO_ENCODED=$(echo "$REPO" | sed 's|/|%2F|g')
+
+                  ART_DATA=$(curl -sk -u "$AUTH" \
+                    "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts?with_accessory=true&page_size=1" 2>/dev/null)
+                  SIG_DIGEST=$(echo "$ART_DATA" | jq -r '.[0].digest // empty')
+                  [ -z "$SIG_DIGEST" ] && continue
+
+                  HAS_COSIGN=$(echo "$ART_DATA" | jq \
+                    '[.[0].accessories // [] | .[] | select(.type == "signature.cosign")] | length')
+                  [ "$HAS_COSIGN" != "0" ] && continue
+
+                  HARBOR_REF="harbor.k8s.local/$PROJECT/$REPO@$SIG_DIGEST"
+                  SIGN_ERR=$(COSIGN_PASSWORD="" cosign sign --yes \
+                      --tlog-upload=false \
+                      --key k8s://harbor/cosign-keypair \
+                      --allow-http-registry=false \
+                      --allow-insecure-registry=false \
+                      "$HARBOR_REF" 2>&1) && {
+                    echo "  signed: $PROJECT/$REPO (CI/CD)"
+                    SIGN_COUNT=$((SIGN_COUNT + 1))
+                  } || {
+                    echo "  sign-failed: $PROJECT/$REPO ($SIGN_ERR)"
+                  }
+                done
+              done
+
               echo "=== Complete ==="
-              echo "  Repos indexed:   $INDEXED"
-              echo "  Scans triggered: $SCAN_COUNT"
-              echo "  SBOMs triggered: $SBOM_COUNT"
+              echo "  Repos indexed:      $INDEXED"
+              echo "  Scans triggered:    $SCAN_COUNT"
+              echo "  SBOMs triggered:    $SBOM_COUNT"
+              echo "  Upstream verified:  $VERIFY_OK"
+              echo "  Upstream unsigned:  $VERIFY_FAIL"
+              echo "  Artifacts signed:   $SIGN_COUNT"
             env:
               - name: HARBOR_ADMIN_PASSWORD
                 valueFrom:
@@ -216,11 +370,11 @@ spec:
                     key: HARBOR_ADMIN_PASSWORD
             resources:
               requests:
-                memory: "64Mi"
-                cpu: "50m"
-              limits:
                 memory: "128Mi"
-                cpu: "200m"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
             volumeMounts:
               - name: ca-certs
                 mountPath: /etc/ssl/certs/homelab

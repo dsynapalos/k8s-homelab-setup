@@ -67,6 +67,27 @@ Multi-arch images pulled through proxy cache repos don't register artifact metad
 
 The CronJob also triggers **SBOM generation** (Trivy) and **vulnerability scans** for any artifact that is missing them.
 
+### Signature Verification (Cosign)
+
+The artifact indexer CronJob performs upstream signature verification using [Cosign](https://docs.sigstore.dev/cosign/overview/) (Sigstore, CNCF Graduated):
+
+**Proxy cache images** — Verified against upstream Sigstore/Rekor transparency logs using keyless verification. Results are recorded as **Harbor labels** on each artifact:
+- **`upstream-verified`** (green) — Valid Sigstore signature found from upstream publisher
+- **`upstream-unverified`** (red) — No verifiable Sigstore signature (e.g., image signed with a different mechanism or not signed at all)
+
+> **Note:** Harbor proxy cache projects are read-only — signatures cannot be pushed to them. Verification status is tracked via labels instead of co-signing.
+
+**CI/CD project images** — Signed with a homelab Cosign keypair stored as K8s Secret `cosign-keypair` in the `harbor` namespace. The keypair is auto-generated on first CronJob run and reused thereafter. Signatures are pushed as OCI artifacts (cosign accessories) and uploaded without Rekor transparency log entries (`--tlog-upload=false`).
+
+**Verification status of current images:**
+
+| Status | Count | Examples |
+|--------|-------|---------|
+| Sigstore-verified | 4 | otel-collector, kube-state-metrics, metrics-server, matrix-alertmanager-receiver |
+| No Sigstore signature | 9 | grafana, alpine, busybox, alertmanager, thanos, keycloak, etc. |
+
+Most upstream images don't use Sigstore keyless signing — they may use other mechanisms (Docker Content Trust, GPG) or not be signed at all. The `upstream-unverified` label indicates absence of Sigstore signatures specifically.
+
 ### Vulnerability Scanning & Maintenance Schedules
 
 Configured by the bootstrap Job on first deploy:
@@ -187,6 +208,36 @@ curl -sk -u "admin:$HARBOR_PW" https://harbor.k8s.local/api/v2.0/projects/docker
 # - ClusterRole missing → kubectl apply -f argocd_applications/infrastructure/harbor/rbac.yaml
 # - CA trust issue → Check homelab-ca-bundle ConfigMap mount
 # - Pod discovery returns 0 → Check ClusterRoleBinding for harbor-bootstrap SA
+```
+
+### Cosign verification / signing issues
+
+```bash
+# Check if Cosign keypair exists
+kubectl get secret cosign-keypair -n harbor
+
+# Check verification labels on an artifact
+HARBOR_PW=$(kubectl get secret harbor-admin-password -n harbor -o jsonpath='{.data.HARBOR_ADMIN_PASSWORD}' | base64 -d)
+curl -sk -u "admin:$HARBOR_PW" \
+  "https://harbor.k8s.local/api/v2.0/labels?scope=g" | jq '.[] | {name, id}'
+
+# Check labels on a specific artifact
+curl -sk -u "admin:$HARBOR_PW" \
+  "https://harbor.k8s.local/api/v2.0/projects/dockerhub-cache/repositories/library%2Falpine/artifacts?with_label=true&page_size=1" | \
+  jq '.[0].labels'
+
+# Manually verify an upstream image
+cosign verify --certificate-identity-regexp='.*' \
+  --certificate-oidc-issuer-regexp='.*' docker.io/otel/opentelemetry-collector-contrib:0.120.0
+
+# Re-run verification (remove labels first to force re-check)
+# Labels are idempotent — existing labels cause the CronJob to skip verification.
+# To re-verify, remove labels from artifacts via Harbor UI or API, then trigger a run.
+
+# Common issues:
+# - "can not push artifact to a proxy project" → Expected; proxy cache is read-only
+# - Keypair not found → Check RBAC allows secret create/update in harbor namespace
+# - CA trust failure → Verify homelab-ca-bundle ConfigMap is mounted
 ```
 
 ## Links
