@@ -104,6 +104,110 @@ spec:
           # CONFIG_OVERWRITE_JSON in the Harbor core container — no API
           # call needed here.
 
+          # ── Configure daily vulnerability scan-all schedule ────────────
+          echo "Configuring daily scan-all schedule (03:00 UTC)..."
+          SCAN_PAYLOAD='{"schedule":{"type":"Custom","cron":"0 0 3 * * *"}}'
+          SCAN_HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+            -X POST "$HARBOR_API/system/scanAll/schedule" \
+            -H "Content-Type: application/json" \
+            -d "$SCAN_PAYLOAD")
+          if [ "$SCAN_HTTP" = "201" ]; then
+            echo "  Created."
+          elif [ "$SCAN_HTTP" = "409" ] || [ "$SCAN_HTTP" = "200" ]; then
+            curl -sk -o /dev/null -u "$AUTH" \
+              -X PUT "$HARBOR_API/system/scanAll/schedule" \
+              -H "Content-Type: application/json" \
+              -d "$SCAN_PAYLOAD"
+            echo "  Updated (already existed)."
+          else
+            echo "  WARNING: HTTP $SCAN_HTTP"
+          fi
+
+          # ── Configure weekly garbage collection (Sunday 02:00 UTC) ─────
+          echo "Configuring weekly GC schedule..."
+          GC_PAYLOAD='{"parameters":{"delete_untagged":true,"dry_run":false,"workers":1},"schedule":{"type":"Custom","cron":"0 0 2 * * 0"}}'
+          GC_HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+            -X POST "$HARBOR_API/system/gc/schedule" \
+            -H "Content-Type: application/json" \
+            -d "$GC_PAYLOAD")
+          if [ "$GC_HTTP" = "201" ]; then
+            echo "  Created."
+          elif [ "$GC_HTTP" = "409" ] || [ "$GC_HTTP" = "200" ]; then
+            curl -sk -o /dev/null -u "$AUTH" \
+              -X PUT "$HARBOR_API/system/gc/schedule" \
+              -H "Content-Type: application/json" \
+              -d "$GC_PAYLOAD"
+            echo "  Updated (already existed)."
+          else
+            echo "  WARNING: HTTP $GC_HTTP"
+          fi
+
+          # ── Configure 90-day tag retention per proxy-cache project ─────
+          echo "Configuring 90-day tag retention policies..."
+          configure_retention() {
+            local PROJECT_NAME="$1"
+            local PROJECT_DATA
+            PROJECT_DATA=$(curl -sk -u "$AUTH" "$HARBOR_API/projects?name=$PROJECT_NAME")
+            local PROJECT_ID
+            PROJECT_ID=$(echo "$PROJECT_DATA" | jq -r '.[0].project_id')
+            if [ "$PROJECT_ID" = "null" ] || [ -z "$PROJECT_ID" ]; then
+              echo "  $PROJECT_NAME: not found, skipping."
+              return 0
+            fi
+
+            # Proxy-cache projects have a default retention policy — get its ID
+            local RETENTION_ID
+            RETENTION_ID=$(curl -sk -u "$AUTH" \
+              "$HARBOR_API/projects/$PROJECT_ID" | jq -r '.metadata.retention_id // empty')
+
+            local PAYLOAD
+            PAYLOAD=$(jq -n --argjson pid "$PROJECT_ID" '{
+              algorithm: "or",
+              rules: [{
+                action: "retain",
+                disabled: false,
+                params: {nDaysSinceLastPull: "90"},
+                scope_selectors: {
+                  repository: [{kind: "doublestar", decoration: "repoMatches", pattern: "**"}]
+                },
+                tag_selectors: [{kind: "doublestar", decoration: "matches", pattern: "**"}],
+                template: "nDaysSinceLastPull"
+              }],
+              scope: {level: "project", ref: $pid},
+              trigger: {kind: "Schedule", settings: {cron: "0 0 0 * * *"}}
+            }')
+
+            local HTTP
+            if [ -n "$RETENTION_ID" ]; then
+              # Update existing retention policy
+              HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+                -X PUT "$HARBOR_API/retentions/$RETENTION_ID" \
+                -H "Content-Type: application/json" \
+                -d "$PAYLOAD")
+              if [ "$HTTP" = "200" ]; then
+                echo "  $PROJECT_NAME: updated to 90 days (retention $RETENTION_ID)."
+              else
+                echo "  $PROJECT_NAME: WARNING HTTP $HTTP"
+              fi
+            else
+              # Create new retention policy
+              HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+                -X POST "$HARBOR_API/retentions" \
+                -H "Content-Type: application/json" \
+                -d "$PAYLOAD")
+              if [ "$HTTP" = "201" ] || [ "$HTTP" = "200" ]; then
+                echo "  $PROJECT_NAME: created (90 days since last pull)."
+              else
+                echo "  $PROJECT_NAME: WARNING HTTP $HTTP"
+              fi
+            fi
+          }
+
+          configure_retention "dockerhub-cache"
+          configure_retention "quay-cache"
+          configure_retention "k8s-registry-cache"
+          configure_retention "nvcr-cache"
+
           echo "Harbor bootstrap complete."
         env:
           - name: HARBOR_ADMIN_PASSWORD

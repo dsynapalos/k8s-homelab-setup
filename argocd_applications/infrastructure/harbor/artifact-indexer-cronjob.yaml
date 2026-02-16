@@ -1,0 +1,231 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: harbor-artifact-indexer
+  namespace: harbor
+spec:
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: harbor-bootstrap
+          restartPolicy: OnFailure
+          containers:
+          - name: indexer
+            image: docker.io/library/alpine:3.19
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache curl jq > /dev/null 2>&1
+
+              HARBOR_API="https://harbor.k8s.local/api/v2.0"
+              HARBOR_V2="https://harbor.k8s.local/v2"
+              AUTH="admin:$HARBOR_ADMIN_PASSWORD"
+              KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              KUBE_API="https://kubernetes.default.svc"
+              KUBE_CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+              echo "=== Harbor Artifact Indexer $(date -Iseconds) ==="
+
+              # ── Discover images from cluster pods ──────────────────────
+              echo "Discovering images from cluster pods..."
+              POD_IMAGES=$(curl -s --cacert "$KUBE_CA" \
+                -H "Authorization: Bearer $KUBE_TOKEN" \
+                "$KUBE_API/api/v1/pods" | jq -r '
+                [.items[].spec |
+                 ((.initContainers // [])[], .containers[]) | .image
+                ] | unique[] | select(startswith("harbor.k8s.local/"))' 2>/dev/null || true)
+
+              IMAGE_COUNT=$(echo "$POD_IMAGES" | grep -c . 2>/dev/null || echo 0)
+              echo "Found $IMAGE_COUNT unique Harbor-proxied images."
+
+              # ── Index repos with 0 artifacts ───────────────────────────
+              # Harbor bug #21454: multi-arch images don't register artifact
+              # metadata. Workaround: request the manifest list, extract the
+              # amd64 platform digest, then request that specific manifest.
+              INDEXED=0
+
+              index_image() {
+                local PROJECT="$1" REPO="$2" REF="$3"
+                local REPO_ENCODED
+                REPO_ENCODED=$(echo "$REPO" | sed 's|/|%2F|g')
+
+                local ARTIFACT_COUNT
+                ARTIFACT_COUNT=$(curl -sk -u "$AUTH" \
+                  "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED" 2>/dev/null | \
+                  jq -r '.artifact_count // 0')
+
+                if [ "$ARTIFACT_COUNT" != "0" ] && [ "$ARTIFACT_COUNT" != "null" ]; then
+                  return 0
+                fi
+
+                echo "  Indexing: $PROJECT/$REPO ($REF)..."
+
+                # Step 1: request manifest — check if it's a manifest list
+                local MANIFEST
+                MANIFEST=$(curl -sk -u "$AUTH" \
+                  -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json" \
+                  "$HARBOR_V2/$PROJECT/$REPO/manifests/$REF" 2>/dev/null)
+
+                local MEDIA_TYPE
+                MEDIA_TYPE=$(echo "$MANIFEST" | jq -r '.mediaType // empty')
+
+                case "$MEDIA_TYPE" in
+                  *manifest.list*|*image.index*)
+                    # Multi-arch: extract amd64/linux digest, request it directly
+                    local PLAT_DIGEST
+                    PLAT_DIGEST=$(echo "$MANIFEST" | jq -r '
+                      .manifests[] |
+                      select(.platform.architecture=="amd64" and .platform.os=="linux") |
+                      .digest' | head -1)
+                    if [ -n "$PLAT_DIGEST" ]; then
+                      curl -sk -o /dev/null -u "$AUTH" \
+                        -H "Accept: application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json" \
+                        "$HARBOR_V2/$PROJECT/$REPO/manifests/$PLAT_DIGEST" 2>/dev/null
+                      INDEXED=$((INDEXED + 1))
+                    else
+                      echo "    WARNING: no amd64/linux platform in manifest list"
+                    fi
+                    ;;
+                  *)
+                    # Single-arch: the initial request already triggered indexing
+                    INDEXED=$((INDEXED + 1))
+                    ;;
+                esac
+              }
+
+              for IMAGE in $POD_IMAGES; do
+                IMAGE_PATH="${IMAGE#harbor.k8s.local/}"
+                PROJECT="${IMAGE_PATH%%/*}"
+                REMAINDER="${IMAGE_PATH#*/}"
+
+                case "$REMAINDER" in
+                  *@sha256:*) REPO="${REMAINDER%%@*}"; REF="${REMAINDER##*@}" ;;
+                  *:*)        REPO="${REMAINDER%:*}";  REF="${REMAINDER##*:}" ;;
+                  *)          REPO="$REMAINDER";       REF="latest" ;;
+                esac
+
+                index_image "$PROJECT" "$REPO" "$REF"
+              done
+
+              # ── Also check Harbor repos not discovered via pods ────────
+              echo "Checking Harbor repos not in pod list..."
+              PROXY_PROJECTS=$(curl -sk -u "$AUTH" \
+                "$HARBOR_API/projects?page_size=100" | \
+                jq -r '.[] | select(.registry_id > 0) | .name' 2>/dev/null || true)
+
+              for PROJECT in $PROXY_PROJECTS; do
+                UNINDEXED_REPOS=$(curl -sk -u "$AUTH" \
+                  "$HARBOR_API/projects/$PROJECT/repositories?page_size=100" 2>/dev/null | \
+                  jq -r '.[] | select(.artifact_count == 0 and .pull_count > 0) | .name' 2>/dev/null || true)
+
+                for REPO_FULL in $UNINDEXED_REPOS; do
+                  [ -z "$REPO_FULL" ] && continue
+                  REPO="${REPO_FULL#*/}"
+
+                  # Skip if already handled via pod discovery
+                  echo "$POD_IMAGES" | grep -q "$PROJECT/$REPO" 2>/dev/null && continue
+
+                  REPO_ENCODED=$(echo "$REPO" | sed 's|/|%2F|g')
+                  FIRST_TAG=$(curl -sk -u "$AUTH" \
+                    "$HARBOR_V2/$PROJECT/$REPO/tags/list" 2>/dev/null | \
+                    jq -r '.tags[0] // empty')
+
+                  if [ -n "$FIRST_TAG" ]; then
+                    index_image "$PROJECT" "$REPO" "$FIRST_TAG"
+                  fi
+                done
+              done
+
+              if [ "$INDEXED" -gt 0 ]; then
+                echo "Waiting 15s for async artifact registration..."
+                sleep 15
+              fi
+
+              # ── SBOM + vulnerability scan for all artifacts ────────────
+              echo "Checking SBOM and scan status..."
+              SBOM_COUNT=0
+              SCAN_COUNT=0
+
+              for PROJECT in $PROXY_PROJECTS; do
+                INDEXED_REPOS=$(curl -sk -u "$AUTH" \
+                  "$HARBOR_API/projects/$PROJECT/repositories?page_size=100" 2>/dev/null | \
+                  jq -r '.[] | select(.artifact_count > 0) | .name' 2>/dev/null || true)
+
+                for REPO_FULL in $INDEXED_REPOS; do
+                  [ -z "$REPO_FULL" ] && continue
+                  REPO="${REPO_FULL#*/}"
+                  REPO_ENCODED=$(echo "$REPO" | sed 's|/|%2F|g')
+
+                  ARTIFACTS=$(curl -sk -u "$AUTH" \
+                    "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts?page=1&page_size=10&with_scan_overview=true&with_accessory=true" 2>/dev/null)
+
+                  DIGESTS=$(echo "$ARTIFACTS" | jq -r '.[].digest // empty' 2>/dev/null || true)
+
+                  for DIGEST in $DIGESTS; do
+                    [ -z "$DIGEST" ] && continue
+
+                    SCAN_STATUS=$(echo "$ARTIFACTS" | jq -r \
+                      --arg d "$DIGEST" \
+                      '.[] | select(.digest == $d) |
+                       .scan_overview // {} | to_entries[0].value.scan_status // empty')
+
+                    HAS_SBOM=$(echo "$ARTIFACTS" | jq -r \
+                      --arg d "$DIGEST" \
+                      '[.[] | select(.digest == $d) | .accessories // [] | .[] |
+                       select((.type // "") | test("sbom"; "i"))] | length')
+
+                    # Trigger vulnerability scan if not yet scanned
+                    if [ -z "$SCAN_STATUS" ] || [ "$SCAN_STATUS" = "null" ]; then
+                      echo "  Scan: $PROJECT/$REPO"
+                      curl -sk -o /dev/null -u "$AUTH" \
+                        -X POST "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts/$DIGEST/scan" \
+                        -H "Content-Type: application/json" 2>/dev/null || true
+                      SCAN_COUNT=$((SCAN_COUNT + 1))
+                    fi
+
+                    # Trigger SBOM generation if missing
+                    if [ "$HAS_SBOM" = "0" ] || [ "$HAS_SBOM" = "null" ]; then
+                      echo "  SBOM: $PROJECT/$REPO"
+                      curl -sk -o /dev/null -u "$AUTH" \
+                        -X POST "$HARBOR_API/projects/$PROJECT/repositories/$REPO_ENCODED/artifacts/$DIGEST/scan" \
+                        -H "Content-Type: application/json" \
+                        -d '{"scan_type":"sbom"}' 2>/dev/null || true
+                      SBOM_COUNT=$((SBOM_COUNT + 1))
+                    fi
+                  done
+                done
+              done
+
+              echo "=== Complete ==="
+              echo "  Repos indexed:   $INDEXED"
+              echo "  Scans triggered: $SCAN_COUNT"
+              echo "  SBOMs triggered: $SBOM_COUNT"
+            env:
+              - name: HARBOR_ADMIN_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: harbor-admin-password
+                    key: HARBOR_ADMIN_PASSWORD
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+              limits:
+                memory: "128Mi"
+                cpu: "200m"
+            volumeMounts:
+              - name: ca-certs
+                mountPath: /etc/ssl/certs/homelab
+                readOnly: true
+          volumes:
+            - name: ca-certs
+              configMap:
+                name: homelab-ca-bundle

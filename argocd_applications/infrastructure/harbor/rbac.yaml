@@ -27,3 +27,25 @@ subjects:
   - kind: ServiceAccount
     name: harbor-bootstrap
     namespace: harbor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: harbor-pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: harbor-pod-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: harbor-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: harbor-bootstrap
+    namespace: harbor

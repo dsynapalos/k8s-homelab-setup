@@ -6,3 +6,4 @@ namespace: harbor
 resources:
   - rbac.yaml
   - bootstrap-job.yaml
+  - artifact-indexer-cronjob.yaml
