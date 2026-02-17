@@ -103,7 +103,7 @@ Applications are deployed through a **three-tier app-of-app-of-apps** pattern th
 
 1. The `bootstrap_applications` role applies a single parent manifest (`cluster-apps_manifest.yaml`) to the cluster
 2. This creates the **first-order** Application (`cluster-apps`) which reads `argocd_applications/cluster-apps/` with `directory.recurse: false`
-3. ArgoCD discovers two **second-order** Applications inside that directory: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 2)
+3. ArgoCD discovers two **second-order** Applications inside that directory: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 4)
 4. Each second-order Application points to a subdirectory containing **third-order** Application manifests — the actual apps
 5. Sync waves at the second order ensure all platform apps are Healthy before any service apps begin deploying
 6. Within the platform tier, sync waves on individual apps enforce fine-grained ordering (cert-manager before Harbor before Keycloak)
@@ -126,11 +126,18 @@ resource.customizations.health.argoproj.io_Application: |
         hs.message = obj.status.health.message
       end
     end
+    if obj.status.operationState == nil then
+      hs.status = "Progressing"
+      hs.message = "Waiting for first sync"
+    elseif obj.status.operationState.phase == "Running" then
+      hs.status = "Progressing"
+      hs.message = "Sync operation running"
+    end
   end
   return hs
 ```
 
-This script is also maintained in `argocd_applications/security/argocd-oidc/argocd-cm.yaml` so it persists across ArgoCD syncs.
+The script defaults to "Progressing" (blocking the next wave) and only passes through the Application's reported health once at least one sync operation has completed. This prevents a freshly-created Application (which has no managed resources and therefore appears "Healthy") from allowing ArgoCD to advance to the next sync wave before child apps have been deployed.
 
 ### Application Manifest Structure
 
@@ -145,7 +152,7 @@ argocd_applications/
 │   │   ├── harbor.yaml                    (wave 2)
 │   │   ├── keycloak.yaml                  (wave 3)
 │   │   └── argocd-oidc.yaml               (wave 3)
-│   ├── services.yaml                      ← 2nd order: sync wave 2 (cluster-services)
+│   ├── services.yaml                      ← 2nd order: sync wave 4 (cluster-services)
 │   └── services/                          ← 3rd order: service apps (no waves)
 │       ├── alertmanager.yaml
 │       ├── dcgm-exporter.yaml
@@ -188,7 +195,7 @@ The three-tier structure enforces dependencies through sync waves at two levels:
 | Wave | Application | Purpose |
 |------|-------------|---------|
 | 1 | `cluster-platform` | Platform dependencies must all be Healthy first |
-| 2 | `cluster-services` | Monitoring and application stack, deploys only after platform is ready |
+| 4 | `cluster-services` | Monitoring and application stack, deploys only after platform is ready |
 
 **Third-order** (within platform tier):
 

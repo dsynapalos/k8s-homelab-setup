@@ -14,6 +14,7 @@
     PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
     PROXMOX_NODE: "{{ proxmox_node }}"
   register: storage_discovery_result
+  changed_when: false
 
 - name: Parse storage discovery results
   ansible.builtin.set_fact:

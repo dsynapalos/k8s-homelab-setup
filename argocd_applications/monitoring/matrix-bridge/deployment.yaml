@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
       - name: generate-config
-        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.19
+        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.21
         command:
         - /bin/sh
         - -c

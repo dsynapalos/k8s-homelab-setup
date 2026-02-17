@@ -5,6 +5,16 @@
     value: '1'  # Required for Kubernetes networking (pods route through node)
     sysctl_set: true  # Apply immediately and persist across reboots
 
+# Reduce TCP SYN timeout so connections to unreachable services (e.g. Harbor
+# proxy-cache mirrors before CoreDNS/Cilium are running) fail within ~15 s
+# instead of the default ~130 s.  This lets CRI-O fall back from an
+# unavailable mirror to the upstream registry quickly during first boot.
+- name: reduce TCP SYN retries for faster mirror fallback
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_syn_retries
+    value: '3'
+    sysctl_set: true
+
 # Control Plane Firewall Rules - TCP ports for K8s API and control plane components
 - name: allow k8s control ports
   community.general.ufw:

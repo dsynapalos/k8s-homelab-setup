@@ -20,7 +20,7 @@ spec:
           - 0
       containers:
         - name: grafana
-          image: harbor.k8s.local/dockerhub-cache/grafana/grafana:latest
+          image: harbor.k8s.local/dockerhub-cache/grafana/grafana:12.3.3
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_SERVER_ROOT_URL

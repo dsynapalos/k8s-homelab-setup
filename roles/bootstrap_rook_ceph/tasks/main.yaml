@@ -4,6 +4,9 @@
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('file', role_path + '/files/rook_operator_manifest.yaml') }}"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
 
 - name: Wait for Rook operator to be ready
@@ -24,7 +27,12 @@
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('file', role_path + '/files/rook_cluster_manifest.yaml') }}"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: rook_cluster_app
+  changed_when: rook_cluster_app.method == 'create'
 
 - name: Wait for Ceph cluster to be ready
   delegate_to: localhost

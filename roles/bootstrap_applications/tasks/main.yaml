@@ -2,5 +2,10 @@
   kubernetes.core.k8s:
     state: present
     definition: "{{ lookup('file', item) }}"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: app_of_apps_result
+  changed_when: app_of_apps_result.method == 'create'
   loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) | list }}"

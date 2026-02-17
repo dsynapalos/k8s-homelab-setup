@@ -10,7 +10,7 @@ When `ENABLE_CUDA=true`, GPUs are passed through to worker VMs for compute workl
 
 ## How It's Configured
 
-**Deployment**: DaemonSet (`nvcr.io/nvidia/k8s/dcgm-exporter:3.3.5-3.4.1-ubuntu22.04`) that runs only on nodes with:
+**Deployment**: DaemonSet (`nvcr.io/nvidia/k8s/dcgm-exporter:4.5.2-4.8.1-ubuntu22.04`) that runs only on nodes with:
 - `nodeSelector: compute: cuda` — targets GPU nodes
 - `runtimeClassName: nvidia` — required for GPU library injection
 - `nvidia.com/gpu: 1` resource request — must allocate a GPU to read its metrics

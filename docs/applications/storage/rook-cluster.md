@@ -12,7 +12,7 @@ This is what actually stores data for Matrix (Synapse DB), Thanos (metric blocks
 
 ## How It's Configured
 
-**Ceph version**: v19.2.0 (Squid stable)
+**Ceph version**: v19.2.3 (Squid stable)
 
 **Single-node optimization**: All components run with count=1, `failureDomain: osd` (not host), and `requireSafeReplicaSize: false`. This is intentional for a homelab — production would use replication across hosts.
 

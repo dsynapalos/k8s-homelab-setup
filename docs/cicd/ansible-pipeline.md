@@ -2,27 +2,29 @@
 
 ## What It Does
 
-Three Python entry points drive all cluster automation through Ansible Runner. Each one loads `.env`, cleans the `artifacts/` directory, and executes a specific playbook. There is no CI server — you run these scripts from your workstation and they orchestrate everything from VM creation to application deployment.
+Python entry points drive all cluster automation through Ansible Runner. Each one loads `.env`, cleans the `artifacts/` directory, and executes a specific playbook. There is no CI server — you run these scripts from your workstation and they orchestrate everything from VM creation to application deployment.
 
 ## Why It's Structured This Way
 
 The pipeline is split into two independent lifecycles:
 
-- **Infrastructure** (`setup-clusters.py`): Destructive, ~17 minutes, touches VMs and the Kubernetes cluster. You run this when building or rebuilding.
+- **Infrastructure** (`setup-clusters.py`): Destructive, ~26 minutes, touches VMs and the Kubernetes cluster. You run this when building or rebuilding.
 - **Applications** (`setup-applications.py`): Non-destructive, seconds, only uploads ArgoCD manifests. You run this during day-to-day development.
 
 This separation means you can iterate on application configs without ever risking infrastructure state.
 
 A third entry point, **`cleanup-clusters.py`**, reverses everything — destroying VMs, wiping storage, and removing local kubeconfig.
 
+A utility script, **`expose-ca.py`**, re-displays the root CA trust setup instructions (the same output shown at the end of a full `setup-clusters.py` run) — useful if you missed the output or need to import the CA on another machine.
+
 ## Entry Points
 
 ### `setup-clusters.py` — Full Provisioning
 
-Executes `setup_cluster.yaml` — the 14-play playbook that builds everything from scratch.
+Executes `setup_cluster.yaml` — the 15-play playbook that builds everything from scratch.
 
 ```bash
-python3 setup-clusters.py    # ~17 minutes
+python3 setup-clusters.py    # ~26 minutes
 ```
 
 - Loads `.env` via `python-dotenv`
@@ -55,11 +57,24 @@ python3 cleanup-clusters.py
 - Wipes disk signatures for clean re-provisioning
 - Removes local `~/.kube/config`
 
+### `expose-ca.py` — Root CA Trust Scripts
+
+Executes `expose_ca.yaml` — fetches the root CA from the running cluster and prints copy-paste ready import scripts.
+
+```bash
+python3 expose-ca.py    # Seconds, requires running cluster
+```
+
+- Reads `homelab-ca-secret` from cert-manager namespace via the Kubernetes API
+- Prints the certificate in PEM format with OS-specific import scripts (Windows PowerShell, Linux, macOS)
+- Useful when the `setup-clusters.py` output has scrolled away or importing the CA on a different machine
+- Requires a running cluster with cert-manager deployed
+
 ---
 
 ## Playbook: `setup_cluster.yaml`
 
-This is the main playbook. It runs 14 plays in sequence, each targeting specific host groups and executing one or more roles.
+This is the main playbook. It runs 15 plays in sequence, each targeting specific host groups and executing one or more roles.
 
 ### Execution Flow
 
@@ -78,6 +93,7 @@ Play 11: localhost           → bootstrap_pki_secret
 Play 12: localhost           → bootstrap_harbor_secret
 Play 13: localhost           → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
 Play 14: localhost           → bootstrap_applications
+Play 15: localhost           → display root CA trust instructions
 ```
 
 ### Phase 1 — Local Preparation
@@ -86,7 +102,7 @@ Play 14: localhost           → bootstrap_applications
 
 Validates that Ansible Runner is working, then prepares the control machine:
 
-- Installs CLI tools: kubectl, Helm, Cilium CLI, Hubble CLI, and optionally istioctl
+- Installs CLI tools: kubectl, Helm, Cilium CLI, Hubble CLI, and optionally istioctl (kubectl and Helm are installed from APT repositories via the `install_repo` utility role; Cilium CLI and Hubble CLI are downloaded from GitHub as tarballs via `unarchive` with `remote_src`; istioctl uses a `get_url` + `unarchive` split)
 - Creates a Python venv (`venv_proxmox`) with `proxmoxer` for Proxmox API access
 - Downloads the Ubuntu Server ISO and remasters it with cloud-init autoinstall configuration (injects GRUB menu entry, creates hybrid BIOS+UEFI bootable ISO using xorriso)
 - Uploads the remastered ISO to Proxmox storage
@@ -117,7 +133,7 @@ GPU passthrough is automatic for nodes with `labels.compute: cuda` — the VM is
 Prepares the OS (via included `setup_os` role) and initializes the Kubernetes control plane:
 
 **OS preparation** (`setup_os`):
-- Disables swap, enables IP forwarding
+- Disables swap, enables IP forwarding, reduces `net.ipv4.tcp_syn_retries` to 3 (faster mirror fallback during bootstrap)
 - Installs CRI-O (container runtime) and kubeadm/kubelet (Kubernetes), both version-pinned
 - Configures UFW firewall rules for Kubernetes ports, Cilium VXLAN/WireGuard, and node ports
 - Optionally loads Ceph kernel module (`ENABLE_CEPH`) or installs NVIDIA drivers (`compute: cuda` nodes)
@@ -165,7 +181,8 @@ Distributes the root CA and configures CRI-O registry mirrors on all cluster nod
   - `quay.io` → `harbor.k8s.local/quay-cache`
   - `registry.k8s.io` → `harbor.k8s.local/k8s-registry-cache`
   - `nvcr.io` → `harbor.k8s.local/nvcr-cache`
-- Restarts CRI-O only when the CA or mirror config actually changes
+- Writes a CRI-O drop-in (`/etc/crio/crio.conf.d/10-pull-timeouts.conf`) setting `pull_progress_timeout = "2m"` — cancels stalled image pulls that make no progress for 2 minutes, preventing indefinite hangs when Harbor mirrors are unreachable during initial bootstrap
+- Restarts CRI-O only when the CA, mirror config, or pull timeout config actually changes
 
 ### Phase 7 — Cilium Networking
 
@@ -177,10 +194,19 @@ Deploys Cilium CNI via Helm with full kube-proxy replacement:
   - **Gateway API mode**: Cilium with Envoy proxy, Gateway API CRDs, `bpf.masquerade=true`
   - **Ingress Controller mode**: Cilium Ingress Controller with Istio Ambient compatibility settings (`bpf.masquerade=false`, `socketLB.hostNamespaceOnly=true`, `cni.exclusive=false`)
 - Both modes enable: WireGuard encryption, Hubble observability with TLS, L2 announcements
+- Helm `wait` is disabled (`wait: false`) and Helm hooks are skipped (`disable_hook: true`) — the chart's only hook (`hubble-generate-certs` post-install Job) cannot schedule during first boot because only the control plane node exists and it has a `NoSchedule` taint. Two targeted wait tasks then poll for readiness:
+  - **Cilium DaemonSet**: All agent pods Ready across all nodes (retries 60 × 10s = 10 min max)
+  - **Cilium operator Deployment**: At least 1 ready replica (retries 30 × 10s = 5 min max)
+  - Hubble Relay is **not** waited on — its TLS cert is generated by a CronJob that may not have run yet. It comes up on its own once the `hubble-relay-client-certs` secret exists.
+- After the targeted waits, the role manually triggers the `hubble-generate-certs` CronJob (`kubectl create job hubble-generate-certs-initial --from=cronjob/hubble-generate-certs`) so Hubble Relay gets its TLS certs without waiting for the next CronJob schedule. This Job also needs a schedulable node, so it stays Pending until the worker joins in Phase 4.
 - Creates a `CiliumLoadBalancerIPPool` from the configured CIDR
 - Creates per-node `CiliumL2AnnouncementPolicy` on worker nodes (ARP/NDP for LoadBalancer IPs)
 - Patches CoreDNS with a `*.k8s.local` rewrite rule to resolve Ingress hostnames to the Cilium Ingress ClusterIP internally (enables OIDC backchannel calls without separate internal URLs)
 - Restarts all non-hostNetwork pods to pick up Cilium networking
+
+**Bootstrap timing**: During first boot, Harbor mirrors are unreachable (CoreDNS needs Cilium, Cilium needs images). Two OS-level tunings prevent this from stalling the install:
+- `net.ipv4.tcp_syn_retries=3` (set in `setup_os`) — TCP connections to unreachable mirrors fail in ~15s instead of ~130s, so CRI-O falls back to upstream registries quickly
+- `pull_progress_timeout="2m"` (set in `distribute_pki`) — safety net that cancels any pull making zero progress for 2 minutes
 
 ### Phase 8 — Istio Ambient (Optional)
 
@@ -270,9 +296,15 @@ Two mutually independent storage options:
 Uploads the ArgoCD app-of-apps parent manifest:
 
 - Applies `roles/bootstrap_applications/files/cluster-apps_manifest.yaml` to Kubernetes via `kubernetes.core.k8s`
-- This single Application CR (`cluster-apps`) points to `argocd_applications/cluster-apps/` and discovers two second-order Applications: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 2)
+- This single Application CR (`cluster-apps`) points to `argocd_applications/cluster-apps/` and discovers two second-order Applications: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 4)
 - ArgoCD then cascades through the hierarchy, deploying platform apps in dependency order before service apps
 - See [GitOps](../cicd/gitops.md) for the full app-of-app-of-apps architecture and sync wave ordering
+
+### Phase 15 — Root CA Trust Instructions
+
+**Hosts**: `localhost`
+
+Displays the homelab root CA certificate in PEM format along with copy-paste ready import scripts for each OS (Windows PowerShell, Linux, macOS). Each script embeds the certificate inline, writes it to a temp file, imports it into the OS trust store, and cleans up. This enables browsers to trust `*.k8s.local` Ingress endpoints without certificate warnings.
 
 ---
 

@@ -15,9 +15,16 @@ except Exception as e:
 
 start_time = time.time()
 
+# Set PATH to include venv bin directory for ansible-playbook
+env = os.environ.copy()
+venv_bin = os.path.join(dir_path, '.venv', 'bin')
+env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
+env['ANSIBLE_STDOUT_CALLBACK'] = 'yaml'
+
 r = ansible_runner.run(
         private_data_dir=dir_path, 
-        playbook=os.path.join(dir_path,'setup_applications.yaml')
+        playbook=os.path.join(dir_path,'setup_applications.yaml'),
+        envvars=env
     )
 
 print(r.stats)

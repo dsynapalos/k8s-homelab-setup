@@ -146,7 +146,7 @@ kubectl get pvc -n monitoring | grep thanos
 
 **Thanos has no data / dashboards empty**: Check that the OTel Collector pod is running and its `prometheusremotewrite` exporter is configured to send to `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive`. Verify with `kubectl logs -n monitoring -l app=otel-collector --tail=50`.
 
-**Thanos Query shows no stores**: Check that Receive and Store pods are running. Query discovers stores via `--store` flags — verify the service DNS names resolve correctly.
+**Thanos Query shows no stores**: Check that Receive and Store pods are running. Query discovers stores via `--endpoint.sd-config` with inline YAML listing endpoint addresses — verify the service DNS names (`thanos-receive`, `thanos-store`, `thanos-ruler`) resolve correctly within the `monitoring` namespace.
 
 **S3 bucket errors**: Ensure the Rook-Ceph Object Store (RGW) is running: `kubectl get pods -n rook-ceph -l app=rook-ceph-rgw`. Check that the `thanos-bucket` ConfigMap and Secret have valid credentials.
 

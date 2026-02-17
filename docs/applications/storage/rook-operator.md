@@ -133,7 +133,7 @@ spec:
       valuesObject:
         cephClusterSpec:
           cephVersion:
-            image: quay.io/ceph/ceph:v19.2.0
+            image: quay.io/ceph/ceph:v19.2.3
           mon:
             count: 1
             allowMultiplePerNode: false

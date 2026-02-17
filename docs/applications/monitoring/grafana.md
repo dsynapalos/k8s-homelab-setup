@@ -10,7 +10,7 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 
 ## How It's Configured
 
-**Deployment**: Single replica (`grafana/grafana:latest`) in the `monitoring` namespace.
+**Deployment**: Single replica (`grafana/grafana:12.3.3`) in the `monitoring` namespace.
 
 **Datasource**: Thanos Query at `http://thanos-query.monitoring.svc.cluster.local:9090` is configured as the default Prometheus-compatible datasource with `uid: prometheus`. The datasource is **named "Thanos" in the Grafana UI** but uses the `prometheus` type and UID — this means all dashboards reference `uid: prometheus` even though they're querying Thanos. This naming is intentional: Thanos Query speaks the Prometheus API, so Grafana treats it as a Prometheus datasource.
 

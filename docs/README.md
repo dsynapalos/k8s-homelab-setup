@@ -137,7 +137,7 @@ How code and configuration get from your machine into the cluster.
 
 | Document | Purpose |
 |---|---|
-| [ansible-pipeline.md](cicd/ansible-pipeline.md) | The three Python entry points (`setup-clusters.py`, `setup-applications.py`, `cleanup-clusters.py`), Ansible Runner mechanics, playbook structure, artifact debugging. |
+| [ansible-pipeline.md](cicd/ansible-pipeline.md) | Python entry points (`setup-clusters.py`, `setup-applications.py`, `cleanup-clusters.py`, `expose-ca.py`), Ansible Runner mechanics, playbook structure, artifact debugging. |
 | [gitops.md](cicd/gitops.md) | ArgoCD setup — app-of-app-of-apps deployment ordering, SSH deploy keys, sync waves, Application health checks. |
 
 ### Applications (`applications/`)

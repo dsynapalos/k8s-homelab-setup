@@ -1,120 +1,26 @@
-- name: test ansible runner
-  hosts: localhost
-  become: false
-  gather_facts: true
-  roles:
-    - test_ansible_runner
-    - setup_localhost
-
-- name: provision infrastructure
-  hosts: proxmox
-  gather_facts: false
-  become: true
-  strategy: free
-  any_errors_fatal: true
-  roles:
-    - provision_infra
-
-- name: setup k8s cluster master nodes
-  hosts: k8s-control
-  gather_facts: false
-  become: true
-  roles:
-    - setup_cluster_master
-
-- name: setup k8s cluster worker nodes
-  hosts: k8s-nodes
-  gather_facts: true
-  become: true
-  roles:
-    - setup_cluster_node
-
-- name: generate homelab PKI
-  hosts: k8s-control
-  gather_facts: false
-  become: true
-  roles:
-    - setup_pki
-
-- name: distribute root CA and configure registry mirrors
-  hosts: k8s
-  gather_facts: false
-  become: true
-  roles:
-    - distribute_pki
-
-- name: setup cillium networking
-  hosts: k8s
-  gather_facts: false
-  become: true
-  roles:
-    - bootstrap_cillium
-
-- name: setup istio ambient service mesh
-  hosts: k8s-control
-  gather_facts: false
-  become: true
-  roles:
-    - bootstrap_istio_ambient
-
-- name: setup nvidia device plugin
-  hosts: localhost
-  gather_facts: false
-  become: false
-  roles:
-    - bootstrap_nvidia_device_plugin
-
-- name: setup argo cd
-  hosts: localhost
-  gather_facts: true
-  become: true
-  roles:
-    - bootstrap_argocd
-
-- name: bootstrap PKI secret for cert-manager
-  hosts: localhost
-  gather_facts: false
-  become: false
-  roles:
-    - bootstrap_pki_secret
-
-- name: bootstrap Harbor admin secret
-  hosts: localhost
-  gather_facts: false
-  become: false
-  roles:
-    - bootstrap_harbor_secret
-
-- name: setup storage classes
-  hosts: localhost
-  gather_facts: false
-  become: false
-  roles:
-    - role: bootstrap_cephfs_storage_class
-      when: lookup('env', 'ENABLE_CEPH') == 'true'
-    - role: bootstrap_rook_ceph
-      when: lookup('env', 'ENABLE_ROOK') == 'true'
-
-- name: setup applications
-  hosts: localhost
-  gather_facts: false
-  become: true
-  roles:
-    - bootstrap_applications
-
 - name: display root CA trust instructions
   hosts: localhost
   gather_facts: false
   become: false
   tasks:
-    - name: read root CA certificate
-      ansible.builtin.slurp:
-        src: /tmp/homelab-pki/root-ca.crt
-      register: root_ca
+    - name: fetch root CA from cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: homelab-ca-secret
+        namespace: cert-manager
+        kubeconfig: "{{ lookup('env', 'KUBECONFIG') | default('~/.kube/config', true) }}"
+      register: ca_secret
+      no_log: true
+
+    - name: verify secret was found
+      ansible.builtin.assert:
+        that: ca_secret.resources | length > 0
+        fail_msg: "homelab-ca-secret not found in cert-manager namespace — is the cluster running?"
 
     - name: print root CA trust instructions
       vars:
-        cert_b64: "{{ root_ca.content }}"
+        cert_b64: "{{ ca_secret.resources[0].data['ca.crt'] }}"
       ansible.builtin.debug:
         msg: |
 
@@ -161,4 +67,3 @@
           ────────────────────────────────────────────────────────────────────
            Restart your browser after importing the certificate.
           ────────────────────────────────────────────────────────────────────
-  

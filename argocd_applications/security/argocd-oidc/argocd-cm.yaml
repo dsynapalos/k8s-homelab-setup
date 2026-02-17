@@ -30,5 +30,16 @@ data:
           hs.message = obj.status.health.message
         end
       end
+      -- Block sync-wave progression until at least one sync has
+      -- completed.  Without this guard a freshly-created Application
+      -- (no managed resources yet) is reported as Healthy, causing
+      -- ArgoCD to advance to the next wave before child apps exist.
+      if obj.status.operationState == nil then
+        hs.status = "Progressing"
+        hs.message = "Waiting for first sync"
+      elseif obj.status.operationState.phase == "Running" then
+        hs.status = "Progressing"
+        hs.message = "Sync operation running"
+      end
     end
     return hs

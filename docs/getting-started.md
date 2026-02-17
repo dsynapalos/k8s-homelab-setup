@@ -48,9 +48,9 @@ K8S_SSH_KEY=~/.ssh/id_rsa
 K8S_SSH_PUB_KEY=~/.ssh/id_rsa.pub
 
 # Kubernetes and runtime versions
-K8S_VERSION=1.34
-CRIO_VERSION=1.33
-CILIUM_VERSION=1.18.1
+K8S_VERSION=1.35
+CRIO_VERSION=1.34
+CILIUM_VERSION=1.18.7
 CILIUM_LOADBALANCER_IPPOOL=192.168.1.193/27
 
 # Proxmox connection
@@ -97,7 +97,7 @@ For optional features (GPU passthrough, Istio mesh, CephFS, Rook-Ceph, ArgoCD), 
 **Full cluster build** — provisions VMs, installs Kubernetes, deploys everything:
 
 ```bash
-python3 setup-clusters.py    # ~17 minutes
+python3 setup-clusters.py    # ~26 minutes
 ```
 
 **Application-only deployment** — uploads ArgoCD manifests to an existing cluster:
@@ -129,7 +129,24 @@ To find the actual LoadBalancer IP assigned to the Ingress:
 kubectl get ingress -A
 ```
 
-### 5. Log In to ArgoCD
+### 5. Trust the Homelab Root CA
+
+At the end of the `setup-clusters.py` run, the final play prints the root CA certificate and copy-paste ready import scripts for Windows (PowerShell), Linux, and macOS. Copy the script for your OS and paste it into a terminal to import the certificate. Restart your browser afterwards.
+
+If you missed the output, re-run the utility script to display the instructions again:
+
+```bash
+python3 expose-ca.py
+```
+
+Or extract the CA manually:
+
+```bash
+kubectl get secret -n cert-manager homelab-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d > homelab-ca.crt
+sudo cp homelab-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+```
+
+### 6. Log In to ArgoCD
 
 ArgoCD generates a random admin password on first install. Retrieve it with:
 
@@ -137,9 +154,9 @@ ArgoCD generates a random admin password on first install. Retrieve it with:
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
 
-Then open `https://argocd.k8s.local` and log in with username `admin` and the password above. Your browser will warn about the self-signed certificate — this is expected.
+Then open `https://argocd.k8s.local` and log in with username `admin` and the password above.
 
-### 6. Verify the Cluster
+### 7. Verify the Cluster
 
 ```bash
 kubectl get nodes
@@ -149,7 +166,7 @@ hubble observe
 
 ## What Happens During a Full Run
 
-The first run takes approximately 17 minutes, most of which is spent downloading and remastering the Ubuntu ISO (~3 GB) and waiting for VMs to boot from the autoinstall media. Subsequent runs are faster because the ISO is cached on Proxmox.
+The first run takes approximately 26 minutes, most of which is spent downloading and remastering the Ubuntu ISO (~3 GB) and waiting for VMs to boot from the autoinstall media. Subsequent runs are faster because the ISO is cached on Proxmox.
 
 | Phase | Duration | What Happens |
 |-------|----------|-------------|
@@ -162,9 +179,9 @@ The first run takes approximately 17 minutes, most of which is spent downloading
 
 | Task | Entry Point | Duration | Infra Changes | Use Case |
 |------|-------------|----------|---------------|----------|
-| Full cluster | `setup-clusters.py` | ~17 min | VM create/destroy | New deployment, add nodes |
+| Full cluster | `setup-clusters.py` | ~26 min | VM create/destroy | New deployment, add nodes |
 | Applications only | `setup-applications.py` | Seconds | None | App updates, GitOps changes |
-| Cluster reset | `setup-clusters.py` | ~17 min | VM recreate | Major version upgrades |
+| Cluster reset | `setup-clusters.py` | ~26 min | VM recreate | Major version upgrades |
 | Teardown | `cleanup-clusters.py` | ~2 min | VM destroy, storage wipe | Starting over |
 
 The `cleanup-clusters.py` script destroys all VMs on Proxmox, removes secondary storage pools and LVM structures, wipes disk signatures, and deletes the local kubeconfig. It uses the same Ansible Runner pattern but runs `cleanup_cluster.yaml`.

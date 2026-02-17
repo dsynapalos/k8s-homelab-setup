@@ -56,11 +56,27 @@
     mode: '0644'
   register: registry_mirror_config
 
+# Cap no-progress image pull time so a stalled mirror attempt is cancelled
+# before the helm post-install hook timeout expires.
+- name: configure CRI-O image pull progress timeout
+  ansible.builtin.copy:
+    content: |
+      # Cancel an image pull if no progress is made for 2 minutes.
+      # This acts as a safety net: the tcp_syn_retries sysctl makes
+      # individual mirror connections fail in ~15 s, but if something
+      # else stalls (TLS handshake, slow layer download) this timeout
+      # ensures the pull does not hang indefinitely.
+      [crio.image]
+      pull_progress_timeout = "2m"
+    dest: /etc/crio/crio.conf.d/10-pull-timeouts.conf
+    mode: '0644'
+  register: pull_timeout_config
+
 - name: restart CRI-O to pick up CA and registry changes
   ansible.builtin.systemd_service:
     name: crio.service
     state: restarted
-  when: root_ca_installed.changed or registry_mirror_config.changed
+  when: root_ca_installed.changed or registry_mirror_config.changed or pull_timeout_config.changed
 
 # --- Node DNS: forward *.k8s.local to kube-dns (CoreDNS) ---
 # CoreDNS rewrites *.k8s.local → cilium-ingress.kube-system.svc.cluster.local

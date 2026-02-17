@@ -15,7 +15,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: bootstrap
-        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.19
+        image: harbor.k8s.local/dockerhub-cache/library/alpine:3.21
         command:
         - /bin/sh
         - -c

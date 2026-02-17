@@ -15,11 +15,10 @@
 
 | Script | Playbook | Duration | Destructive? | When to use |
 |--------|----------|----------|-------------|-------------|
-| `setup-clusters.py` | `setup_cluster.yaml` (14 plays) | ~17 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
+| `setup-clusters.py` | `setup_cluster.yaml` (15 plays) | ~26 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
 | `setup-applications.py` | `setup_applications.yaml` (1 play) | Seconds | No | App manifest changes, GitOps iteration |
 | `cleanup-clusters.py` | `cleanup_cluster.yaml` | ~2 min | Yes (destroys everything) | Full teardown, start over |
-
-All three: load `.env` via `python-dotenv` → clean `artifacts/` → call `ansible_runner.run()`.
+| `expose-ca.py` | `expose_ca.yaml` (1 play) | Seconds | No | Re-display root CA trust scripts |
 
 ## Setup & Validation
 
@@ -30,7 +29,7 @@ sudo chmod +x init.sh && ./init.sh
 # 2. Configure: copy and fill in all required values
 cp example.env .env
 
-# 3. Run full cluster provisioning (~17 min, destructive)
+# 3. Run full cluster provisioning (~26 min, destructive)
 python3 setup-clusters.py
 
 # 4. Run application deployment only (seconds, safe)
@@ -80,17 +79,18 @@ Play 11: localhost      → bootstrap_pki_secret
 Play 12: localhost      → bootstrap_harbor_secret
 Play 13: localhost      → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
 Play 14: localhost      → bootstrap_applications
+Play 15: localhost      → display root CA trust instructions
 ```
 
-Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `ENABLE_CEPH`/`ENABLE_ROOK`. Plays 9-14 target `localhost` for K8s API calls via kubeconfig.
+Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `ENABLE_CEPH`/`ENABLE_ROOK`. Plays 9-15 target `localhost` for K8s API calls via kubeconfig.
 
 → Full execution flow: `docs/cicd/ansible-pipeline.md`
 
 ## Repository Structure
 
 ```
-├── setup-clusters.py / setup-applications.py / cleanup-clusters.py  ← Python entry points
-├── setup_cluster.yaml / setup_applications.yaml / cleanup_cluster.yaml  ← Ansible playbooks
+├── setup-clusters.py / setup-applications.py / cleanup-clusters.py / expose-ca.py  ← Python entry points
+├── setup_cluster.yaml / setup_applications.yaml / cleanup_cluster.yaml / expose_ca.yaml  ← Ansible playbooks
 ├── .env (from example.env)          ← All configuration (not committed)
 ├── inventory/                       ← Ansible inventories (k8s.yaml, localhost.yaml)
 ├── roles/                           ← Ansible roles (one per function)
@@ -166,7 +166,7 @@ docs/
 - Kustomize-based manifests in `argocd_applications/{category}/{app}/`
 - Each app needs: `kustomization.yaml`, workload definition, `service.yaml`
 - Application CR manifests live in `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`
-- Three-tier app-of-app-of-apps: parent (`cluster-apps`) → tiers (`cluster-platform` wave 1, `cluster-services` wave 2) → individual apps
+- Three-tier app-of-app-of-apps: parent (`cluster-apps`) → tiers (`cluster-platform` wave 1, `cluster-services` wave 4) → individual apps
 - Sync waves within the platform tier enforce ordering (1 → CRDs/operators, 2 → Harbor, 3 → Keycloak/OIDC)
 - Service-tier apps deploy simultaneously after the entire platform tier is Healthy
 - Application health check (Lua script in `argocd-cm`) required for sync waves to block on child apps

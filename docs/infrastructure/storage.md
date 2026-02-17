@@ -99,7 +99,7 @@ If you don't have external Ceph infrastructure and want a fully self-contained s
 1. **Operator (wave 1)**: CRDs, RBAC, and the Rook operator Deployment from upstream v1.19.1 manifests
 2. **Cluster (wave 2)**: CephCluster CR, storage pools, and StorageClasses
 
-**Ceph version**: v19.2.0 (Squid stable release)
+**Ceph version**: v19.2.3 (Squid stable release)
 
 **Operator configuration patches** (`operator-config-patch.yaml`):
 

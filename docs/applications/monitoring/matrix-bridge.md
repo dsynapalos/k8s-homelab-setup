@@ -21,7 +21,7 @@ Generates the Alertmanager receiver config file from the `matrix-bot` Secret:
 - Reads `user-id`, `access-token`, and `room-id` from the Secret
 - Writes `/config/config.yml` using a quoted heredoc (`<< 'CONFIGEOF'`) to preserve Go template syntax, then `sed` substitutes credentials into YAML-quoted values
 - Generates full receiver config including `http.port`, `matrix` credentials, `room-mapping`, and `templating` (emoji-based severity formatting: ℹ️ Info, ⚠️ Warning, 🚨 Critical, ✅ Resolved)
-- Uses `alpine:3.19` (no runtime dependencies needed)
+- Uses `alpine:3.21` (no runtime dependencies needed)
 
 ### Container 1: `alertmanager` (port 3000)
 

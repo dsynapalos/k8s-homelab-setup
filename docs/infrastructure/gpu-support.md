@@ -92,7 +92,7 @@ When `ENABLE_CUDA=true`, the monitoring stack includes GPU-specific components:
 
 | Component | What It Does |
 |-----------|-------------|
-| [DCGM Exporter](../applications/monitoring/dcgm-exporter.md) | DaemonSet (v3.3.5-3.4.1) that collects GPU hardware metrics (temp, utilization, power, memory) |
+| [DCGM Exporter](../applications/monitoring/dcgm-exporter.md) | DaemonSet (v4.5.2-4.8.1) that collects GPU hardware metrics (temp, utilization, power, memory) |
 | [Prometheus](../applications/monitoring/prometheus.md) | Scrapes DCGM metrics, evaluates `GPUHighTemperature` alert rule (>60°C for 5 min) |
 | [Grafana](../applications/monitoring/grafana.md) | NVIDIA GPU Dashboard with 8 panels (utilization, temp, power, memory, clocks, PCIe) |
 | [Alertmanager](../applications/monitoring/alertmanager.md) | Routes GPU temperature alerts to Matrix chat room |

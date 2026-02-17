@@ -2,7 +2,6 @@ import ansible_runner
 import os
 import shutil
 from dotenv import load_dotenv
-import time
 
 load_dotenv()
 
@@ -15,19 +14,14 @@ try:
 except Exception as e:
     pass
 
-start_time = time.time()
-
-# Set PATH to include venv bin directory for ansible-playbook
 env = os.environ.copy()
 env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
 env['ANSIBLE_STDOUT_CALLBACK'] = 'yaml'
 
 r = ansible_runner.run(
         private_data_dir=dir_path,
-        playbook=os.path.join(dir_path, 'cleanup_cluster.yaml'),
+        playbook=os.path.join(dir_path, 'expose_ca.yaml'),
         envvars=env
     )
 
 print(r.stats)
-minutes, seconds = divmod(int(time.time() - start_time), 60)
-print(f"--- {minutes}:{seconds:02d} ---")

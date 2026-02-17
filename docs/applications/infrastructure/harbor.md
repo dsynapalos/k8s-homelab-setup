@@ -42,7 +42,7 @@ Most image references in `argocd_applications/` are rewritten to pull through Ha
 
 ```
 # Docker Hub (library/ namespace for official images)
-harbor.k8s.local/dockerhub-cache/library/alpine:3.19
+harbor.k8s.local/dockerhub-cache/library/alpine:3.21
 harbor.k8s.local/dockerhub-cache/prom/alertmanager:v0.31.1
 
 # Quay.io
@@ -52,7 +52,7 @@ harbor.k8s.local/quay-cache/thanos/thanos:v0.41.0
 harbor.k8s.local/k8s-registry-cache/metrics-server/metrics-server:v0.8.1
 
 # NVIDIA registry
-harbor.k8s.local/nvcr-cache/nvidia/k8s/dcgm-exporter:3.3.5-3.4.1-ubuntu22.04
+harbor.k8s.local/nvcr-cache/nvidia/k8s/dcgm-exporter:4.5.2-4.8.1-ubuntu22.04
 ```
 
 ### Artifact Indexing (Harbor Bug #21454 Workaround)

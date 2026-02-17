@@ -50,9 +50,25 @@
                 hs.message = obj.status.health.message
               end
             end
+            -- Block sync-wave progression until at least one sync has
+            -- completed.  Without this guard a freshly-created Application
+            -- (no managed resources yet) is reported as Healthy, causing
+            -- ArgoCD to advance to the next wave before child apps exist.
+            if obj.status.operationState == nil then
+              hs.status = "Progressing"
+              hs.message = "Waiting for first sync"
+            elseif obj.status.operationState.phase == "Running" then
+              hs.status = "Progressing"
+              hs.message = "Sync operation running"
+            end
           end
           return hs
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  register: argocd_cm_health_check
+  changed_when: argocd_cm_health_check.method == 'create'
 
 - name: restart argocd-server to apply insecure mode
   kubernetes.core.k8s:

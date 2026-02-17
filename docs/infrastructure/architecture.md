@@ -10,9 +10,9 @@ The project has two independent entry points with very different risk profiles:
 
 ### Full Provisioning (`setup-clusters.py`)
 
-Runs `setup_cluster.yaml` — the 14-play playbook that builds everything from bare metal to a running cluster with applications.
+Runs `setup_cluster.yaml` — the 15-play playbook that builds everything from bare metal to a running cluster with applications.
 
-- **Duration**: ~17 minutes
+- **Duration**: ~26 minutes
 - **What it touches**: Proxmox VMs, OS configuration, Kubernetes cluster, networking, storage, GitOps, applications
 - **When to use**: New deployments, adding nodes, infrastructure changes, major version upgrades
 - **Risk**: Destructive — creates and configures VMs from scratch
@@ -26,7 +26,7 @@ Runs `setup_applications.yaml` — a single play that uploads ArgoCD Application
 - **When to use**: Adding applications, modifying manifests, day-to-day development
 - **Risk**: Non-destructive — never touches infrastructure or cluster state
 
-This separation exists so you can iterate on application configs without risking a 17-minute rebuild. There's also `cleanup-clusters.py` which reverses everything (destroys VMs, wipes storage, removes kubeconfig).
+This separation exists so you can iterate on application configs without risking a 26-minute rebuild. There's also `cleanup-clusters.py` which reverses everything (destroys VMs, wipes storage, removes kubeconfig), and `expose-ca.py` which re-displays the root CA trust setup instructions for importing the homelab CA certificate into your browser.
 
 ## Role Map
 
@@ -110,7 +110,7 @@ The role also has two optional sub-task files that run conditionally:
 
 ## Execution Order
 
-The main playbook runs these 14 plays in sequence. Each play targets a specific host group:
+The main playbook runs these 15 plays in sequence. Each play targets a specific host group:
 
 ```
  1. localhost        →  test_ansible_runner + setup_localhost
@@ -127,6 +127,7 @@ The main playbook runs these 14 plays in sequence. Each play targets a specific 
 12. localhost         →  bootstrap_harbor_secret
 13. localhost         →  bootstrap_cephfs_storage_class / bootstrap_rook_ceph
 14. localhost         →  bootstrap_applications
+15. localhost         →  display root CA trust instructions
 ```
 
 Optional roles (Istio, CUDA, CephFS, Rook) are gated by environment variables and skip cleanly when disabled.

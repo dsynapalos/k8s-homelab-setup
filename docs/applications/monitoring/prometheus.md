@@ -16,7 +16,7 @@ Every observable system needs a metrics backend. Prometheus was chosen because:
 
 ## How It's Configured
 
-**Deployment**: Single replica (`prom/prometheus:v3.5.1`) in the `monitoring` namespace, with `emptyDir` storage and 200h retention.
+**Deployment**: Single replica (`prom/prometheus:v3.9.1`) in the `monitoring` namespace, with `emptyDir` storage and 200h retention.
 
 > **Storage is ephemeral**: Prometheus uses `emptyDir` — all metrics are lost when the pod restarts. The 200h retention setting is a maximum, not a guarantee. This is why Thanos is deployed alongside Prometheus: to provide durable, long-term metric storage. Until Prometheus `remote_write` is configured (see Integration Points below), restarting the Prometheus pod means starting with zero historical data.
 

@@ -6,12 +6,13 @@ End-to-end Kubernetes cluster provisioning on Proxmox — from VM creation to a 
 
 ## What It Does
 
-Three Python scripts drive all automation through [Ansible Runner](https://ansible-runner.readthedocs.io/) (no Ansible CLI required):
+Python scripts drive all automation through [Ansible Runner](https://ansible-runner.readthedocs.io/) (no Ansible CLI required):
 
 ```bash
-python3 setup-clusters.py       # Full cluster build (~17 min)
+python3 setup-clusters.py       # Full cluster build (~26 min)
 python3 setup-applications.py   # Application-only deploy (seconds)
 python3 cleanup-clusters.py     # Teardown (destroys VMs, wipes storage)
+python3 expose-ca.py            # Re-display root CA trust scripts
 ```
 
 A single `.env` file controls everything — node IPs, versions, feature flags. Optional features are off by default and enabled with `ENABLE_*` flags.
