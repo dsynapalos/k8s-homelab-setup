@@ -104,7 +104,7 @@ spec:
 
           # ── Create proxy cache projects for all upstream registries ────
           create_proxy_cache "dockerhub-cache"     "https://hub.docker.com"  "docker-hub"       "Docker Hub proxy cache"
-          create_proxy_cache "quay-cache"           "https://quay.io"        "quay"              "Quay.io proxy cache"
+          create_proxy_cache "quay-cache"           "https://quay.io"        "docker-registry"  "Quay.io proxy cache"
           create_proxy_cache "k8s-registry-cache"   "https://registry.k8s.io" "docker-registry"  "Kubernetes registry proxy cache"
           create_proxy_cache "nvcr-cache"           "https://nvcr.io"        "docker-registry"  "NVIDIA Container Registry proxy cache"
 
