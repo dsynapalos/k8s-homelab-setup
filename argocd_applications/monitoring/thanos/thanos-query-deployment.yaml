@@ -26,9 +26,12 @@ spec:
         - --http-address=0.0.0.0:9090
         - --query.replica-label=receive_replica
         - --query.replica-label=prometheus_replica
-        - --store=dnssrv+_grpc._tcp.thanos-receive.monitoring.svc.cluster.local
-        - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc.cluster.local
-        - --store=dnssrv+_grpc._tcp.thanos-ruler.monitoring.svc.cluster.local
+        - |
+          --endpoint.sd-config=
+          endpoints:
+            - address: dnssrv+_grpc._tcp.thanos-receive.monitoring.svc.cluster.local
+            - address: dnssrv+_grpc._tcp.thanos-store.monitoring.svc.cluster.local
+            - address: dnssrv+_grpc._tcp.thanos-ruler.monitoring.svc.cluster.local
         ports:
         - name: grpc
           containerPort: 10901
