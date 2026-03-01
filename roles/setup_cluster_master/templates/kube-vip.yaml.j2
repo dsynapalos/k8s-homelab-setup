@@ -59,4 +59,4 @@ spec:
   volumes:
   - name: kubeconfig
     hostPath:
-      path: /etc/kubernetes/admin.conf
+      path: {{ kube_vip_kubeconfig_path | default('/etc/kubernetes/admin.conf') }}

@@ -94,6 +94,22 @@
       ansible_user: ubuntu
     when: "'Starting' in create_vm_result.stdout"
 
+  # When VMs are destroyed and recreated they get new SSH host keys.
+  # Stale entries in known_hosts cause SSH to reject connections even with
+  # ANSIBLE_HOST_KEY_CHECKING=False (key type mismatch disables password auth).
+  - name: remove stale known_hosts entries for new VM
+    ansible.builtin.known_hosts:
+      name: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ ansible_host }}"
+      - "{{ hostvars[inventory_hostname].vm_provision.ip }}"
+    loop_control:
+      label: "{{ item }}"
+    delegate_to: localhost
+    become: false
+    when: "'Starting' in create_vm_result.stdout"
+
   - name: configure host
     block:
 
