@@ -53,17 +53,19 @@ The automation is organized into Ansible roles, each responsible for one concern
 
 > Cilium CLI and Hubble CLI are **not version-pinned** — they always pull the latest stable release. This is usually fine since they're client tools, but be aware if you need reproducible environments.
 
-**What `provision_infra` actually does**: Downloads the Ubuntu Server ISO, remasters it with a cloud-init `autoinstall.yaml` embedded in the image, injects a custom GRUB menu entry (into both `grub.cfg` and `loopback.cfg` with a 1-second timeout for fast automated boot), recalculates MD5 checksums, and creates a hybrid BIOS+UEFI ISO using 7z (extraction) + xorriso (rebuild with GPT partition GUIDs from the `[BOOT]` directory). The ISO is uploaded to Proxmox storage with an idempotency check (queries the API first, skips upload if already present). VM creation uses `create_vm.py` which checks for duplicate VMs by name — if a VM with the same name already exists, the script exits successfully without creating anything (making re-runs safe). The script enables QEMU Guest Agent, sets balloon memory to 0, uses `virtio-scsi-single` SCSI controller, and boots with `order=scsi0;ide2`. After boot, it configures hostname, creates the SSH user with passwordless sudo, deploys authorized keys, applies a static IP via a netplan template, kills the default `ubuntu` user sessions and processes, removes it, and disables password authentication in sshd. VMs are staggered during creation to avoid Proxmox API contention.
+**What `provision_infra` actually does**: Downloads the Ubuntu Server ISO, remasters it with a cloud-init `autoinstall.yaml` embedded in the image, injects a custom GRUB menu entry (into both `grub.cfg` and `loopback.cfg` with a 1-second timeout for fast automated boot), recalculates MD5 checksums, and creates a hybrid BIOS+UEFI ISO using 7z (extraction) + xorriso (rebuild with GPT partition GUIDs from the `[BOOT]` directory). The ISO is checked against all configured Proxmox hosts, built once locally if any host is missing it, then uploaded to each host that needs it. VM creation uses `create_vm.py` which checks for duplicate VMs by name — if a VM with the same name already exists, the script exits successfully without creating anything (making re-runs safe). Each host in inventory has a `proxmox_cluster` field that maps to the correct Proxmox API connection in the `proxmox_cluster` dict. The script enables QEMU Guest Agent, sets balloon memory to 0, uses `virtio-scsi-single` SCSI controller, and boots with `order=scsi0;ide2`. After boot, it configures hostname, creates the SSH user with passwordless sudo, deploys authorized keys, applies a static IP via a netplan template, kills the default `ubuntu` user sessions and processes, removes it, and disables password authentication in sshd. VMs are staggered during creation to avoid Proxmox API contention.
 
 ### Kubernetes Layer
 
 | Role | Runs On | Purpose |
 |------|---------|---------|
 | `setup_os` | k8s nodes | Disables swap, installs CRI-O + kubeadm, configures firewall |
-| `setup_cluster_master` | k8s-control | Runs kubeadm init, fetches kubeconfig to localhost, applies node labels |
+| `setup_cluster_master` | k8s-control | Optionally deploys kube-vip static pod for API server HA, runs kubeadm init on the primary control plane with `--control-plane-endpoint` and `--upload-certs`, joins secondary control planes, fetches kubeconfig to localhost, applies node labels |
 | `setup_cluster_node` | k8s-nodes | Joins workers to cluster, applies and enforces declarative node labels |
 
-**Kubeconfig handling**: `kubeadm init` generates `/etc/kubernetes/admin.conf` on the control plane. The role fetches this file to localhost as `new_cluster_admin.conf`, then copies it to `~/.kube/config` (controlled by the `OVERWRITE_KUBECONFIG` variable, which defaults to `true`). Other roles reference the kubeconfig at its localhost path (`/etc/kubernetes/new_cluster_admin.conf`) for Kubernetes API operations.
+**Kubeconfig handling**: `kubeadm init` generates `/etc/kubernetes/admin.conf` on the primary control plane. The role fetches this file to localhost as `new_cluster_admin.conf`, then copies it to `~/.kube/config` (controlled by the `OVERWRITE_KUBECONFIG` variable, which defaults to `true`). Other roles reference the kubeconfig at its localhost path (`/etc/kubernetes/new_cluster_admin.conf`) for Kubernetes API operations.
+
+**Multi-control-plane support**: When `K8S_VIP` is set and the cluster is new, kube-vip is deployed as a static pod on each control plane node before `kubeadm init`. The primary control plane (`k8s-control-1`) initializes with `--control-plane-endpoint=<VIP>:6443 --upload-certs`. Secondary control planes join using `kubeadm join --control-plane` with the certificate key from the primary. The kube-vip deployment is guarded by a stat check on the primary's `admin.conf` — if the cluster already exists, kube-vip is skipped on all nodes.
 
 **Declarative node labels**: Both master and worker roles apply labels from inventory definitions and remove labels that are no longer declared — enforcing desired state on every run. Labels protected from removal differ by role:
 - **Control plane**: `kubernetes.io/*` and `k8s.io/*` namespaces are protected
@@ -98,7 +100,7 @@ Labels are only updated when a key is missing or its value differs from what's i
 | `bootstrap_cephfs_storage_class` | localhost | Deploys CephFS CSI driver for external Ceph (optional) |
 | `bootstrap_rook_ceph` | localhost | Deploys Rook-Ceph operator and cluster via ArgoCD (optional) |
 | `bootstrap_applications` | localhost | Uploads the app-of-apps parent manifest (ArgoCD cascades to all apps) |
-| `cleanup_cluster` | localhost | Destroys VMs, removes storage pools, wipes disks |
+| `cleanup_cluster` | localhost | Iterates over each Proxmox cluster: destroys VMs, removes storage pools, wipes disks |
 
 ### How `setup_os` Fits In
 
@@ -139,13 +141,16 @@ Two inventory files target different host groups:
 **`inventory/k8s.yaml`** — defines cluster nodes:
 - Host groups: `proxmox`, `k8s-control`, `k8s-nodes` (all inherit from parent group `k8s`)
 - Every variable comes from `.env` via `{{ lookup("env", "VAR_NAME") }}`
+- Per-host `proxmox_cluster` field (e.g., `cluster_1`, `cluster_2`) maps each VM to its Proxmox host
 - Per-host node labels (e.g., `compute: cuda` for GPU workers)
+- Group-level vars include `k8s_vip` and `kube_vip_version` for API server HA
 - **Label aggregation**: Since Ansible's default `hash_behaviour=replace` doesn't merge dictionaries, the `provision_infra` role includes `aggregate_labels.yaml` which reads the raw inventory YAML and merges labels from all group levels. A host can inherit `infra: proxmox` from its group and `compute: cuda` from its host-level definition.
 - **`bare-metal` group**: Exists as an empty placeholder (`hosts: {}`) with `labels.infra: baremetal` for future bare-metal node support
 
 **`inventory/localhost.yaml`** — defines the control machine:
 - Used for all Kubernetes API operations (ArgoCD, storage, GPU plugin)
 - Points to the venv Python interpreter: `{{ playbook_dir }}/.venv/bin/python`
+- Contains a `proxmox_cluster` dict map with entries for each Proxmox host (API host, user, password, node name, storage names)
 - Contains Ceph, GPU, and ArgoCD credentials
 - Note: `ENABLE_ROOK` is **not** in the inventory — it's read directly from the environment via `lookup('env', 'ENABLE_ROOK')` in the playbook, unlike other feature flags
 

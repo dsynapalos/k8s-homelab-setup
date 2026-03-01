@@ -1,0 +1,119 @@
+---
+# Clean up VMs and secondary storage on a single Proxmox cluster.
+# Called from main.yaml in a loop over proxmox_cluster entries.
+#
+# Expected loop_var: pxcluster (dict with key + value from proxmox_cluster map)
+# Expected var: cluster_vm_names (list of VM names targeted at this cluster)
+
+# --- Build list of VM names that belong to this Proxmox cluster ---
+
+- name: "Identify VMs on {{ pxcluster.key }}"
+  ansible.builtin.set_fact:
+    cluster_vm_names: >-
+      {%- set vms = [] -%}
+      {%- set all_vms = (groups['k8s-control'] | default([])) + (groups['k8s-nodes'] | default([])) -%}
+      {%- for vm in all_vms -%}
+        {%- if hostvars[vm].vm_provision.proxmox_cluster == pxcluster.key -%}
+          {%- set _ = vms.append(vm) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ vms }}
+
+- name: "Display VMs to destroy on {{ pxcluster.key }}"
+  ansible.builtin.debug:
+    msg: "VMs to destroy on {{ pxcluster.key }} ({{ pxcluster.value.proxmox_node }}): {{ cluster_vm_names | join(', ') }}"
+  when: cluster_vm_names | length > 0
+
+# --- Phase 1: Destroy VMs on this cluster ---
+
+- name: "Destroy VMs on {{ pxcluster.key }}"
+  ansible.builtin.script: "{{ role_path }}/files/destroy_vms.py"
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  no_log: true
+  environment:
+    PROXMOX_HOST: "{{ pxcluster.value.proxmox_api_host }}"
+    PROXMOX_USER: "{{ pxcluster.value.proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ pxcluster.value.proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ pxcluster.value.proxmox_node }}"
+    VM_NAMES: "{{ cluster_vm_names | join(',') }}"
+  register: cluster_destroy_result
+  when: cluster_vm_names | length > 0
+
+- name: "Display VM destruction result for {{ pxcluster.key }}"
+  ansible.builtin.debug:
+    msg: "{{ (cluster_destroy_result.stdout | from_json).message }}"
+  when:
+    - cluster_destroy_result is not skipped
+    - cluster_destroy_result.stdout is defined
+
+# --- Phase 2: Clean up secondary storage on this cluster ---
+
+- name: "Remove storage pools on {{ pxcluster.key }}"
+  ansible.builtin.script: "{{ role_path }}/files/cleanup_storage.py"
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  no_log: true
+  environment:
+    PROXMOX_HOST: "{{ pxcluster.value.proxmox_api_host }}"
+    PROXMOX_USER: "{{ pxcluster.value.proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ pxcluster.value.proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ pxcluster.value.proxmox_node }}"
+    STORAGE_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_STORAGE') | default('vm-storage', true) }}"
+    VG_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_VG') | default('vg-secondary', true) }}"
+  register: cluster_storage_cleanup
+
+- name: "Display storage cleanup for {{ pxcluster.key }}"
+  ansible.builtin.debug:
+    msg: "{{ (cluster_storage_cleanup.stdout | from_json).message }}"
+  when: cluster_storage_cleanup.stdout is defined
+
+# --- Phase 3: Clean up LVM structures via SSH on this cluster ---
+
+- name: "Discover LVM VGs on {{ pxcluster.key }}"
+  ansible.builtin.command:
+    cmd: >
+      ssh -o StrictHostKeyChecking=no
+      {{ pxcluster.value.proxmox_api_user | regex_replace('@pam$', '') }}@{{ pxcluster.value.proxmox_api_host }}
+      "vgs --noheadings -o vg_name,pv_name --separator='|' 2>/dev/null | grep '{{ lookup('env', 'PROXMOX_SECONDARY_VG') | default('vg-secondary', true) }}' || true"
+  register: cluster_vg_discovery
+  changed_when: false
+
+- name: "Parse VGs for {{ pxcluster.key }}"
+  ansible.builtin.set_fact:
+    cluster_discovered_vgs: >-
+      {%- set vgs = [] -%}
+      {%- for line in cluster_vg_discovery.stdout_lines -%}
+        {%- set parts = line.strip().split('|') -%}
+        {%- if parts | length == 2 -%}
+          {%- set _ = vgs.append({'vg_name': parts[0].strip(), 'pv_device': parts[1].strip()}) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ vgs }}
+
+- name: "Clean LVM structures on {{ pxcluster.key }}"
+  ansible.builtin.command:
+    cmd: >
+      ssh -o StrictHostKeyChecking=no
+      {{ pxcluster.value.proxmox_api_user | regex_replace('@pam$', '') }}@{{ pxcluster.value.proxmox_api_host }}
+      "set -e;
+      {% for vg in cluster_discovered_vgs %}
+      echo 'Removing LVM structures for {{ vg.vg_name }} on {{ vg.pv_device }}...';
+      lvremove -f {{ vg.vg_name }} 2>/dev/null || true;
+      vgremove -f {{ vg.vg_name }} 2>/dev/null || true;
+      pvremove -y {{ vg.pv_device }} 2>/dev/null || true;
+      wipefs -a {{ vg.pv_device }};
+      echo 'Cleaned {{ vg.pv_device }}';
+      {% endfor %}
+      echo 'All secondary disks cleaned on {{ pxcluster.key }}'"
+  register: cluster_disk_cleanup
+  when: cluster_discovered_vgs | length > 0
+
+- name: "Display disk cleanup for {{ pxcluster.key }}"
+  ansible.builtin.debug:
+    msg: "{{ cluster_disk_cleanup.stdout_lines }}"
+  when:
+    - cluster_disk_cleanup is not skipped
+    - cluster_disk_cleanup.stdout_lines is defined

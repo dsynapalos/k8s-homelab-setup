@@ -1,5 +1,19 @@
 - include_tasks: aggregate_labels.yaml
 
+# Resolve Proxmox connection details from the proxmox_cluster map on localhost.
+# Each host in the proxmox group has vm_provision.proxmox_cluster (e.g. cluster_1)
+# which maps to the corresponding entry in the proxmox_cluster dict defined in
+# inventory/localhost.yaml containing the API host, user, password, node, and storage.
+- name: Resolve Proxmox connection details for {{ inventory_hostname }}
+  ansible.builtin.set_fact:
+    proxmox_api_host: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_api_host }}"
+    proxmox_api_user: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_api_user }}"
+    proxmox_api_password: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_api_password }}"
+    proxmox_node: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_node }}"
+    proxmox_local_storage: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_local_storage }}"
+    proxmox_storage: "{{ hostvars['localhost'].proxmox_cluster[vm_provision.proxmox_cluster].proxmox_storage }}"
+  no_log: true
+
 # Secondary storage setup is done in setup_localhost play (before this play)
 # The cached_secondary_disks_spec fact is set on localhost and accessed via hostvars
 
@@ -19,14 +33,15 @@
     ansible.builtin.script: create_vm.py
     args:
       executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+    no_log: true
     environment:
       PROXMOX_HOST: "{{ proxmox_api_host }}"
       PROXMOX_USER: "{{ proxmox_api_user }}"
       PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
       PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
       PROXMOX_NODE: "{{ proxmox_node }}"
-      # Use local-lvm for VM disks (not local which is for ISOs)
-      PROXMOX_STORAGE: "local-lvm"
+      # VM disk storage (defaults to local-lvm from proxmox_cluster map)
+      PROXMOX_STORAGE: "{{ proxmox_storage }}"
       VM_NAME: "{{ inventory_hostname }}"
       VM_MEMORY: "{{ vm_provision.memory_mb }}"
       VM_CORES: "{{ vm_provision.cpu }}"
@@ -40,8 +55,8 @@
       GPU_PCI_ADDRESS: "{{ lookup('env', 'GPU_PCI_ADDRESS') if labels.compute is defined and labels.compute == 'cuda' else '' }}"
       # Secondary disks for node VMs (Rook-Ceph storage, etc.)
       # Only passed for k8s-nodes, not control plane
-      # Uses cached spec from localhost (set in setup_localhost play before this)
-      SECONDARY_DISKS: "{{ hostvars['localhost'].cached_secondary_disks_spec | default('') if inventory_hostname in groups['k8s-nodes'] else '' }}"
+      # Uses per-cluster cached spec from localhost (set in setup_localhost play before this)
+      SECONDARY_DISKS: "{{ hostvars['localhost'].cached_secondary_disks_spec[vm_provision.proxmox_cluster] | default('') if inventory_hostname in groups['k8s-nodes'] else '' }}"
     delegate_to: localhost
     register: create_vm_result
     changed_when: "'Starting VM' in create_vm_result.stdout"
@@ -56,6 +71,7 @@
     ansible.builtin.script: poll_for_ip.py
     args:
       executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+    no_log: true
     environment:
       PROXMOX_HOST: "{{ proxmox_api_host }}"
       PROXMOX_USER: "{{ proxmox_api_user }}"

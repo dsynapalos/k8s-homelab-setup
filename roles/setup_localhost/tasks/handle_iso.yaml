@@ -24,35 +24,41 @@
     state: present
     requirements: "{{ role_path }}/files/requirements.txt"  # Contains proxmoxer, requests, etc.
 
-# Check if autoinstall ISO already exists on Proxmox to avoid unnecessary reprocessing
-- name: check images present on proxmox
-  ansible.builtin.script: evaluate_proxmox.py  # Python script queries Proxmox storage API
+# Pre-check: Determine which Proxmox clusters already have the autoinstall ISO.
+# rc=0 → ISO present, rc=2 → ISO missing, anything else → error.
+- name: Check ISO on each Proxmox cluster
+  ansible.builtin.script: evaluate_proxmox.py
   args:
     executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
-  loop:
-    - "ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Custom autoinstall ISO
-  loop_control:
-    loop_var: image
+  no_log: true
   environment:
-    PROXMOX_HOST: "{{ proxmox_api_host }}"
-    PROXMOX_USER: "{{ proxmox_api_user }}"
-    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+    PROXMOX_HOST: "{{ item.value.proxmox_api_host }}"
+    PROXMOX_USER: "{{ item.value.proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ item.value.proxmox_api_password }}"
     PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
-    PROXMOX_NODE: "{{ proxmox_node }}"
-    PROXMOX_STORAGE: "{{ proxmox_local_storage }}"
-    IMAGE: "{{ image }}"
-  register: image_check
-  failed_when: image_check.rc not in [0,2]  # rc=0: exists, rc=2: missing (expected states)
-  changed_when: image_check.rc == 2  # Only mark as changed when image is NOT found
+    PROXMOX_NODE: "{{ item.value.proxmox_node }}"
+    PROXMOX_STORAGE: "{{ item.value.proxmox_local_storage }}"
+    IMAGE: "ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+  register: iso_cluster_checks
+  failed_when: iso_cluster_checks.rc not in [0, 2]
+  changed_when: false
+  loop: "{{ proxmox_cluster | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
 
-# Create lookup map for conditional ISO creation (skip if already uploaded)
-- name: build image_result_map
-  set_fact:
-    image_result_map: "{{ (image_result_map | default({})) | combine({ (item.item | default(item.image | default(item))): item.rc }) }}"  # Map filename -> return code
-  loop: "{{ image_check.results }}"
+# Build a list of proxmox_cluster entries (key+value dicts) that still need the ISO.
+- name: Identify clusters that need the ISO
+  no_log: true
+  ansible.builtin.set_fact:
+    clusters_needing_iso: >-
+      {{ iso_cluster_checks.results
+         | selectattr('rc', 'equalto', 2)
+         | map(attribute='item')
+         | list }}
 
-# ISO Remastering Block - only runs if autoinstall ISO is missing from Proxmox
-- name: upload ubuntu iso to proxmox
+# ISO Remastering Block - only runs if at least one cluster needs the ISO
+# and the local autoinstall ISO doesn't already exist on disk.
+- name: Build autoinstall ISO locally
   block:
 
   # Download official Ubuntu Server ISO from canonical releases
@@ -198,35 +204,44 @@
       creates: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Idempotent
 
   # Remove temporary files after ISO creation (disk space cleanup)
+  # Requires become because 7z/xorriso create root-owned files
   - name: cleanup iso workdir
     ansible.builtin.file:
       path: "{{ role_path }}/files/{{ item }}"
       state: absent
+    become: true
     loop:
-      - .iso_workdir  # ~3GB extracted ISO contents
-      - "[BOOT]"  # Boot image files
+      - .iso_workdir
+      - "[BOOT]"
 
-  # Transfer remastered ISO to Proxmox storage for VM provisioning
-  - name: upload ubuntu iso to proxmox
-    ansible.builtin.script: upload_to_proxmox.py  # Python script uses Proxmox API for ISO upload
-    args:
-      executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
-    environment:
-      PROXMOX_HOST: "{{ proxmox_api_host }}"
-      PROXMOX_USER: "{{ proxmox_api_user }}"
-      PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
-      PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
-      PROXMOX_NODE: "{{ proxmox_node }}"
-      PROXMOX_STORAGE: "{{ proxmox_local_storage }}"  # Typically 'local' storage for ISOs
-      IMAGE: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
-    register: upload_ubuntu_iso_result
-    failed_when: upload_ubuntu_iso_result.rc != 0
+  # Conditional: Only build if at least one cluster needs it AND local copy doesn't exist
+  when:
+    - clusters_needing_iso | length > 0
+    - not (role_path + '/files/iso/ubuntu-' + ubuntu_release_version + '-live-server-amd64-autoinstall.iso') is file
 
-  # Remove local ISO copy after successful upload (cleanup, typically ~1-2GB)
-  - name: cleanup modified ubuntu iso
-    ansible.builtin.file:
-      path: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
-      state: absent
+# Upload the autoinstall ISO to every Proxmox cluster that is missing it.
+- name: "Upload ISO to Proxmox cluster {{ item.key }}"
+  ansible.builtin.script: upload_to_proxmox.py
+  args:
+    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  no_log: true
+  environment:
+    PROXMOX_HOST: "{{ item.value.proxmox_api_host }}"
+    PROXMOX_USER: "{{ item.value.proxmox_api_user }}"
+    PROXMOX_PASSWORD: "{{ item.value.proxmox_api_password }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+    PROXMOX_NODE: "{{ item.value.proxmox_node }}"
+    PROXMOX_STORAGE: "{{ item.value.proxmox_local_storage }}"
+    IMAGE: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+  register: upload_result
+  failed_when: upload_result.rc != 0
+  loop: "{{ clusters_needing_iso }}"
+  loop_control:
+    label: "{{ item.key }}"
 
-  # Conditional: Only run this entire block if the ISO is missing from Proxmox (rc=2 from check)
-  when: image_result_map['ubuntu-' + ubuntu_release_version + '-live-server-amd64-autoinstall.iso'] == 2
+# Remove local ISO copy after all uploads complete (cleanup, typically ~1-2GB)
+- name: cleanup modified ubuntu iso
+  ansible.builtin.file:
+    path: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"
+    state: absent
+  when: clusters_needing_iso | length > 0

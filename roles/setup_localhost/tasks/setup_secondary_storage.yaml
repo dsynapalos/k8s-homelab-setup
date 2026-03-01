@@ -1,82 +1,26 @@
 ---
-# Setup secondary storage pools on Proxmox for VM disk provisioning
-# This runs on localhost BEFORE VM provisioning to ensure pools exist
-# The cached_secondary_disks_spec fact is then available to all hosts
+# Setup secondary storage pools on each Proxmox host for VM disk provisioning.
+# This runs on localhost BEFORE VM provisioning to ensure pools exist on every
+# Proxmox cluster. Each cluster's secondary disk spec is cached in
+# cached_secondary_disks_spec[cluster_key] so provision_infra can reference
+# the correct spec per host.
 
-- name: Discover Proxmox storage availability
-  ansible.builtin.script: "{{ role_path }}/files/discover_storage.py"
-  args:
-    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
-  environment:
-    PROXMOX_HOST: "{{ proxmox_api_host }}"
-    PROXMOX_USER: "{{ proxmox_api_user }}"
-    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
-    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
-    PROXMOX_NODE: "{{ proxmox_node }}"
-  register: storage_discovery_result
-  changed_when: false
-
-- name: Parse storage discovery results
+- name: Initialize per-cluster secondary disks cache
   ansible.builtin.set_fact:
-    proxmox_storage_info: "{{ storage_discovery_result.stdout | from_json }}"
-    secondary_disk_devices: "{{ (storage_discovery_result.stdout | from_json).secondary_disks | map(attribute='devpath') | list }}"
-    secondary_disk_sizes_gib: "{{ (storage_discovery_result.stdout | from_json).secondary_disks | map(attribute='size_gib') | list }}"
-
-- name: Display discovered storage
-  ansible.builtin.debug:
-    msg: |
-      OS Disk: {{ proxmox_storage_info.os_disk.devpath }} ({{ proxmox_storage_info.os_disk.size_gib }} GiB)
-      Secondary Disks Available: {{ proxmox_storage_info.secondary_disks | length }}
-      Total Secondary Storage: {{ proxmox_storage_info.total_secondary_gib }} GiB
-      {% for disk in proxmox_storage_info.secondary_disks %}
-      - {{ disk.devpath }}: {{ disk.size_gib }} GiB ({{ disk.model }})
-      {% endfor %}
-  when: proxmox_storage_info.secondary_disks | length > 0
-
-- name: Setup secondary storage pools
-  ansible.builtin.script: "{{ role_path }}/files/setup_secondary_storage.py"
-  args:
-    executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
-  environment:
-    PROXMOX_HOST: "{{ proxmox_api_host }}"
-    PROXMOX_USER: "{{ proxmox_api_user }}"
-    PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
-    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
-    PROXMOX_NODE: "{{ proxmox_node }}"
-    SECONDARY_DISKS: "{{ secondary_disk_devices | join(',') }}"
-    STORAGE_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_STORAGE') | default('vm-storage', true) }}"
-    VG_NAME: "{{ lookup('env', 'PROXMOX_SECONDARY_VG') | default('vg-secondary', true) }}"
-  register: storage_setup_result
-  when: secondary_disk_devices | length > 0
-
-- name: Calculate per-node disk sizes
-  ansible.builtin.set_fact:
-    per_node_disk_sizes_gib: >-
-      {%- set node_count = groups['k8s-nodes'] | length -%}
-      {%- set sizes = [] -%}
-      {%- for size in secondary_disk_sizes_gib -%}
-        {%- set _ = sizes.append((size | float / node_count) | int) -%}
-      {%- endfor -%}
-      {{ sizes }}
-  when: 
-    - secondary_disk_devices | length > 0
-    - groups['k8s-nodes'] | length > 0
-
-- name: Build secondary disks spec for node VMs
-  ansible.builtin.set_fact:
-    cached_secondary_disks_spec: >-
-      {%- set storage_base = lookup('env', 'PROXMOX_SECONDARY_STORAGE') | default('vm-storage', true) -%}
-      {%- set specs = [] -%}
-      {%- for size in per_node_disk_sizes_gib -%}
-        {%- set _ = specs.append(storage_base ~ '-' ~ (loop.index) ~ ':' ~ size) -%}
-      {%- endfor -%}
-      {{ specs | join(',') }}
+    cached_secondary_disks_spec: {}
     cacheable: true
-  when: per_node_disk_sizes_gib is defined and per_node_disk_sizes_gib | length > 0
 
-- name: Display disk allocation for worker nodes
+- name: Setup secondary storage for each Proxmox cluster
+  include_tasks: setup_storage_for_cluster.yaml
+  loop: "{{ proxmox_cluster | dict2items }}"
+  loop_control:
+    loop_var: pxcluster
+    label: "{{ pxcluster.key }}"
+
+- name: Display per-cluster disk allocations
   ansible.builtin.debug:
     msg: |
-      Worker nodes: {{ groups['k8s-nodes'] | length }}
-      Per-node disk allocation: {{ cached_secondary_disks_spec | default('No secondary storage') }}
-  when: cached_secondary_disks_spec is defined
+      === Secondary storage allocation summary ===
+      {% for cluster_key, spec in cached_secondary_disks_spec.items() %}
+      {{ cluster_key }}: {{ spec if spec else 'No secondary storage' }}
+      {% endfor %}

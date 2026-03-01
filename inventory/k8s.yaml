@@ -10,8 +10,21 @@ proxmox:
         ip: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_1
       labels:
         role: main-control
+    k8s-control-2:
+      ansible_host: '{{ lookup("env", "K8S_CONTROL_2_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_CONTROL_2_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_CONTROL_2_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_CONTROL_2_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_CONTROL_2_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_2
+      labels:
+        role: secondary-control
     k8s-node-1:
       ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
       vm_provision:
@@ -21,9 +34,23 @@ proxmox:
         ip: '{{ lookup("env", "K8S_NODE_1_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_1
       labels:
         role: main-node
         compute: cuda
+    k8s-node-2:
+      ansible_host: '{{ lookup("env", "K8S_NODE_2_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_NODE_2_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_NODE_2_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_NODE_2_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_NODE_2_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_2
+      labels:
+        role: secondary-node
+        compute: cpu
   vars:
     labels:
       infra: proxmox
@@ -38,10 +65,14 @@ k8s:
       hosts:
         k8s-control-1:
           ansible_host: '{{ lookup("env", "K8S_CONTROL_1_IP") }}'
+        k8s-control-2:
+          ansible_host: '{{ lookup("env", "K8S_CONTROL_2_IP") }}'
     k8s-nodes:
       hosts:
         k8s-node-1:
           ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
+        k8s-node-2:
+          ansible_host: '{{ lookup("env", "K8S_NODE_2_IP") }}'
   vars:
     K8S_VERSION: '{{ lookup("env", "K8S_VERSION") | default("1.34") }}'
     CRIO_VERSION: '{{ lookup("env", "CRIO_VERSION") | default("1.33") }}'
@@ -51,6 +82,8 @@ k8s:
     ENABLE_CEPH: '{{ lookup("env", "ENABLE_CEPH") | default("false") }}'
     ENABLE_CUDA: '{{ lookup("env", "ENABLE_CUDA") | default("false") }}'
     ENABLE_ISTIO: '{{ lookup("env", "ENABLE_ISTIO") | default("false") }}'
+    k8s_vip: '{{ lookup("env", "K8S_VIP") }}'
+    kube_vip_version: '{{ lookup("env", "KUBE_VIP_VERSION") | default("0.8.7") }}'
     NVIDIA_DEVICE_PLUGIN_VERSION: '{{ lookup("env", "NVIDIA_DEVICE_PLUGIN_VERSION") | default("v0.18.2") }}'
     ansible_user: '{{ lookup("env", "K8S_SSH_USER") | default(ansible_user_id) }}'
     ansible_ssh_private_key_file: '{{ lookup("env", "K8S_SSH_KEY") | default("~/.ssh/id_rsa") }}'

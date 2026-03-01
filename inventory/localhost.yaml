@@ -23,11 +23,20 @@ all:
     labels:
       cluster: homelab
     ubuntu_release_version: '{{ lookup("env", "UBUNTU_RELEASE_VERSION") | default("24.04.3") }}'
-    proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
-    proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
-    proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST") }}'
-    proxmox_node: '{{ lookup("env", "PROXMOX_NODE") }}'
-    proxmox_local_storage: '{{ lookup("env", "PROXMOX_LOCAL_STORAGE") }}'
-    proxmox_storage: '{{ lookup("env", "PROXMOX_STORAGE") | default("local-lvm") }}'
+    proxmox_cluster:
+      cluster_1:
+        proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
+        proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
+        proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST_1") }}'
+        proxmox_node: '{{ lookup("env", "PROXMOX_NODE_1") }}'
+        proxmox_local_storage: '{{ lookup("env", "PROXMOX_LOCAL_STORAGE") }}'
+        proxmox_storage: '{{ lookup("env", "PROXMOX_STORAGE") | default("local-lvm") }}'
+      cluster_2:
+        proxmox_api_user: '{{ lookup("env", "PROXMOX_API_USER") }}'
+        proxmox_api_password: '{{ lookup("env", "PROXMOX_API_PASSWORD") }}'
+        proxmox_api_host: '{{ lookup("env", "PROXMOX_API_HOST_2") }}'
+        proxmox_node: '{{ lookup("env", "PROXMOX_NODE_2") }}'
+        proxmox_local_storage: '{{ lookup("env", "PROXMOX_LOCAL_STORAGE") }}'
+        proxmox_storage: '{{ lookup("env", "PROXMOX_STORAGE") | default("local-lvm") }}'
     vm_gateway: '{{ lookup("env", "VM_GATEWAY") }}'
     vm_nameserver: '{{ lookup("env", "VM_NAMESERVER") }}'

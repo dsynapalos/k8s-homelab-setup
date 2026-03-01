@@ -105,11 +105,11 @@ Validates that Ansible Runner is working, then prepares the control machine:
 - Installs CLI tools: kubectl, Helm, Cilium CLI, Hubble CLI, and optionally istioctl (kubectl and Helm are installed from APT repositories via the `install_repo` utility role; Cilium CLI and Hubble CLI are downloaded from GitHub as tarballs via `unarchive` with `remote_src`; istioctl uses a `get_url` + `unarchive` split)
 - Creates a Python venv (`venv_proxmox`) with `proxmoxer` for Proxmox API access
 - Downloads the Ubuntu Server ISO and remasters it with cloud-init autoinstall configuration (injects GRUB menu entry, creates hybrid BIOS+UEFI bootable ISO using xorriso)
-- Uploads the remastered ISO to Proxmox storage
-- Discovers raw secondary disks on the Proxmox host (for Rook-Ceph OSDs)
-- Creates LVM thin pools from secondary disks and calculates per-node disk allocation
+- Pre-checks all configured Proxmox hosts, builds the ISO locally only if at least one host is missing it, then uploads to each host that needs it
+- Discovers raw secondary disks on each Proxmox host independently (for Rook-Ceph OSDs)
+- Creates LVM thin pools from secondary disks and calculates per-node disk allocation for each cluster
 
-The ISO remaster is idempotent — if the autoinstall ISO already exists on Proxmox, the entire block is skipped.
+The ISO remaster is idempotent — if the autoinstall ISO already exists on all Proxmox hosts, the entire block is skipped.
 
 ### Phase 2 — VM Provisioning
 
@@ -117,6 +117,7 @@ The ISO remaster is idempotent — if the autoinstall ISO already exists on Prox
 
 Creates VMs on Proxmox for every host defined in inventory:
 
+- Resolves Proxmox API connection details from the `proxmox_cluster` map — each host's `vm_provision.proxmox_cluster` field (e.g., `cluster_1`) is used to look up the correct API host, user, password, node name, and storage
 - Staggers VM creation with calculated delays to avoid Proxmox serial port conflicts
 - Calls `create_vm.py` with full environment (CPU, memory, disk, network bridge, GPU PCI address for cuda nodes, secondary disk spec for worker nodes)
 - Polls for IP assignment (`poll_for_ip.py`, 1800s timeout) — the VM boots from the autoinstall ISO and gets a DHCP address
@@ -139,12 +140,14 @@ Prepares the OS (via included `setup_os` role) and initializes the Kubernetes co
 - Optionally loads Ceph kernel module (`ENABLE_CEPH`) or installs NVIDIA drivers (`compute: cuda` nodes)
 
 **Cluster initialization**:
-- Runs `kubeadm init --skip-phases=addon/kube-proxy` (Cilium replaces kube-proxy)
+- Optionally deploys kube-vip static pods for API server HA (only on new clusters when `K8S_VIP` is set — guarded by checking `admin.conf` on the primary control plane)
+- Runs `kubeadm init --skip-phases=addon/kube-proxy --control-plane-endpoint=<VIP>:6443 --upload-certs` on the primary control plane (falls back to control-1 IP if no VIP is configured)
+- Secondary control planes join via `kubeadm join --control-plane` using a certificate key from the primary
 - Fetches the admin kubeconfig to `~/.kube/config` on localhost
 - Waits for the node to report Ready
 - Applies declarative node labels from inventory (removes stale labels, adds missing ones)
 
-Idempotent via `creates: /etc/kubernetes/admin.conf` — re-running skips the init if the cluster already exists.
+Idempotent via `creates: /etc/kubernetes/admin.conf` — re-running skips the init if the cluster already exists. kube-vip deployment is guarded with `delegate_to: k8s-control-1` + `run_once: true` to ensure all nodes check the primary's state.
 
 ### Phase 4 — Worker Node Join
 
@@ -190,6 +193,7 @@ Distributes the root CA and configures CRI-O registry mirrors on all cluster nod
 
 Deploys Cilium CNI via Helm with full kube-proxy replacement:
 
+- Detects the API server endpoint dynamically: checks whether kube-vip is deployed on the primary control plane (`/etc/kubernetes/manifests/kube-vip.yaml`). If present, sets `cilium_api_host` to the floating VIP; otherwise falls back to the primary control plane IP. This ensures Cilium works correctly on both new clusters (with kube-vip) and existing clusters (without it).
 - Two mutually exclusive modes controlled by `ENABLE_GATEWAY_API`:
   - **Gateway API mode**: Cilium with Envoy proxy, Gateway API CRDs, `bpf.masquerade=true`
   - **Ingress Controller mode**: Cilium Ingress Controller with Istio Ambient compatibility settings (`bpf.masquerade=false`, `socketLB.hostNamespaceOnly=true`, `cni.exclusive=false`)
@@ -327,11 +331,13 @@ Use this for fast iteration on application manifests without touching infrastruc
 
 Reverses the provisioning pipeline:
 
-- Builds a list of VM names from inventory (`k8s-control` + `k8s-nodes`)
-- Destroys VMs via `destroy_vms.py` (Proxmox API)
-- Removes Proxmox storage pool registrations via `cleanup_storage.py`
-- SSHs to Proxmox host to discover and clean LVM structures (thin pools, VGs, PVs)
-- Wipes disk signatures (`wipefs -a`) so disks are discovered as raw on next run
+- Iterates over each Proxmox cluster defined in the `proxmox_cluster` map from `inventory/localhost.yaml`
+- For each cluster:
+  - Builds a list of VM names that belong to that cluster (by matching `vm_provision.proxmox_cluster`)
+  - Destroys VMs via `destroy_vms.py` (Proxmox API)
+  - Removes Proxmox storage pool registrations via `cleanup_storage.py`
+  - SSHs to the Proxmox host to discover and clean LVM structures (thin pools, VGs, PVs)
+  - Wipes disk signatures (`wipefs -a`) so disks are discovered as raw on next run
 - Removes local `~/.kube/config`
 
 ---
@@ -356,11 +362,14 @@ Two inventory files serve different target groups:
 **`inventory/k8s.yaml`** — Cluster nodes:
 - Host groups: `proxmox`, `k8s-control`, `k8s-nodes` (all inherit from `k8s` parent)
 - All variables sourced from `.env` via `{{ lookup("env", "VAR_NAME") }}`
+- Per-host `proxmox_cluster` field (e.g., `cluster_1`, `cluster_2`) maps each VM to its Proxmox host
 - Per-host node labels (e.g., `compute: cuda` for GPU nodes)
+- Group-level vars include `k8s_vip` and `kube_vip_version` for API server HA
 
 **`inventory/localhost.yaml`** — Control machine:
 - Used for Kubernetes API operations (ArgoCD, CephFS, GPU device plugin)
 - Uses venv Python interpreter: `{{ playbook_dir }}/.venv/bin/python`
+- Contains a `proxmox_cluster` dict map with entries for each Proxmox host (API host, user, password, node name, storage names)
 - Contains all localhost-specific variables (Ceph config, GPU settings)
 
 ---

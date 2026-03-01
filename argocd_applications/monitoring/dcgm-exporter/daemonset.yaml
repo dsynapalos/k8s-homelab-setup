@@ -52,7 +52,7 @@ spec:
             nvidia.com/gpu: 1
           limits:
             cpu: 200m
-            memory: 256Mi
+            memory: 500Mi
             nvidia.com/gpu: 1
         volumeMounts:
         - name: pod-gpu-resources

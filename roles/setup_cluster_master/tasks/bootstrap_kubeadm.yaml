@@ -1,6 +1,82 @@
-- name: initialize the Kubernetes cluster
+---
+# Bootstrap kubeadm on control plane nodes.
+# - Optionally deploys kube-vip static pod for API server HA (floating VIP)
+#   only on NEW nodes when K8S_VIP is set. Skipped on existing clusters.
+# - k8s-control-1 (primary): kubeadm init with --control-plane-endpoint + --upload-certs
+# - Additional control planes: kubeadm join --control-plane using cert key from primary
+
+# --- Deploy kube-vip static pod manifest (new clusters only, when VIP is configured) ---
+# The gate is control-1: if control-1 already has admin.conf (existing cluster),
+# kube-vip is skipped on ALL control plane nodes — even newly joining ones.
+# This prevents deploying kube-vip to secondary nodes when it was never set up
+# on the primary, which would cause a VIP with no matching controlPlaneEndpoint.
+- name: Check if primary control plane is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: admin_conf_stat
+  delegate_to: k8s-control-1
+  run_once: true
+
+- name: Ensure static pod manifest directory exists
+  ansible.builtin.file:
+    path: /etc/kubernetes/manifests
+    state: directory
+    mode: '0755'
+  when:
+    - k8s_vip | default('') | length > 0
+    - not admin_conf_stat.stat.exists
+
+- name: Deploy kube-vip static pod manifest
+  ansible.builtin.template:
+    src: kube-vip.yaml.j2
+    dest: /etc/kubernetes/manifests/kube-vip.yaml
+    mode: '0644'
+  when:
+    - k8s_vip | default('') | length > 0
+    - not admin_conf_stat.stat.exists
+
+# --- Primary control plane: kubeadm init ---
+# Uses VIP as controlPlaneEndpoint if K8S_VIP is set, otherwise falls back to control-1 IP.
+- name: Initialize the Kubernetes cluster (primary control plane)
   ansible.builtin.command:
-    cmd: "kubeadm init --skip-phases=addon/kube-proxy"
+    cmd: >-
+      kubeadm init
+      --skip-phases=addon/kube-proxy
+      --control-plane-endpoint={{ k8s_vip | default(hostvars['k8s-control-1'].ansible_host, true) }}:6443
+      --upload-certs
     creates: /etc/kubernetes/admin.conf
   no_log: true
+  when: inventory_hostname == 'k8s-control-1'
+
+# --- Secondary control planes: kubeadm join --control-plane ---
+- name: Join secondary control plane to cluster
+  block:
+    - name: Upload certificates on primary control plane
+      ansible.builtin.command:
+        cmd: kubeadm init phase upload-certs --upload-certs
+      register: upload_certs_result
+      delegate_to: k8s-control-1
+      become: true
+      changed_when: false
+      no_log: true
+
+    - name: Extract certificate key
+      ansible.builtin.set_fact:
+        certificate_key: "{{ upload_certs_result.stdout_lines | last }}"
+      no_log: true
+
+    - name: Get join command from primary control plane
+      ansible.builtin.shell: kubeadm token create --print-join-command
+      register: join_command_result
+      delegate_to: k8s-control-1
+      become: true
+      changed_when: false
+      no_log: true
+
+    - name: Join as control plane node
+      ansible.builtin.command:
+        cmd: "{{ join_command_result.stdout }} --control-plane --certificate-key {{ certificate_key }} --ignore-preflight-errors=NumCPU"
+        creates: /etc/kubernetes/admin.conf
+      no_log: true
+  when: inventory_hostname != 'k8s-control-1'
 

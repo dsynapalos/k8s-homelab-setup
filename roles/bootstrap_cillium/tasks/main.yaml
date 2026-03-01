@@ -16,6 +16,29 @@
   delegate_to: localhost  
   become: false
 
+# Determine API server endpoint for Cilium agents:
+# - If kube-vip is deployed (new cluster with K8S_VIP), use the floating VIP
+# - Otherwise (existing cluster), fall back to control-1 IP
+- name: Check if kube-vip is deployed
+  ansible.builtin.stat:
+    path: /etc/kubernetes/manifests/kube-vip.yaml
+  register: kube_vip_manifest
+  when: inventory_hostname == 'k8s-control-1'
+
+- name: Set API server host to VIP (kube-vip deployed)
+  ansible.builtin.set_fact:
+    cilium_api_host: "{{ lookup('env', 'K8S_VIP') }}"
+  when:
+    - inventory_hostname == 'k8s-control-1'
+    - kube_vip_manifest.stat.exists
+
+- name: Set API server host to control-1 IP (no kube-vip)
+  ansible.builtin.set_fact:
+    cilium_api_host: "{{ lookup('env', 'K8S_CONTROL_1_IP') }}"
+  when:
+    - inventory_hostname == 'k8s-control-1'
+    - not kube_vip_manifest.stat.exists
+
 - name: Deploy cilium with helm (Gateway API mode)
   kubernetes.core.helm:
     name: cilium
@@ -30,7 +53,7 @@
     set_values:
       # Core Networking - kube-proxy replacement
       - value: "kubeProxyReplacement=true"  # Replace kube-proxy with eBPF for better performance and lower latency
-      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"  # API server endpoint for Cilium agents
+      - value: "k8sServiceHost={{ cilium_api_host }}"  # API server endpoint (VIP if kube-vip, else control-1)
       - value: "k8sServicePort=6443"  # Standard K8s API server port
       
       # Operator Configuration
@@ -85,7 +108,7 @@
     set_values:
       # Core Networking - kube-proxy replacement
       - value: "kubeProxyReplacement=true"  # Replace kube-proxy with eBPF for better performance and lower latency
-      - value: "k8sServiceHost={{ lookup('env', 'K8S_CONTROL_1_IP') }}"  # API server endpoint for Cilium agents
+      - value: "k8sServiceHost={{ cilium_api_host }}"  # API server endpoint (VIP if kube-vip, else control-1)
       - value: "k8sServicePort=6443"  # Standard K8s API server port
       
       # Operator Configuration

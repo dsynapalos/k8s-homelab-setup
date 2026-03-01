@@ -69,8 +69,9 @@ cilium status --wait
 ## VM Provisioning
 
 **API authentication fails**:
-- Verify `PROXMOX_API_USER`, `PROXMOX_API_PASSWORD`, and `PROXMOX_API_HOST` in `.env`
+- Verify `PROXMOX_API_USER`, `PROXMOX_API_PASSWORD`, and `PROXMOX_API_HOST_1`/`PROXMOX_API_HOST_2` in `.env`
 - Test manually: `curl -k https://<host>:8006/api2/json/access/ticket -d 'username=root@pam&password=<pass>'`
+- If using multiple Proxmox hosts, test each one independently`
 
 **VM creation hangs**:
 - Check ISO exists in Proxmox storage (the automation uploads it, but if storage is full it fails silently)
@@ -100,6 +101,25 @@ cilium status --wait
 - The playbook fetches it from `/etc/kubernetes/admin.conf` on the control plane
 - Check SSH connectivity to the control plane node
 - Look for it at `~/.kube/config`
+
+---
+
+## API Server HA (kube-vip)
+
+**VIP not responding**:
+- Check that kube-vip pods are running on the control plane: `kubectl get pods -n kube-system | grep kube-vip`
+- Verify the VIP is being announced: `arping -I <interface> <K8S_VIP>` from another machine on the LAN
+- Check kube-vip logs: `kubectl logs -n kube-system kube-vip-k8s-control-1`
+- Verify the VIP address is outside your DHCP range and `CILIUM_LOADBALANCER_IPPOOL`
+
+**kube-vip not deploying on new cluster**:
+- Ensure `K8S_VIP` is set in `.env` (not empty)
+- kube-vip is only deployed when `admin.conf` does not exist on the primary control plane — if the cluster was previously initialized, kube-vip is skipped
+
+**kube-vip deployed but API unreachable via VIP**:
+- Check leader election: `kubectl get lease plndr-cp-lock -n kube-system -o yaml`
+- Verify `controlPlaneEndpoint` in the kubeadm config matches the VIP: `kubectl get cm -n kube-system kubeadm-config -o yaml | grep controlPlaneEndpoint`
+- Ensure the kube-vip interface matches the node's default interface: check `ansible_facts.default_ipv4.interface` vs the `vip_interface` env var in the kube-vip manifest
 
 ---
 

@@ -24,6 +24,8 @@ Traditional Kubernetes networking stacks (kube-proxy + Flannel/Calico with iptab
 
 **Deployment**: Helm chart (`cilium/cilium`) with kube-proxy replacement enabled. Deployed in Phase 7 of the pipeline after kubeadm init (which runs with `--skip-phases=addon/kube-proxy`).
 
+**API server endpoint**: Cilium agents need to know the API server address (`k8sServiceHost`). The role detects this dynamically by checking whether kube-vip is deployed on the primary control plane (`/etc/kubernetes/manifests/kube-vip.yaml`). If present, it sets `cilium_api_host` to the floating VIP (`K8S_VIP`); otherwise it falls back to the primary control plane's IP. This stat-based detection means Cilium works correctly on both new clusters (with kube-vip) and existing clusters (without it), regardless of whether `K8S_VIP` is set in `.env`.
+
 **Two mutually exclusive modes** (controlled by `ENABLE_GATEWAY_API`):
 
 | Mode | Ingress | Proxy | Best For |
@@ -85,25 +87,36 @@ Cilium announces LoadBalancer service IPs via ARP (IPv4) and NDP (IPv6) on the l
 
 ### Firewall Rules
 
-The `setup_os` role configures UFW on every node:
+The `setup_os` role configures UFW with different rules per node type. In addition, `net.ipv4.tcp_syn_retries` is set to `3` (reducing TCP SYN timeout from ~130s to ~15s) so connections to unreachable Harbor mirrors fail fast during initial bootstrap.
 
-In addition, `net.ipv4.tcp_syn_retries` is set to `3` (reducing TCP SYN timeout from ~130s to ~15s) so connections to unreachable Harbor mirrors fail fast during initial bootstrap.
+**All nodes** (common):
 
 | Port | Protocol | Purpose |
 |------|----------|---------|
 | 22 | TCP | SSH access |
-| 6443 | TCP | Kubernetes API server |
-| 2379–2380 | TCP | etcd (control plane only) |
-| 10250 | TCP | kubelet API |
-| 10256 | TCP | kube-proxy health checks |
-| 10257, 10259 | TCP | kube-controller-manager, kube-scheduler |
-| 80, 443 | TCP | Ingress HTTP/HTTPS |
-| 30000–32767 | TCP | NodePort range |
 | 4240 | TCP | Cilium health checks |
-| 4244–4245 | TCP | Hubble relay |
+| 4244–4245 | TCP | Hubble server and relay |
 | 4250 | TCP | Cilium metrics |
+| 10250 | TCP | kubelet API |
 | 8472 | UDP | Cilium VXLAN overlay |
 | 51871 | UDP | Cilium WireGuard encryption |
+
+**Control plane nodes** (`k8s-control` group):
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 6443 | TCP | Kubernetes API server |
+| 2379–2380 | TCP | etcd server and peer communication |
+| 10257 | TCP | kube-controller-manager |
+| 10259 | TCP | kube-scheduler |
+
+**Worker nodes** (`k8s-nodes` group):
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 80, 443 | TCP | Ingress HTTP/HTTPS |
+| 10256 | TCP | kube-proxy health checks |
+| 30000–32767 | TCP/UDP | NodePort service range |
 
 ---
 

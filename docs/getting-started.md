@@ -1,6 +1,6 @@
 # Getting Started
 
-> **This is a homelab/learning project**, not a production-ready deployment. It's designed for studying Kubernetes, virtualization, Linux, and general homelab experimentation. Expect single-replica components, relaxed security defaults, and configuration tuned for a single Proxmox host.
+> **This is a homelab/learning project**, not a production-ready deployment. It's designed for studying Kubernetes, virtualization, Linux, and general homelab experimentation. Expect single-replica components, relaxed security defaults, and configuration tuned for a small number of Proxmox hosts.
 
 ## What This Guide Covers
 
@@ -10,9 +10,9 @@ Everything you need to go from a fresh checkout to a running Kubernetes cluster.
 
 You need three things before starting:
 
-1. **A Proxmox host** (or standalone Ubuntu VMs if you're skipping VM provisioning)
+1. **One or more Proxmox hosts** (or standalone Ubuntu VMs if you're skipping VM provisioning)
 2. **A control machine** running Ubuntu, WSL, or any Linux with Python 3 and SSH
-3. **SSH access** to the Proxmox host and the network where VMs will live
+3. **SSH access** to each Proxmox host and the network where VMs will live
 
 ## Installation
 
@@ -53,12 +53,18 @@ CRIO_VERSION=1.34
 CILIUM_VERSION=1.18.7
 CILIUM_LOADBALANCER_IPPOOL=192.168.1.193/27
 
-# Proxmox connection
+# Proxmox connection (one entry per host, shared credentials)
 PROXMOX_API_USER=root@pam
 PROXMOX_API_PASSWORD=yourpassword
-PROXMOX_API_HOST=192.168.1.1
+PROXMOX_API_HOST_1=192.168.1.1      # Primary Proxmox host
+PROXMOX_API_HOST_2=192.168.1.2      # Secondary Proxmox host (optional)
 PROXMOX_LOCAL_STORAGE=local
-PROXMOX_NODE=proxmox
+PROXMOX_NODE_1=pve                   # Primary Proxmox node name
+PROXMOX_NODE_2=pve2                  # Secondary Proxmox node name (optional)
+
+# API Server HA (kube-vip)
+K8S_VIP=192.168.1.210               # Floating VIP for API server HA, must be outside DHCP range and LB pool
+KUBE_VIP_VERSION=0.8.7
 
 # VM networking
 VM_GATEWAY=192.168.1.1
@@ -66,13 +72,23 @@ VM_NAMESERVER=192.168.1.1
 VM_NET_BRIDGE=vmbr0
 VM_NET_MODEL=virtio
 
-# VM resources (per node)
+# VM resources — primary nodes (on PROXMOX_NODE_1)
 K8S_CONTROL_1_MEM_MB=4096
 K8S_CONTROL_1_DISK_GB=32
 K8S_CONTROL_1_CPU=2
 K8S_NODE_1_MEM_MB=8192
 K8S_NODE_1_DISK_GB=64
 K8S_NODE_1_CPU=4
+
+# VM resources — secondary nodes (on PROXMOX_NODE_2, optional)
+K8S_CONTROL_2_IP=192.168.1.12
+K8S_CONTROL_2_MEM_MB=8192
+K8S_CONTROL_2_DISK_GB=25
+K8S_CONTROL_2_CPU=1
+K8S_NODE_2_IP=192.168.1.13
+K8S_NODE_2_MEM_MB=16384
+K8S_NODE_2_DISK_GB=125
+K8S_NODE_2_CPU=4
 
 # VM CPU emulation
 VM_CPU_TYPE=host              # 'host' exposes full CPU features (required for Istio); 'kvm64' for baseline x86-64
@@ -184,7 +200,7 @@ The first run takes approximately 26 minutes, most of which is spent downloading
 | Cluster reset | `setup-clusters.py` | ~26 min | VM recreate | Major version upgrades |
 | Teardown | `cleanup-clusters.py` | ~2 min | VM destroy, storage wipe | Starting over |
 
-The `cleanup-clusters.py` script destroys all VMs on Proxmox, removes secondary storage pools and LVM structures, wipes disk signatures, and deletes the local kubeconfig. It uses the same Ansible Runner pattern but runs `cleanup_cluster.yaml`.
+The `cleanup-clusters.py` script destroys all VMs on every configured Proxmox host, removes secondary storage pools and LVM structures per cluster, wipes disk signatures, and deletes the local kubeconfig. It iterates over the `proxmox_cluster` map so each host is cleaned independently. It uses the same Ansible Runner pattern but runs `cleanup_cluster.yaml`.
 
 ## Next Steps
 

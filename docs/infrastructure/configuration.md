@@ -109,11 +109,11 @@ Rook uses the secondary disks automatically provisioned by the `setup_localhost`
 
 ### Setup
 
-1. Ensure your Proxmox host has secondary disks available (beyond the OS disk)
+1. Ensure your Proxmox hosts have secondary disks available (beyond the OS disk)
 2. Set `ENABLE_ROOK=true` in `.env`
 3. The automation will:
-   - Discover raw disks on the Proxmox host
-   - Create LVM thin pools and attach virtual disks to worker VMs
+   - Discover raw disks on each Proxmox host independently
+   - Create LVM thin pools and attach virtual disks to worker VMs on the corresponding host
    - Deploy the Rook operator and CephCluster via ArgoCD
    - Create three StorageClasses: `rook-ceph-block`, `rook-cephfs`, `rook-ceph-bucket`
 
@@ -227,6 +227,47 @@ For networking internals and Cilium integration, see [Networking](networking.md)
 
 ---
 
+## API Server HA (kube-vip)
+
+### What It Does
+
+Deploys a [kube-vip](https://kube-vip.io/) static pod on each control plane node to provide a floating Virtual IP (VIP) for the Kubernetes API server. This enables API server high availability — if the active control plane node goes down, another control plane node takes over the VIP via ARP leader election, transparently redirecting `kubectl` and in-cluster API traffic.
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `K8S_VIP` | Floating VIP address for the API server | `192.168.178.225` |
+| `KUBE_VIP_VERSION` | kube-vip container image version (default: `0.8.7`) | `0.8.7` |
+
+### Setup
+
+1. Choose a VIP address on your LAN subnet that is:
+   - **Outside your DHCP range** (so no device gets assigned this IP)
+   - **Outside your `CILIUM_LOADBALANCER_IPPOOL`** (so it doesn't conflict with LoadBalancer IPs)
+   - **Routable from your workstation** (same L2 subnet as nodes)
+2. Set `K8S_VIP` and optionally `KUBE_VIP_VERSION` in `.env`
+3. The automation will:
+   - Deploy a kube-vip static pod manifest to `/etc/kubernetes/manifests/kube-vip.yaml` on each control plane node
+   - Pass `--control-plane-endpoint=<VIP>:6443` to `kubeadm init`
+   - Upload certificates so additional control plane nodes can join with `kubeadm join --control-plane`
+   - Configure Cilium to use the VIP as `k8sServiceHost` (Cilium agents connect to the API via the VIP)
+
+### How It Works
+
+- **ARP mode**: kube-vip announces the VIP via gratuitous ARP on the local network. Only the leader node responds to ARP requests for the VIP address.
+- **Leader election**: Uses a Kubernetes Lease object (`plndr-cp-lock` in `kube-system`) to elect a single owner. Lease duration is 5 seconds with a 3-second renew deadline and 1-second retry period.
+- **Static pod**: Deployed as a static pod (not managed by the API server) so it can start before the cluster is initialized. Uses `hostNetwork: true` and requires `NET_ADMIN` + `NET_RAW` capabilities.
+- **Metrics**: Exposes Prometheus metrics on port 2112.
+
+### Existing Cluster Guard
+
+kube-vip is only deployed when the primary control plane (`k8s-control-1`) does **not** yet have `/etc/kubernetes/admin.conf`. This prevents kube-vip from being retroactively added to an existing cluster that was initialized without a VIP — which would cause a mismatch between the `controlPlaneEndpoint` in the kubeadm config and the actual VIP.
+
+If `K8S_VIP` is set but the cluster already exists, the VIP is ignored and Cilium continues using the primary control plane IP directly.
+
+---
+
 ## cert-manager (TLS Certificates)
 
 ### What It Does
@@ -260,6 +301,7 @@ For full details, see [cert-manager](../applications/security/cert-manager.md). 
 | GPU passthrough | `ENABLE_CUDA` | `false` | IOMMU + vfio-pci on host, `compute: cuda` label |
 | Istio Ambient | `ENABLE_ISTIO` | `false` | `VM_CPU_TYPE=host` |
 | Gateway API | `ENABLE_GATEWAY_API` | `false` | Mutually exclusive with Ingress Controller mode |
+| API Server HA | `K8S_VIP` + `KUBE_VIP_VERSION` | unset / `0.8.7` | VIP must be outside DHCP range and LB pool |
 
 ---
 
@@ -272,8 +314,8 @@ diff <(grep -oP '^[A-Z_]+' example.env | sort) <(grep -oP '^[A-Z_]+' .env | sort
 # Verify feature flags and versions
 grep -E 'ENABLE_|_VERSION' .env
 
-# Test Proxmox API connectivity
-curl -k "https://${PROXMOX_API_HOST}:8006/api2/json/access/ticket" \
+# Test Proxmox API connectivity (use PROXMOX_API_HOST_1 or _2)
+curl -k "https://${PROXMOX_API_HOST_1}:8006/api2/json/access/ticket" \
   -d "username=${PROXMOX_API_USER}&password=${PROXMOX_API_PASSWORD}"
 
 # Check if a variable is empty (common with env lookups)

@@ -9,6 +9,7 @@
   ansible.builtin.script: setup_secondary_storage.py
   args:
     executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  no_log: true
   environment:
     PROXMOX_HOST: "{{ proxmox_api_host }}"
     PROXMOX_USER: "{{ proxmox_api_user }}"

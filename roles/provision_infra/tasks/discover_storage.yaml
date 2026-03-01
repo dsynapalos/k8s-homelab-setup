@@ -1,12 +1,17 @@
 ---
-# Discover available secondary storage on Proxmox host
+# Discover available secondary storage on the Proxmox host for this VM.
 # This task discovers raw disks that can be used for VM secondary storage
 # (for Rook-Ceph, additional data volumes, etc.)
+#
+# NOTE: Secondary storage setup is now handled per-cluster in
+# setup_localhost/tasks/setup_secondary_storage.yaml before this play runs.
+# This file is kept for reference but is NOT included from main.yaml.
 
 - name: Discover Proxmox storage availability
   ansible.builtin.script: discover_storage.py
   args:
     executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+  no_log: true
   environment:
     PROXMOX_HOST: "{{ proxmox_api_host }}"
     PROXMOX_USER: "{{ proxmox_api_user }}"
@@ -14,7 +19,6 @@
     PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
     PROXMOX_NODE: "{{ proxmox_node }}"
   delegate_to: localhost
-  run_once: true
   register: storage_discovery_result
 
 - name: Parse storage discovery results
