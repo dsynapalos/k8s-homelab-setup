@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="980" height="820" viewBox="0 0 980 820" content="PG14ZmlsZSBob3N0PSJkcmF3LmlvIj4KICA8ZGlhZ3JhbSBuYW1lPSJOZXR3b3JraW5nIEFyY2hpdGVjdHVyZSIgaWQ9Im5ldHdvcmtpbmciPgogICAgPG14R3JhcGhNb2RlbCBkeD0iMTQwMCIgZHk9IjkwMCIgZ3JpZD0iMSIgZ3JpZFNpemU9IjEwIiBndWlkZXM9IjEiIHRvb2x0aXBzPSIxIiBjb25uZWN0PSIxIiBhcnJvd3M9IjEiIGZvbGQ9IjEiIHBhZ2U9IjEiIHBhZ2VTY2FsZT0iMSIgcGFnZVdpZHRoPSIxNjAwIiBwYWdlSGVpZ2h0PSIxMDAwIiBtYXRoPSIwIiBzaGFkb3c9IjAiPgogICAgICA8cm9vdD4KICAgICAgICA8bXhDZWxsIGlkPSIwIi8+CiAgICAgICAgPG14Q2VsbCBpZD0iMSIgcGFyZW50PSIwIi8+CgogICAgICAgIDwhLS0gRXh0ZXJuYWwgY2xpZW50cyAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJjbGllbnQiIHZhbHVlPSJMQU4gQ2xpZW50cyYjeGE7KEJyb3dzZXIpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmZmYyY2M7c3Ryb2tlQ29sb3I9I2Q2YjY1Njtmb250U3R5bGU9MTtmb250U2l6ZT0xMTsiIHZlcnRleD0iMSIgcGFyZW50PSIxIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjQwIiB5PSIxMjAiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImxiX3Bvb2wiIHZhbHVlPSJMb2FkQmFsYW5jZXIgSVAgUG9vbCYjeGE7Q0lMSVVNX0xPQURCQUxBTkNFUl9JUFBPT0wmI3hhOyguMjA4LS4yMjIpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmOGNlY2M7c3Ryb2tlQ29sb3I9I2I4NTQ1MDtmb250U3R5bGU9MTtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSIxIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjQwIiB5PSIyMjAiIHdpZHRoPSIxNjAiIGhlaWdodD0iNjAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImRucyIgdmFsdWU9IkROUyYjeGE7Ki5rOHMubG9jYWwiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2ZmZjJjYztzdHJva2VDb2xvcj0jZDZiNjU2O2ZvbnRTaXplPTExOyIgdmVydGV4PSIxIiBwYXJlbnQ9IjEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iNDAiIHk9IjMxMCIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI1MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gSzhzIENsdXN0ZXIgY29udGFpbmVyIC0tPgogICAgICAgIDxteENlbGwgaWQ9ImNsdXN0ZXIiIHZhbHVlPSJLdWJlcm5ldGVzIENsdXN0ZXIiIHN0eWxlPSJzd2ltbGFuZTtzdGFydFNpemU9MzA7ZmlsbENvbG9yPSNkYWU4ZmM7c3Ryb2tlQ29sb3I9IzZjOGViZjtyb3VuZGVkPTE7Zm9udFNpemU9MTM7Zm9udFN0eWxlPTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyNDAiIHk9IjEwMCIgd2lkdGg9IjcwMCIgaGVpZ2h0PSI2ODAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIGt1YmUtc3lzdGVtIG5hbWVzcGFjZSAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJrdWJlc3lzIiB2YWx1ZT0ia3ViZS1zeXN0ZW0iIHN0eWxlPSJzd2ltbGFuZTtzdGFydFNpemU9MjI7ZmlsbENvbG9yPSNlNmU2ZTY7c3Ryb2tlQ29sb3I9Izk5OTk5OTtyb3VuZGVkPTE7Zm9udFNpemU9MTE7Zm9udFN0eWxlPTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY2x1c3RlciI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iNDAiIHdpZHRoPSIzMjAiIGhlaWdodD0iMjAwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJjaWxpdW1fYWdlbnQiIHZhbHVlPSJDaWxpdW0gQWdlbnQmI3hhOyhEYWVtb25TZXQpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJrdWJlc3lzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIzMCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY2lsaXVtX29wIiB2YWx1ZT0iQ2lsaXVtIE9wZXJhdG9yIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJrdWJlc3lzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjE3MCIgeT0iMzAiIHdpZHRoPSIxMzAiIGhlaWdodD0iNDAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImNpbGl1bV9pbmdyZXNzIiB2YWx1ZT0iQ2lsaXVtIEluZ3Jlc3MmI3hhO0NvbnRyb2xsZXIiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9Imt1YmVzeXMiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9Ijg1IiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJodWJibGUiIHZhbHVlPSJIdWJibGUgUmVsYXkmI3hhOysgVUkiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9Imt1YmVzeXMiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMTcwIiB5PSI4NSIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY29yZWRucyIgdmFsdWU9IkNvcmVETlMmI3hhOyhyZXdyaXRlICouazhzLmxvY2FsKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0ia3ViZXN5cyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMTQ1IiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSBFbmNyeXB0aW9uIGxheWVyIC0tPgogICAgICAgIDxteENlbGwgaWQ9IndpcmVndWFyZCIgdmFsdWU9IldpcmVHdWFyZCBFbmNyeXB0aW9uJiN4YTsobm9kZS10by1ub2RlLCB0cmFuc3BhcmVudCkiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwO2Rhc2hlZD0xOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImNsdXN0ZXIiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzgwIiB5PSI2MCIgd2lkdGg9IjIwMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gTDIgQW5ub3VuY2VtZW50IC0tPgogICAgICAgIDxteENlbGwgaWQ9ImwyIiB2YWx1ZT0iTDIgQW5ub3VuY2VtZW50JiN4YTsoQVJQIG9uIHdvcmtlciBub2RlcykiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImNsdXN0ZXIiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzgwIiB5PSIxMjAiIHdpZHRoPSIyMDAiIGhlaWdodD0iNDAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIElzdGlvIG5hbWVzcGFjZSAob3B0aW9uYWwpIC0tPgogICAgICAgIDxteENlbGwgaWQ9ImlzdGlvX25zIiB2YWx1ZT0iaXN0aW8tc3lzdGVtIChvcHRpb25hbCkiIHN0eWxlPSJzd2ltbGFuZTtzdGFydFNpemU9MjI7ZmlsbENvbG9yPSNlNmU2ZTY7c3Ryb2tlQ29sb3I9Izk5OTk5OTtyb3VuZGVkPTE7Zm9udFNpemU9MTE7Zm9udFN0eWxlPTI7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY2x1c3RlciI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMjYwIiB3aWR0aD0iMzIwIiBoZWlnaHQ9IjEyMCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0ienR1bm5lbCIgdmFsdWU9Inp0dW5uZWwmI3hhOyhEYWVtb25TZXQpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpc3Rpb19ucyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMzAiIHdpZHRoPSIxMzAiIGhlaWdodD0iNDAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImlzdGlvZCIgdmFsdWU9ImlzdGlvZCYjeGE7KGNvbnRyb2wgcGxhbmUpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpc3Rpb19ucyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIxNzAiIHk9IjMwIiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJpc3Rpb19jbmkiIHZhbHVlPSJJc3RpbyBDTkkmI3hhOyhEYWVtb25TZXQpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpc3Rpb19ucyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iNzUiIHdpZHRoPSIxMzAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIEluZ3Jlc3MgcmVzb3VyY2VzIC0tPgogICAgICAgIDxteENlbGwgaWQ9ImluZ3Jlc3NfYm94IiB2YWx1ZT0iSW5ncmVzcyBSZXNvdXJjZXMiIHN0eWxlPSJzd2ltbGFuZTtzdGFydFNpemU9MjI7ZmlsbENvbG9yPSNlNmU2ZTY7c3Ryb2tlQ29sb3I9Izk5OTk5OTtyb3VuZGVkPTE7Zm9udFNpemU9MTE7Zm9udFN0eWxlPTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY2x1c3RlciI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIzODAiIHk9IjI2MCIgd2lkdGg9IjI5MCIgaGVpZ2h0PSIyNTAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImluZ19hcmdvY2QiIHZhbHVlPSJhcmdvY2QuazhzLmxvY2FsIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpbmdyZXNzX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMzAiIHdpZHRoPSIxMjAiIGhlaWdodD0iMjgiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImluZ19ncmFmYW5hIiB2YWx1ZT0iZ3JhZmFuYS5rOHMubG9jYWwiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImluZ3Jlc3NfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSI2OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIyOCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iaW5nX2tleWNsb2FrIiB2YWx1ZT0ia2V5Y2xvYWsuazhzLmxvY2FsIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpbmdyZXNzX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMTA2IiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjI4IiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJpbmdfaGFyYm9yIiB2YWx1ZT0iaGFyYm9yLms4cy5sb2NhbCIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iaW5ncmVzc19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9IjE0NCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIyOCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iaW5nX2h1YmJsZSIgdmFsdWU9Imh1YmJsZS5rOHMubG9jYWwiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImluZ3Jlc3NfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIxODIiIHdpZHRoPSIxMjAiIGhlaWdodD0iMjgiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImluZ19tYXRyaXgiIHZhbHVlPSJtYXRyaXguazhzLmxvY2FsIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJpbmdyZXNzX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIxNTUiIHk9IjMwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjI4IiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJpbmdfdGhhbm9zIiB2YWx1ZT0idGhhbm9zLms4cy5sb2NhbCIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iaW5ncmVzc19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMTU1IiB5PSI2OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIyOCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iaW5nX2FsZXJ0IiB2YWx1ZT0iYWxlcnRtYW5hZ2VyLms4cy5sb2NhbCIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iaW5ncmVzc19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMTU1IiB5PSIxMDYiIHdpZHRoPSIxMjAiIGhlaWdodD0iMjgiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIFRMUyAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJ0bHMiIHZhbHVlPSJjZXJ0LW1hbmFnZXImI3hhO1RMUyBjZXJ0aWZpY2F0ZXMiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Y1ZjVmNTtzdHJva2VDb2xvcj0jNjY2NjY2O2ZvbnRDb2xvcj0jNjY2NjY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImNsdXN0ZXIiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzgwIiB5PSIxODUiIHdpZHRoPSIyMDAiIGhlaWdodD0iNDAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIEVkZ2VzIC0tPgogICAgICAgIDxteENlbGwgaWQ9ImVfY2xpZW50X2xiIiBlZGdlPSIxIiBzb3VyY2U9ImNsaWVudCIgdGFyZ2V0PSJsYl9wb29sIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZXhpdFg9MC41O2V4aXRZPTE7ZXhpdER4PTA7ZXhpdER5PTA7ZW50cnlYPTAuNTtlbnRyeVk9MDtlbnRyeUR4PTA7ZW50cnlEeT0wOyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iZV9jbGllbnRfbGJfbCIgdmFsdWU9IkhUVFBTIiBzdHlsZT0iZWRnZUxhYmVsO2h0bWw9MTthbGlnbj1jZW50ZXI7dmVydGljYWxBbGlnbj1taWRkbGU7cmVzaXphYmxlPTA7cG9pbnRzPVtdO2ZvbnRTaXplPTk7IiB2ZXJ0ZXg9IjEiIGNvbm5lY3RhYmxlPSIwIiBwYXJlbnQ9ImVfY2xpZW50X2xiIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiPjxteFBvaW50IGFzPSJvZmZzZXQiLz48L214R2VvbWV0cnk+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDxteENlbGwgaWQ9ImVfbGJfaW5ncmVzcyIgZWRnZT0iMSIgc291cmNlPSJsYl9wb29sIiB0YXJnZXQ9ImNpbGl1bV9pbmdyZXNzIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZXhpdFg9MTtleGl0WT0wLjU7ZXhpdER4PTA7ZXhpdER5PTA7ZW50cnlYPTA7ZW50cnlZPTAuNTtlbnRyeUR4PTA7ZW50cnlEeT0wOyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iZV9sYl9pbmdyZXNzX2wiIHZhbHVlPSJMMiBBUlAiIHN0eWxlPSJlZGdlTGFiZWw7aHRtbD0xO2FsaWduPWNlbnRlcjt2ZXJ0aWNhbEFsaWduPW1pZGRsZTtyZXNpemFibGU9MDtwb2ludHM9W107Zm9udFNpemU9OTsiIHZlcnRleD0iMSIgY29ubmVjdGFibGU9IjAiIHBhcmVudD0iZV9sYl9pbmdyZXNzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiPjxteFBvaW50IGFzPSJvZmZzZXQiLz48L214R2VvbWV0cnk+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDxteENlbGwgaWQ9ImVfZG5zX2NvcmVkbnMiIGVkZ2U9IjEiIHNvdXJjZT0iZG5zIiB0YXJnZXQ9ImNvcmVkbnMiIHBhcmVudD0iMSIgc3R5bGU9ImVkZ2VTdHlsZT1vcnRob2dvbmFsRWRnZVN0eWxlO3JvdW5kZWQ9MTtvcnRob2dvbmFsTG9vcD0xO2pldHR5U2l6ZT1hdXRvO2h0bWw9MTtkYXNoZWQ9MTtleGl0WD0xO2V4aXRZPTAuNTtleGl0RHg9MDtleGl0RHk9MDtlbnRyeVg9MDtlbnRyeVk9MC41O2VudHJ5RHg9MDtlbnRyeUR5PTA7Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJlX2Ruc19jb3JlZG5zX2wiIHZhbHVlPSJpbnRlcm5hbCByZXdyaXRlIiBzdHlsZT0iZWRnZUxhYmVsO2h0bWw9MTthbGlnbj1jZW50ZXI7dmVydGljYWxBbGlnbj1taWRkbGU7cmVzaXphYmxlPTA7cG9pbnRzPVtdO2ZvbnRTaXplPTk7IiB2ZXJ0ZXg9IjEiIGNvbm5lY3RhYmxlPSIwIiBwYXJlbnQ9ImVfZG5zX2NvcmVkbnMiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSI+PG14UG9pbnQgYXM9Im9mZnNldCIvPjwvbXhHZW9tZXRyeT4KICAgICAgICA8L214Q2VsbD4KCiAgICAgIDwvcm9vdD4KICAgIDwvbXhHcmFwaE1vZGVsPgogIDwvZGlhZ3JhbT4KPC9teGZpbGU+">
+  <metadata id="drawio-source">
+  <![CDATA[
+<mxfile host="draw.io">
+  <diagram name="Networking Architecture" id="networking">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- External clients -->
+        <mxCell id="client" value="LAN Clients&#xa;(Browser)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="lb_pool" value="LoadBalancer IP Pool&#xa;CILIUM_LOADBALANCER_IPPOOL&#xa;(.208-.222)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="dns" value="DNS&#xa;*.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="310" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- K8s Cluster container -->
+        <mxCell id="cluster" value="Kubernetes Cluster" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="100" width="700" height="680" as="geometry"/>
+        </mxCell>
+
+        <!-- kube-system namespace -->
+        <mxCell id="kubesys" value="kube-system" style="swimlane;startSize=22;fillColor=#e6e6e6;strokeColor=#999999;rounded=1;fontSize=11;fontStyle=1;" vertex="1" parent="cluster">
+          <mxGeometry x="20" y="40" width="320" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="cilium_agent" value="Cilium Agent&#xa;(DaemonSet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="kubesys">
+          <mxGeometry x="20" y="30" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cilium_op" value="Cilium Operator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="kubesys">
+          <mxGeometry x="170" y="30" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cilium_ingress" value="Cilium Ingress&#xa;Controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="kubesys">
+          <mxGeometry x="20" y="85" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="hubble" value="Hubble Relay&#xa;+ UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="kubesys">
+          <mxGeometry x="170" y="85" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="coredns" value="CoreDNS&#xa;(rewrite *.k8s.local)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="kubesys">
+          <mxGeometry x="20" y="145" width="130" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Encryption layer -->
+        <mxCell id="wireguard" value="WireGuard Encryption&#xa;(node-to-node, transparent)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;dashed=1;" vertex="1" parent="cluster">
+          <mxGeometry x="380" y="60" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- L2 Announcement -->
+        <mxCell id="l2" value="L2 Announcement&#xa;(ARP on worker nodes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="cluster">
+          <mxGeometry x="380" y="120" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Istio namespace (optional) -->
+        <mxCell id="istio_ns" value="istio-system (optional)" style="swimlane;startSize=22;fillColor=#e6e6e6;strokeColor=#999999;rounded=1;fontSize=11;fontStyle=2;" vertex="1" parent="cluster">
+          <mxGeometry x="20" y="260" width="320" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="ztunnel" value="ztunnel&#xa;(DaemonSet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="istio_ns">
+          <mxGeometry x="20" y="30" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="istiod" value="istiod&#xa;(control plane)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="istio_ns">
+          <mxGeometry x="170" y="30" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="istio_cni" value="Istio CNI&#xa;(DaemonSet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="istio_ns">
+          <mxGeometry x="20" y="75" width="130" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Ingress resources -->
+        <mxCell id="ingress_box" value="Ingress Resources" style="swimlane;startSize=22;fillColor=#e6e6e6;strokeColor=#999999;rounded=1;fontSize=11;fontStyle=1;" vertex="1" parent="cluster">
+          <mxGeometry x="380" y="260" width="290" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_argocd" value="argocd.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="20" y="30" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_grafana" value="grafana.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="20" y="68" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_keycloak" value="keycloak.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="20" y="106" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_harbor" value="harbor.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="20" y="144" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_hubble" value="hubble.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="20" y="182" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_matrix" value="matrix.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="155" y="30" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_thanos" value="thanos.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="155" y="68" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ing_alert" value="alertmanager.k8s.local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ingress_box">
+          <mxGeometry x="155" y="106" width="120" height="28" as="geometry"/>
+        </mxCell>
+
+        <!-- TLS -->
+        <mxCell id="tls" value="cert-manager&#xa;TLS certificates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="cluster">
+          <mxGeometry x="380" y="185" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_client_lb" edge="1" source="client" target="lb_pool" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_client_lb_l" value="HTTPS" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_client_lb">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_lb_ingress" edge="1" source="lb_pool" target="cilium_ingress" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_lb_ingress_l" value="L2 ARP" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_lb_ingress">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_dns_coredns" edge="1" source="dns" target="coredns" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_dns_coredns_l" value="internal rewrite" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_dns_coredns">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+  ]]>
+  </metadata>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <g>
+    <rect x="260.0" y="120.0" width="700.0" height="680.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="260.0" y="120.0" width="700.0" height="30.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="260.0" y="144.0" width="700.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="610.0" y="136.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" font-style="normal" fill="#000000">Kubernetes Cluster</text>
+    <rect x="280.0" y="160.0" width="320.0" height="200.0" rx="6" ry="6" fill="#e6e6e6" fill-opacity="0.3" stroke="#999999" stroke-width="1.0"/>
+    <rect x="280.0" y="160.0" width="320.0" height="22.0" rx="6" ry="6" fill="#e6e6e6" stroke="#999999" stroke-width="1.0"/>
+    <rect x="280.0" y="176.0" width="320.0" height="6.0" fill="#e6e6e6" stroke="none"/>
+    <text x="440.0" y="174.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">kube-system</text>
+    <rect x="280.0" y="380.0" width="320.0" height="120.0" rx="6" ry="6" fill="#e6e6e6" fill-opacity="0.3" stroke="#999999" stroke-width="1.0"/>
+    <rect x="280.0" y="380.0" width="320.0" height="22.0" rx="6" ry="6" fill="#e6e6e6" stroke="#999999" stroke-width="1.0"/>
+    <rect x="280.0" y="396.0" width="320.0" height="6.0" fill="#e6e6e6" stroke="none"/>
+    <text x="440.0" y="394.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="italic" fill="#000000">istio-system (optional)</text>
+    <rect x="640.0" y="380.0" width="290.0" height="250.0" rx="6" ry="6" fill="#e6e6e6" fill-opacity="0.3" stroke="#999999" stroke-width="1.0"/>
+    <rect x="640.0" y="380.0" width="290.0" height="22.0" rx="6" ry="6" fill="#e6e6e6" stroke="#999999" stroke-width="1.0"/>
+    <rect x="640.0" y="396.0" width="290.0" height="6.0" fill="#e6e6e6" stroke="none"/>
+    <text x="785.0" y="394.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">Ingress Resources</text>
+    <rect x="60.0" y="140.0" width="120.0" height="50.0" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.0"/>
+    <text x="120.0" y="161.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">LAN Clients</text>
+    <text x="120.0" y="176.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">(Browser)</text>
+    <rect x="60.0" y="240.0" width="160.0" height="60.0" rx="6" ry="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.0"/>
+    <text x="140.0" y="260.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="bold" font-style="normal" fill="#000000">LoadBalancer IP Pool</text>
+    <text x="140.0" y="273.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="bold" font-style="normal" fill="#000000">CILIUM_LOADBALANCER_IPPOOL</text>
+    <text x="140.0" y="286.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="bold" font-style="normal" fill="#000000">(.208-.222)</text>
+    <rect x="60.0" y="330.0" width="160.0" height="50.0" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.0"/>
+    <text x="140.0" y="351.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">DNS</text>
+    <text x="140.0" y="366.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">*.k8s.local</text>
+    <rect x="300.0" y="190.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="365.0" y="207.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Cilium Agent</text>
+    <text x="365.0" y="220.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(DaemonSet)</text>
+    <rect x="450.0" y="190.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="515.0" y="213.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Cilium Operator</text>
+    <rect x="300.0" y="245.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="365.0" y="262.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Cilium Ingress</text>
+    <text x="365.0" y="275.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Controller</text>
+    <rect x="450.0" y="245.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="515.0" y="262.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Hubble Relay</text>
+    <text x="515.0" y="275.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">+ UI</text>
+    <rect x="300.0" y="305.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="365.0" y="322.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">CoreDNS</text>
+    <text x="365.0" y="335.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(rewrite *.k8s.local)</text>
+    <rect x="640.0" y="180.0" width="200.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0" stroke-dasharray="6 3"/>
+    <text x="740.0" y="197.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">WireGuard Encryption</text>
+    <text x="740.0" y="210.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(node-to-node, transparent)</text>
+    <rect x="640.0" y="240.0" width="200.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="740.0" y="257.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">L2 Announcement</text>
+    <text x="740.0" y="270.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(ARP on worker nodes)</text>
+    <rect x="300.0" y="410.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="365.0" y="427.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">ztunnel</text>
+    <text x="365.0" y="440.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(DaemonSet)</text>
+    <rect x="450.0" y="410.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="515.0" y="427.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">istiod</text>
+    <text x="515.0" y="440.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(control plane)</text>
+    <rect x="300.0" y="455.0" width="130.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="365.0" y="469.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Istio CNI</text>
+    <text x="365.0" y="482.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(DaemonSet)</text>
+    <rect x="660.0" y="410.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="720.0" y="427.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">argocd.k8s.local</text>
+    <rect x="660.0" y="448.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="720.0" y="465.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">grafana.k8s.local</text>
+    <rect x="660.0" y="486.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="720.0" y="503.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">keycloak.k8s.local</text>
+    <rect x="660.0" y="524.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="720.0" y="541.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">harbor.k8s.local</text>
+    <rect x="660.0" y="562.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="720.0" y="579.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">hubble.k8s.local</text>
+    <rect x="795.0" y="410.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="855.0" y="427.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">matrix.k8s.local</text>
+    <rect x="795.0" y="448.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="855.0" y="465.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">thanos.k8s.local</text>
+    <rect x="795.0" y="486.0" width="120.0" height="28.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="855.0" y="503.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">alertmanager.k8s.local</text>
+    <rect x="640.0" y="305.0" width="200.0" height="40.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="740.0" y="322.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">cert-manager</text>
+    <text x="740.0" y="335.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">TLS certificates</text>
+    <path d="M 120.0 190.0 L 120.0 215.0 L 140.0 215.0 L 140.0 240.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="140.0,240.0 136.0,232.0 144.0,232.0" fill="#000000"/>
+    <path d="M 220.0 270.0 L 260.0 270.0 L 260.0 265.0 L 300.0 265.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="300.0,265.0 292.0,269.0 292.0,261.0" fill="#000000"/>
+    <path d="M 220.0 355.0 L 260.0 355.0 L 260.0 325.0 L 300.0 325.0" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="6 3"/>
+    <polygon points="300.0,325.0 292.0,329.0 292.0,321.0" fill="#000000"/>
+    <text x="130.0" y="215.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">HTTPS</text>
+    <text x="260.0" y="267.5" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">L2 ARP</text>
+    <text x="260.0" y="340.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">internal rewrite</text>
+  </g>
+</svg>

@@ -256,3 +256,5 @@ If you are an AI agent navigating this repository:
 5. **Configuration is centralized**: All environment variables are documented in [configuration.md](infrastructure/configuration.md). The `.env` file is the single source of truth at runtime; the doc is the reference for what each variable does.
 6. **Deprecated docs** (`prometheus.md`) are marked with a banner and kept for reference.
 7. **The project does not use `ansible` CLI** — only `ansible_runner.run()` from Python. Never suggest `ansible-playbook`, `ansible-inventory`, or `ansible -m ping` commands.
+8. **Agent skills** live in `.github/skills/`. Each skill has a `SKILL.md` with YAML frontmatter (`name`, `description`) and Markdown instructions. Copilot loads a skill automatically when the task matches its `description`. Available skills:
+   - `render-drawio-diagram` — generates valid draw.io/mxGraph XML from architecture descriptions (layout rules, style guide, structural conventions).

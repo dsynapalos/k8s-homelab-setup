@@ -4,6 +4,8 @@
 
 The two persistent storage options available for the cluster. Both are optional, both can coexist, and they serve different use cases. Choose based on whether you have external Ceph infrastructure or want storage to run inside Kubernetes.
 
+![Storage Architecture](../diagrams/storage-architecture.svg)
+
 ## At a Glance
 
 | | CephFS CSI | Rook-Ceph |

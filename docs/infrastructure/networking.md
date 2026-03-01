@@ -4,6 +4,8 @@
 
 How traffic moves inside the cluster — the CNI plugin, encryption, load balancing, ingress, and the optional service mesh. Cilium is the foundation; Istio Ambient is an optional layer on top.
 
+![Networking Architecture](../diagrams/networking-architecture.svg)
+
 ## Cilium CNI
 
 ### What It Does

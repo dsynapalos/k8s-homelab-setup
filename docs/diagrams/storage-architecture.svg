@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1140" height="540" viewBox="0 0 1140 540" content="PG14ZmlsZSBob3N0PSJkcmF3LmlvIj4KICA8ZGlhZ3JhbSBuYW1lPSJTdG9yYWdlIEFyY2hpdGVjdHVyZSIgaWQ9InN0b3JhZ2UiPgogICAgPG14R3JhcGhNb2RlbCBkeD0iMTIwMCIgZHk9IjgwMCIgZ3JpZD0iMSIgZ3JpZFNpemU9IjEwIiBndWlkZXM9IjEiIHRvb2x0aXBzPSIxIiBjb25uZWN0PSIxIiBhcnJvd3M9IjEiIGZvbGQ9IjEiIHBhZ2U9IjEiIHBhZ2VTY2FsZT0iMSIgcGFnZVdpZHRoPSIxNDAwIiBwYWdlSGVpZ2h0PSI3MDAiIG1hdGg9IjAiIHNoYWRvdz0iMCI+CiAgICAgIDxyb290PgogICAgICAgIDxteENlbGwgaWQ9IjAiLz4KICAgICAgICA8bXhDZWxsIGlkPSIxIiBwYXJlbnQ9IjAiLz4KCiAgICAgICAgPCEtLSBXb3JrbG9hZCBwb2RzIC0tPgogICAgICAgIDxteENlbGwgaWQ9InBvZHMiIHZhbHVlPSJBcHBsaWNhdGlvbiBQb2RzJiN4YTsoUFZDIHJlcXVlc3RzKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZjhjZWNjO3N0cm9rZUNvbG9yPSNiODU0NTA7Zm9udFN0eWxlPTE7Zm9udFNpemU9MTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSI0MCIgeT0iMjUwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjUwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSBPcHRpb24gQTogUm9vay1DZXBoIC0tPgogICAgICAgIDxteENlbGwgaWQ9InJvb2tfYm94IiB2YWx1ZT0iUm9vay1DZXBoIChFTkFCTEVfUk9PSz10cnVlKSDigJQgSW4tQ2x1c3RlciIgc3R5bGU9InN3aW1sYW5lO3N0YXJ0U2l6ZT0yNTtmaWxsQ29sb3I9I2RhZThmYztzdHJva2VDb2xvcj0jNmM4ZWJmO3JvdW5kZWQ9MTtmb250U2l6ZT0xMTtmb250U3R5bGU9MTsiIHZlcnRleD0iMSIgcGFyZW50PSIxIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjI4MCIgeT0iMzAiIHdpZHRoPSI1NDAiIGhlaWdodD0iMjUwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJyb29rX29wIiB2YWx1ZT0iUm9vayBPcGVyYXRvciYjeGE7KHJvb2stY2VwaCBucykiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9InJvb2tfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY2VwaF9tb24iIHZhbHVlPSJDZXBoIE1PTiYjeGE7KDMgcmVwbGljYXMpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJyb29rX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIxODAiIHk9IjQwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJjZXBoX21nciIgdmFsdWU9IkNlcGggTUdSIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJyb29rX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIzMDAiIHk9IjQwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJjZXBoX29zZCIgdmFsdWU9IkNlcGggT1NEJiN4YTsocGVyIHJhdyBkaXNrKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icm9va19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iNDIwIiB5PSI0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY2VwaF9tZHMiIHZhbHVlPSJDZXBoIE1EUyYjeGE7KENlcGhGUykiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9InJvb2tfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIxMDAiIHdpZHRoPSIxMDAiIGhlaWdodD0iNDAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImNlcGhfcmd3IiB2YWx1ZT0iQ2VwaCBSR1cmI3hhOyhTMyBPYmplY3QpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJyb29rX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIxNDAiIHk9IjEwMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gU3RvcmFnZSBDbGFzc2VzIGZyb20gUm9vayAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJzY19yYmQiIHZhbHVlPSJjZXBoLWJsb2NrJiN4YTsoUkJEIFNDKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZjVmNWY1O3N0cm9rZUNvbG9yPSM2NjY2NjY7Zm9udENvbG9yPSM2NjY2NjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icm9va19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjgwIiB5PSIxMDAiIHdpZHRoPSIxMTAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9InNjX2NlcGhmc19yb29rIiB2YWx1ZT0iY2VwaC1maWxlc3lzdGVtJiN4YTsoQ2VwaEZTIFNDKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZjVmNWY1O3N0cm9rZUNvbG9yPSM2NjY2NjY7Zm9udENvbG9yPSM2NjY2NjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icm9va19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjgwIiB5PSIxNDUiIHdpZHRoPSIxMTAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9InNjX29iaiIgdmFsdWU9ImNlcGgtYnVja2V0JiN4YTsoT2JqZWN0IFNDKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZjVmNWY1O3N0cm9rZUNvbG9yPSM2NjY2NjY7Zm9udENvbG9yPSM2NjY2NjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icm9va19ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjgwIiB5PSIxOTAiIHdpZHRoPSIxMTAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIFJhdyBkaXNrcyAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJkaXNrcyIgdmFsdWU9IlJhdyBCbG9jayBEZXZpY2VzJiN4YTsobnZtZTBuMSwgc2RhKSIgc3R5bGU9InNoYXBlPWN5bGluZGVyMzt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2JvdW5kZWRMYmw9MTtiYWNrZ3JvdW5kT3V0bGluZT0xO3NpemU9MTA7ZmlsbENvbG9yPSNlMWQ1ZTc7c3Ryb2tlQ29sb3I9Izk2NzNhNjtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJyb29rX2JveCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSI0MjAiIHk9IjEwMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI2MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gT3B0aW9uIEI6IEV4dGVybmFsIENlcGhGUyAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJleHRfYm94IiB2YWx1ZT0iQ2VwaEZTIENTSSAoRU5BQkxFX0NFUEg9dHJ1ZSkg4oCUIEV4dGVybmFsIENlcGgiIHN0eWxlPSJzd2ltbGFuZTtzdGFydFNpemU9MjU7ZmlsbENvbG9yPSNkYWU4ZmM7c3Ryb2tlQ29sb3I9IzZjOGViZjtyb3VuZGVkPTE7Zm9udFNpemU9MTE7Zm9udFN0eWxlPTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyODAiIHk9IjMzMCIgd2lkdGg9IjU0MCIgaGVpZ2h0PSIxNzAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImNzaV9kcml2ZXIiIHZhbHVlPSJDZXBoRlMgQ1NJIERyaXZlciYjeGE7KGNlcGgtY3NpLWNlcGhmcyBucykiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImV4dF9ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9IjQwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJzY19jZXBoZnMiIHZhbHVlPSJjZXBoZnMgKGRlZmF1bHQgU0MpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmNWY1ZjU7c3Ryb2tlQ29sb3I9IzY2NjY2Njtmb250Q29sb3I9IzY2NjY2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJleHRfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIxMDAiIHdpZHRoPSIxMzAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9InNjX2NlcGhmc19yZXQiIHZhbHVlPSJjZXBoZnMtcmV0YWluIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmNWY1ZjU7c3Ryb2tlQ29sb3I9IzY2NjY2Njtmb250Q29sb3I9IzY2NjY2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJleHRfYm94Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjE3MCIgeT0iMTAwIiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjM1IiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSBFeHRlcm5hbCBDZXBoIGNsdXN0ZXIgLS0+CiAgICAgICAgPG14Q2VsbCBpZD0iZXh0X2NlcGgiIHZhbHVlPSJFeHRlcm5hbCBDZXBoIENsdXN0ZXImI3hhOyhQcm94bW94IGhvc3QpIiBzdHlsZT0ic2hhcGU9Y3lsaW5kZXIzO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7Ym91bmRlZExibD0xO2JhY2tncm91bmRPdXRsaW5lPTE7c2l6ZT0xMDtmaWxsQ29sb3I9I2UxZDVlNztzdHJva2VDb2xvcj0jOTY3M2E2O2ZvbnRTdHlsZT0xO2ZvbnRTaXplPTExOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImV4dF9ib3giPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzkwIiB5PSI1MCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI3MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gQ29uc3VtZXJzIG9uIHJpZ2h0IC0tPgogICAgICAgIDxteENlbGwgaWQ9ImNvbnN1bWVycyIgdmFsdWU9IkNvbnN1bWVycyIgc3R5bGU9InN3aW1sYW5lO3N0YXJ0U2l6ZT0yMjtmaWxsQ29sb3I9I2RhZThmYztzdHJva2VDb2xvcj0jNmM4ZWJmO3JvdW5kZWQ9MTtmb250U2l6ZT0xMTtmb250U3R5bGU9MTsiIHZlcnRleD0iMSIgcGFyZW50PSIxIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjkwMCIgeT0iODAiIHdpZHRoPSIyMDAiIGhlaWdodD0iNDIwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJjX3RoYW5vcyIgdmFsdWU9IlRoYW5vcyYjeGE7KFMzIG9iamVjdCBzdG9yZSkiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9ImNvbnN1bWVycyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIyMCIgeT0iMzUiIHdpZHRoPSIxNjAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImNfY25wZyIgdmFsdWU9IkNsb3VkTmF0aXZlUEcmI3hhOyhibG9jayB2b2x1bWVzKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY29uc3VtZXJzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSI4NSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSIzNSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY19oYXJib3IiIHZhbHVlPSJIYXJib3ImI3hhOyhyZWdpc3RyeSBkYXRhKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY29uc3VtZXJzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIxMzUiIHdpZHRoPSIxNjAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImNfa2V5Y2xvYWsiIHZhbHVlPSJLZXljbG9hayYjeGE7KFBvc3RncmVTUUwpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJjb25zdW1lcnMiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9IjE4NSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSIzNSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY19tYXRyaXgiIHZhbHVlPSJNYXRyaXggU3luYXBzZSYjeGE7KFBvc3RncmVTUUwpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJjb25zdW1lcnMiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9IjIzNSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSIzNSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY19ncmFmYW5hIiB2YWx1ZT0iR3JhZmFuYSYjeGE7KGRhc2hib2FyZHMpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNkNWU4ZDQ7c3Ryb2tlQ29sb3I9IzgyYjM2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJjb25zdW1lcnMiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAiIHk9IjI4NSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSIzNSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iY19hbGVydG1nciIgdmFsdWU9IkFsZXJ0bWFuYWdlciYjeGE7KHN0YXRlKSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iY29uc3VtZXJzIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwIiB5PSIzMzUiIHdpZHRoPSIxNjAiIGhlaWdodD0iMzUiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIEVkZ2VzIC0tPgogICAgICAgIDxteENlbGwgaWQ9ImVfcG9kc19yb29rIiBlZGdlPSIxIiBzb3VyY2U9InBvZHMiIHRhcmdldD0icm9va19ib3giIHBhcmVudD0iMSIgc3R5bGU9ImVkZ2VTdHlsZT1vcnRob2dvbmFsRWRnZVN0eWxlO3JvdW5kZWQ9MTtvcnRob2dvbmFsTG9vcD0xO2pldHR5U2l6ZT1hdXRvO2h0bWw9MTsiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImVfcG9kc19yb29rX2wiIHZhbHVlPSJQVkMiIHN0eWxlPSJlZGdlTGFiZWw7aHRtbD0xO2FsaWduPWNlbnRlcjt2ZXJ0aWNhbEFsaWduPW1pZGRsZTtyZXNpemFibGU9MDtwb2ludHM9W107Zm9udFNpemU9OTsiIHZlcnRleD0iMSIgY29ubmVjdGFibGU9IjAiIHBhcmVudD0iZV9wb2RzX3Jvb2siPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSI+PG14UG9pbnQgYXM9Im9mZnNldCIvPjwvbXhHZW9tZXRyeT4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPG14Q2VsbCBpZD0iZV9wb2RzX2V4dCIgZWRnZT0iMSIgc291cmNlPSJwb2RzIiB0YXJnZXQ9ImV4dF9ib3giIHBhcmVudD0iMSIgc3R5bGU9ImVkZ2VTdHlsZT1vcnRob2dvbmFsRWRnZVN0eWxlO3JvdW5kZWQ9MTtvcnRob2dvbmFsTG9vcD0xO2pldHR5U2l6ZT1hdXRvO2h0bWw9MTtleGl0WD0xO2V4aXRZPTAuNTtleGl0RHg9MDtleGl0RHk9MDtlbnRyeVg9MDtlbnRyeVk9MC41O2VudHJ5RHg9MDtlbnRyeUR5PTA7Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJlX3BvZHNfZXh0X2wiIHZhbHVlPSJQVkMiIHN0eWxlPSJlZGdlTGFiZWw7aHRtbD0xO2FsaWduPWNlbnRlcjt2ZXJ0aWNhbEFsaWduPW1pZGRsZTtyZXNpemFibGU9MDtwb2ludHM9W107Zm9udFNpemU9OTsiIHZlcnRleD0iMSIgY29ubmVjdGFibGU9IjAiIHBhcmVudD0iZV9wb2RzX2V4dCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ij48bXhQb2ludCBhcz0ib2Zmc2V0Ii8+PC9teEdlb21ldHJ5PgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8bXhDZWxsIGlkPSJlX29zZF9kaXNrcyIgZWRnZT0iMSIgc291cmNlPSJjZXBoX29zZCIgdGFyZ2V0PSJkaXNrcyIgcGFyZW50PSJyb29rX2JveCIgc3R5bGU9ImVkZ2VTdHlsZT1vcnRob2dvbmFsRWRnZVN0eWxlO3JvdW5kZWQ9MTtvcnRob2dvbmFsTG9vcD0xO2pldHR5U2l6ZT1hdXRvO2h0bWw9MTsiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8bXhDZWxsIGlkPSJlX2NzaV9leHQiIGVkZ2U9IjEiIHNvdXJjZT0iY3NpX2RyaXZlciIgdGFyZ2V0PSJleHRfY2VwaCIgcGFyZW50PSJleHRfYm94IiBzdHlsZT0iZWRnZVN0eWxlPW9ydGhvZ29uYWxFZGdlU3R5bGU7cm91bmRlZD0xO29ydGhvZ29uYWxMb29wPTE7amV0dHlTaXplPWF1dG87aHRtbD0xOyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iZV9jc2lfZXh0X2wiIHZhbHVlPSJDZXBoWCBhdXRoIiBzdHlsZT0iZWRnZUxhYmVsO2h0bWw9MTthbGlnbj1jZW50ZXI7dmVydGljYWxBbGlnbj1taWRkbGU7cmVzaXphYmxlPTA7cG9pbnRzPVtdO2ZvbnRTaXplPTk7IiB2ZXJ0ZXg9IjEiIGNvbm5lY3RhYmxlPSIwIiBwYXJlbnQ9ImVfY3NpX2V4dCI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ij48bXhQb2ludCBhcz0ib2Zmc2V0Ii8+PC9teEdlb21ldHJ5PgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8bXhDZWxsIGlkPSJlX3NjX2NvbnN1bWVycyIgZWRnZT0iMSIgc291cmNlPSJzY19yYmQiIHRhcmdldD0iY29uc3VtZXJzIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZGFzaGVkPTE7ZXhpdFg9MTtleGl0WT0wLjU7ZXhpdER4PTA7ZXhpdER5PTA7ZW50cnlYPTA7ZW50cnlZPTAuNTtlbnRyeUR4PTA7ZW50cnlEeT0wOyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ij4KICAgICAgICAgICAgPEFycmF5IGFzPSJwb2ludHMiPgogICAgICAgICAgICAgIDxteFBvaW50IHg9IjY4NSIgeT0iMTQ4Ii8+CiAgICAgICAgICAgICAgPG14UG9pbnQgeD0iNjg1IiB5PSIyOTAiLz4KICAgICAgICAgICAgPC9BcnJheT4KICAgICAgICAgIDwvbXhHZW9tZXRyeT4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJlX3NjX2NvbnN1bWVyc19sIiB2YWx1ZT0icHJvdmlzaW9ucyBQVnMiIHN0eWxlPSJlZGdlTGFiZWw7aHRtbD0xO2FsaWduPWNlbnRlcjt2ZXJ0aWNhbEFsaWduPW1pZGRsZTtyZXNpemFibGU9MDtwb2ludHM9W107Zm9udFNpemU9OTsiIHZlcnRleD0iMSIgY29ubmVjdGFibGU9IjAiIHBhcmVudD0iZV9zY19jb25zdW1lcnMiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSI+PG14UG9pbnQgYXM9Im9mZnNldCIvPjwvbXhHZW9tZXRyeT4KICAgICAgICA8L214Q2VsbD4KCiAgICAgIDwvcm9vdD4KICAgIDwvbXhHcmFwaE1vZGVsPgogIDwvZGlhZ3JhbT4KPC9teGZpbGU+">
+  <metadata id="drawio-source">
+  <![CDATA[
+<mxfile host="draw.io">
+  <diagram name="Storage Architecture" id="storage">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Workload pods -->
+        <mxCell id="pods" value="Application Pods&#xa;(PVC requests)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Option A: Rook-Ceph -->
+        <mxCell id="rook_box" value="Rook-Ceph (ENABLE_ROOK=true) — In-Cluster" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="30" width="540" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="rook_op" value="Rook Operator&#xa;(rook-ceph ns)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="20" y="40" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ceph_mon" value="Ceph MON&#xa;(3 replicas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="180" y="40" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ceph_mgr" value="Ceph MGR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="300" y="40" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ceph_osd" value="Ceph OSD&#xa;(per raw disk)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="420" y="40" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ceph_mds" value="Ceph MDS&#xa;(CephFS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="20" y="100" width="100" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ceph_rgw" value="Ceph RGW&#xa;(S3 Object)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="140" y="100" width="100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Storage Classes from Rook -->
+        <mxCell id="sc_rbd" value="ceph-block&#xa;(RBD SC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="280" y="100" width="110" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="sc_cephfs_rook" value="ceph-filesystem&#xa;(CephFS SC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="280" y="145" width="110" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="sc_obj" value="ceph-bucket&#xa;(Object SC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="280" y="190" width="110" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Raw disks -->
+        <mxCell id="disks" value="Raw Block Devices&#xa;(nvme0n1, sda)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="rook_box">
+          <mxGeometry x="420" y="100" width="100" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Option B: External CephFS -->
+        <mxCell id="ext_box" value="CephFS CSI (ENABLE_CEPH=true) — External Ceph" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="330" width="540" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="csi_driver" value="CephFS CSI Driver&#xa;(ceph-csi-cephfs ns)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="ext_box">
+          <mxGeometry x="20" y="40" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="sc_cephfs" value="cephfs (default SC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="ext_box">
+          <mxGeometry x="20" y="100" width="130" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="sc_cephfs_ret" value="cephfs-retain" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="ext_box">
+          <mxGeometry x="170" y="100" width="130" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- External Ceph cluster -->
+        <mxCell id="ext_ceph" value="External Ceph Cluster&#xa;(Proxmox host)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="ext_box">
+          <mxGeometry x="390" y="50" width="130" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Consumers on right -->
+        <mxCell id="consumers" value="Consumers" style="swimlane;startSize=22;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="80" width="200" height="420" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_thanos" value="Thanos&#xa;(S3 object store)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="35" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_cnpg" value="CloudNativePG&#xa;(block volumes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="85" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_harbor" value="Harbor&#xa;(registry data)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="135" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_keycloak" value="Keycloak&#xa;(PostgreSQL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="185" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_matrix" value="Matrix Synapse&#xa;(PostgreSQL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="235" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_grafana" value="Grafana&#xa;(dashboards)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="285" width="160" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_alertmgr" value="Alertmanager&#xa;(state)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="consumers">
+          <mxGeometry x="20" y="335" width="160" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_pods_rook" edge="1" source="pods" target="rook_box" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pods_rook_l" value="PVC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_pods_rook">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_pods_ext" edge="1" source="pods" target="ext_box" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pods_ext_l" value="PVC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_pods_ext">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_osd_disks" edge="1" source="ceph_osd" target="disks" parent="rook_box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_csi_ext" edge="1" source="csi_driver" target="ext_ceph" parent="ext_box" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_csi_ext_l" value="CephX auth" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_csi_ext">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_sc_consumers" edge="1" source="sc_rbd" target="consumers" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="685" y="148"/>
+              <mxPoint x="685" y="290"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sc_consumers_l" value="provisions PVs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_sc_consumers">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+  ]]>
+  </metadata>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <g>
+    <rect x="300.0" y="50.0" width="540.0" height="250.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.0" y="50.0" width="540.0" height="25.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.0" y="69.0" width="540.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="570.0" y="64.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">Rook-Ceph (ENABLE_ROOK=true) — In-Cluster</text>
+    <rect x="300.0" y="350.0" width="540.0" height="170.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.0" y="350.0" width="540.0" height="25.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.0" y="369.0" width="540.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="570.0" y="364.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">CephFS CSI (ENABLE_CEPH=true) — External Ceph</text>
+    <rect x="920.0" y="100.0" width="200.0" height="420.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="920.0" y="100.0" width="200.0" height="22.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="920.0" y="116.0" width="200.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="1020.0" y="114.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">Consumers</text>
+    <rect x="60.0" y="270.0" width="160.0" height="50.0" rx="6" ry="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.0"/>
+    <text x="140.0" y="291.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">Application Pods</text>
+    <text x="140.0" y="306.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">(PVC requests)</text>
+    <rect x="320.0" y="90.0" width="130.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="385.0" y="107.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Rook Operator</text>
+    <text x="385.0" y="120.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(rook-ceph ns)</text>
+    <rect x="480.0" y="90.0" width="100.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="530.0" y="107.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Ceph MON</text>
+    <text x="530.0" y="120.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(3 replicas)</text>
+    <rect x="600.0" y="90.0" width="100.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="650.0" y="113.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Ceph MGR</text>
+    <rect x="720.0" y="90.0" width="100.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="770.0" y="107.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Ceph OSD</text>
+    <text x="770.0" y="120.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(per raw disk)</text>
+    <rect x="320.0" y="150.0" width="100.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="370.0" y="167.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Ceph MDS</text>
+    <text x="370.0" y="180.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(CephFS)</text>
+    <rect x="440.0" y="150.0" width="100.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="490.0" y="167.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Ceph RGW</text>
+    <text x="490.0" y="180.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(S3 Object)</text>
+    <rect x="580.0" y="150.0" width="110.0" height="35.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="635.0" y="164.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">ceph-block</text>
+    <text x="635.0" y="177.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(RBD SC)</text>
+    <rect x="580.0" y="195.0" width="110.0" height="35.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="635.0" y="209.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">ceph-filesystem</text>
+    <text x="635.0" y="222.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(CephFS SC)</text>
+    <rect x="580.0" y="240.0" width="110.0" height="35.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="635.0" y="254.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">ceph-bucket</text>
+    <text x="635.0" y="267.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(Object SC)</text>
+    <path d="M 720.0 160.0 Q 720.0 150.0 770.0 150.0 Q 820.0 150.0 820.0 160.0 L 820.0 200.0 Q 820.0 210.0 770.0 210.0 Q 720.0 210.0 720.0 200.0 Z" fill="#e1d5e7" stroke="#9673a6"/>
+    <ellipse cx="770.0" cy="160.0" rx="50.0" ry="10.0" fill="#e1d5e7" stroke="#9673a6"/>
+    <text x="770.0" y="182.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Raw Block Devices</text>
+    <text x="770.0" y="195.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(nvme0n1, sda)</text>
+    <rect x="320.0" y="390.0" width="160.0" height="40.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="400.0" y="407.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">CephFS CSI Driver</text>
+    <text x="400.0" y="420.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(ceph-csi-cephfs ns)</text>
+    <rect x="320.0" y="450.0" width="130.0" height="35.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="385.0" y="471.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">cephfs (default SC)</text>
+    <rect x="470.0" y="450.0" width="130.0" height="35.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="535.0" y="471.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">cephfs-retain</text>
+    <path d="M 690.0 410.0 Q 690.0 400.0 755.0 400.0 Q 820.0 400.0 820.0 410.0 L 820.0 460.0 Q 820.0 470.0 755.0 470.0 Q 690.0 470.0 690.0 460.0 Z" fill="#e1d5e7" stroke="#9673a6"/>
+    <ellipse cx="755.0" cy="410.0" rx="65.0" ry="10.0" fill="#e1d5e7" stroke="#9673a6"/>
+    <text x="755.0" y="436.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">External Ceph Cluster</text>
+    <text x="755.0" y="451.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="bold" font-style="normal" fill="#000000">(Proxmox host)</text>
+    <rect x="940.0" y="135.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="149.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Thanos</text>
+    <text x="1020.0" y="162.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(S3 object store)</text>
+    <rect x="940.0" y="185.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="199.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">CloudNativePG</text>
+    <text x="1020.0" y="212.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(block volumes)</text>
+    <rect x="940.0" y="235.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="249.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Harbor</text>
+    <text x="1020.0" y="262.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(registry data)</text>
+    <rect x="940.0" y="285.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="299.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Keycloak</text>
+    <text x="1020.0" y="312.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(PostgreSQL)</text>
+    <rect x="940.0" y="335.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="349.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Matrix Synapse</text>
+    <text x="1020.0" y="362.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(PostgreSQL)</text>
+    <rect x="940.0" y="385.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="399.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Grafana</text>
+    <text x="1020.0" y="412.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(dashboards)</text>
+    <rect x="940.0" y="435.0" width="160.0" height="35.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="1020.0" y="449.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Alertmanager</text>
+    <text x="1020.0" y="462.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(state)</text>
+    <path d="M 220.0 295.0 L 260.0 295.0 L 260.0 175.0 L 300.0 175.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="300.0,175.0 292.0,179.0 292.0,171.0" fill="#000000"/>
+    <path d="M 220.0 295.0 L 260.0 295.0 L 260.0 435.0 L 300.0 435.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="300.0,435.0 292.0,439.0 292.0,431.0" fill="#000000"/>
+    <path d="M 770.0 130.0 L 770.0 140.0 L 770.0 140.0 L 770.0 150.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="770.0,150.0 766.0,142.0 774.0,142.0" fill="#000000"/>
+    <path d="M 480.0 410.0 L 585.0 410.0 L 585.0 435.0 L 690.0 435.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="690.0,435.0 682.0,439.0 682.0,431.0" fill="#000000"/>
+    <path d="M 690.0 167.5 L 705.0 168.0 L 705.0 310.0 L 920.0 310.0" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="6 3"/>
+    <polygon points="920.0,310.0 912.0,314.0 912.0,306.0" fill="#000000"/>
+    <text x="260.0" y="235.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">PVC</text>
+    <text x="260.0" y="365.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">PVC</text>
+    <text x="585.0" y="422.5" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">CephX auth</text>
+    <text x="734.0" y="310.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">provisions PVs</text>
+  </g>
+</svg>

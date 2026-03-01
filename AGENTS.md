@@ -11,6 +11,31 @@ Homelab Kubernetes cluster automation — Python entry points drive Ansible Runn
 
 ---
 
+## Setup & Validation
+
+```bash
+# 1. Bootstrap (one-time): Python venv + Ansible dependencies
+sudo chmod +x init.sh && ./init.sh
+
+# 2. Configure: copy and fill in all required values
+cp example.env .env
+
+# 3. Run full cluster provisioning (~26 min, destructive)
+python3 setup-clusters.py
+
+# 4. Run application deployment only (seconds, safe)
+python3 setup-applications.py
+
+# 5. Verify cluster health
+kubectl get nodes
+cilium status
+kubectl get applications -n argocd
+```
+
+Always run `./init.sh` before first use. Always populate `.env` before running any Python entry point.
+
+---
+
 ## Documentation Navigation
 
 **Start with [`docs/README.md`](docs/README.md)** — it is the full index with catalog tables, folder structure, and conventions. Use it to locate the right document for any topic before searching source code.
@@ -135,6 +160,17 @@ Always test idempotency: running the same script twice must not break anything.
 
 ---
 
+## Security Considerations
+
+- **Never commit `.env`** — it contains Proxmox passwords, API tokens, and repository credentials
+- **`no_log: true`** on any Ansible task that handles Proxmox passwords, join tokens, or certificate keys
+- **Secrets use `data:` with `b64encode`**, not `stringData` — prevents accidental plaintext in manifests
+- **ConfigMaps for public data**, Secrets for private data
+- **TLS everywhere** — cert-manager issues certificates, trust-manager distributes CA bundles
+- **No hardcoded credentials** — all sensitive values come from `.env` via environment lookups
+
+---
+
 ## Debugging
 
 Check `artifacts/` after any run — see [`docs/infrastructure/troubleshooting.md`](docs/infrastructure/troubleshooting.md) for the full guide including per-component diagnostics.
@@ -149,3 +185,13 @@ kubectl get applications -n argocd
 cat artifacts/*/stdout | tail -50
 cat artifacts/*/stderr
 ```
+
+---
+
+## Agent Skills
+
+Skills live in `.github/skills/<skill-name>/SKILL.md`. Each skill has YAML frontmatter (`name`, `description`) and Markdown instructions. Copilot loads a skill automatically when the task matches its `description`.
+
+| Skill | Description |
+|-------|-------------|
+| `render-drawio-diagram` | Creates or edits draw.io architecture diagrams stored as self-contained SVGs — includes workflows, edge routing rules, waypoint placement, and the pure-Python renderer |

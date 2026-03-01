@@ -4,6 +4,8 @@
 
 A high-level map of how the project is structured — the entry points, the Ansible roles, and how they connect. If you want to understand what runs where and in what order, start here. For the detailed per-phase breakdown, see [Ansible Pipeline](../cicd/ansible-pipeline.md).
 
+![Infrastructure Overview](../diagrams/infrastructure-overview.svg)
+
 ## Two Execution Paths
 
 The project has two independent entry points with very different risk profiles:

@@ -4,6 +4,8 @@
 
 Python entry points drive all cluster automation through Ansible Runner. Each one loads `.env`, cleans the `artifacts/` directory, and executes a specific playbook. There is no CI server — you run these scripts from your workstation and they orchestrate everything from VM creation to application deployment.
 
+![Ansible Pipeline](../diagrams/ansible-pipeline.svg)
+
 ## Why It's Structured This Way
 
 The pipeline is split into two independent lifecycles:

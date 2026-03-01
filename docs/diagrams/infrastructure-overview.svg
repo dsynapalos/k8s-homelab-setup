@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="820" height="690" viewBox="0 0 820 690" content="PG14ZmlsZSBob3N0PSJkcmF3LmlvIj4KICA8ZGlhZ3JhbSBuYW1lPSJJbmZyYXN0cnVjdHVyZSBPdmVydmlldyIgaWQ9ImluZnJhLW92ZXJ2aWV3Ij4KICAgIDxteEdyYXBoTW9kZWwgZHg9IjEyMDAiIGR5PSI4MDAiIGdyaWQ9IjEiIGdyaWRTaXplPSIxMCIgZ3VpZGVzPSIxIiB0b29sdGlwcz0iMSIgY29ubmVjdD0iMSIgYXJyb3dzPSIxIiBmb2xkPSIxIiBwYWdlPSIxIiBwYWdlU2NhbGU9IjEiIHBhZ2VXaWR0aD0iMTYwMCIgcGFnZUhlaWdodD0iOTAwIiBtYXRoPSIwIiBzaGFkb3c9IjAiPgogICAgICA8cm9vdD4KICAgICAgICA8bXhDZWxsIGlkPSIwIi8+CiAgICAgICAgPG14Q2VsbCBpZD0iMSIgcGFyZW50PSIwIi8+CgogICAgICAgIDwhLS0gRXh0ZXJuYWw6IEFuc2libGUgQ29udHJvbGxlciAobG9jYWxob3N0KSAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJjdHJsIiB2YWx1ZT0iQW5zaWJsZSBDb250cm9sbGVyJiN4YTsobG9jYWxob3N0KSIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZmZmMmNjO3N0cm9rZUNvbG9yPSNkNmI2NTY7Zm9udFN0eWxlPTE7Zm9udFNpemU9MTI7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSI0MCIgeT0iMzQwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjYwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSBQcm94bW94IEhvc3QgMSBDb250YWluZXIgLS0+CiAgICAgICAgPG14Q2VsbCBpZD0icHZlMSIgdmFsdWU9IlByb3htb3ggSG9zdCAxIChwdmUpJiN4YTsuMTg1IiBzdHlsZT0ic3dpbWxhbmU7c3RhcnRTaXplPTMwO2ZpbGxDb2xvcj0jZGFlOGZjO3N0cm9rZUNvbG9yPSM2YzhlYmY7cm91bmRlZD0xO2ZvbnRTaXplPTEyO2ZvbnRTdHlsZT0xOyIgdmVydGV4PSIxIiBwYXJlbnQ9IjEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjgwIiB5PSI0MCIgd2lkdGg9IjUwMCIgaGVpZ2h0PSIyODAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImMxIiB2YWx1ZT0iazhzLWNvbnRyb2wtMSYjeGE7LjE4NiIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icHZlMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIzMCIgeT0iNTAiIHdpZHRoPSIxMzAiIGhlaWdodD0iNTAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9Im4xIiB2YWx1ZT0iazhzLW5vZGUtMSYjeGE7LjE4NyIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZDVlOGQ0O3N0cm9rZUNvbG9yPSM4MmIzNjY7Zm9udFNpemU9MTE7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0icHZlMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSIzMCIgeT0iMTIwIiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjUwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJrdWJldmlwMSIgdmFsdWU9Imt1YmUtdmlwJiN4YTtWSVA6IC4yMTAiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Y4Y2VjYztzdHJva2VDb2xvcj0jYjg1NDUwO2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9InB2ZTEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjAwIiB5PSI1MCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iaXNvMSIgdmFsdWU9IlVidW50dSBJU08mI3hhOyhhdXRvaW5zdGFsbCkiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Y1ZjVmNTtzdHJva2VDb2xvcj0jNjY2NjY2O2ZvbnRDb2xvcj0jNjY2NjY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9InB2ZTEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzYwIiB5PSI1MCIgd2lkdGg9IjExMCIgaGVpZ2h0PSI1MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0ic3RvcmFnZTEiIHZhbHVlPSJTZWNvbmRhcnkgU3RvcmFnZSYjeGE7KExWTSB0aGluIHBvb2wpIiBzdHlsZT0ic2hhcGU9Y3lsaW5kZXIzO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7Ym91bmRlZExibD0xO2JhY2tncm91bmRPdXRsaW5lPTE7c2l6ZT0xMDtmaWxsQ29sb3I9I2UxZDVlNztzdHJva2VDb2xvcj0jOTY3M2E2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9InB2ZTEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzYwIiB5PSIxMzAiIHdpZHRoPSIxMTAiIGhlaWdodD0iNjAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8IS0tIFByb3htb3ggSG9zdCAyIENvbnRhaW5lciAtLT4KICAgICAgICA8bXhDZWxsIGlkPSJwdmUyIiB2YWx1ZT0iUHJveG1veCBIb3N0IDIgKHB2ZTIpJiN4YTsuMTkwIiBzdHlsZT0ic3dpbWxhbmU7c3RhcnRTaXplPTMwO2ZpbGxDb2xvcj0jZGFlOGZjO3N0cm9rZUNvbG9yPSM2YzhlYmY7cm91bmRlZD0xO2ZvbnRTaXplPTEyO2ZvbnRTdHlsZT0xOyIgdmVydGV4PSIxIiBwYXJlbnQ9IjEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMjgwIiB5PSIzNzAiIHdpZHRoPSI1MDAiIGhlaWdodD0iMjgwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJjMiIgdmFsdWU9Ims4cy1jb250cm9sLTImI3hhOy4xODgiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTExOyIgdmVydGV4PSIxIiBwYXJlbnQ9InB2ZTIiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzAiIHk9IjUwIiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjUwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KICAgICAgICA8bXhDZWxsIGlkPSJuMiIgdmFsdWU9Ims4cy1ub2RlLTImI3hhOy4xODkiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Q1ZThkNDtzdHJva2VDb2xvcj0jODJiMzY2O2ZvbnRTaXplPTExOyIgdmVydGV4PSIxIiBwYXJlbnQ9InB2ZTIiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iMzAiIHk9IjEyMCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI1MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0ia3ViZXZpcDIiIHZhbHVlPSJrdWJlLXZpcCYjeGE7VklQOiAuMjEwIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmOGNlY2M7c3Ryb2tlQ29sb3I9I2I4NTQ1MDtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJwdmUyIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjIwMCIgeT0iNTAiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImlzbzIiIHZhbHVlPSJVYnVudHUgSVNPJiN4YTsoYXV0b2luc3RhbGwpIiBzdHlsZT0icm91bmRlZD0xO3doaXRlU3BhY2U9d3JhcDtodG1sPTE7ZmlsbENvbG9yPSNmNWY1ZjU7c3Ryb2tlQ29sb3I9IzY2NjY2Njtmb250Q29sb3I9IzY2NjY2Njtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJwdmUyIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjM2MCIgeT0iNTAiIHdpZHRoPSIxMTAiIGhlaWdodD0iNTAiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9InN0b3JhZ2UyIiB2YWx1ZT0iU2Vjb25kYXJ5IFN0b3JhZ2UmI3hhOyhMVk0gdGhpbiBwb29sKSIgc3R5bGU9InNoYXBlPWN5bGluZGVyMzt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2JvdW5kZWRMYmw9MTtiYWNrZ3JvdW5kT3V0bGluZT0xO3NpemU9MTA7ZmlsbENvbG9yPSNlMWQ1ZTc7c3Ryb2tlQ29sb3I9Izk2NzNhNjtmb250U2l6ZT0xMDsiIHZlcnRleD0iMSIgcGFyZW50PSJwdmUyIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9IjM2MCIgeT0iMTMwIiB3aWR0aD0iMTEwIiBoZWlnaHQ9IjYwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSBLdWJlY29uZmlnIHN0b3JlIC0tPgogICAgICAgIDxteENlbGwgaWQ9Imt1YmVjb25maWciIHZhbHVlPSJ+Ly5rdWJlL2NvbmZpZyIgc3R5bGU9InJvdW5kZWQ9MTt3aGl0ZVNwYWNlPXdyYXA7aHRtbD0xO2ZpbGxDb2xvcj0jZjVmNWY1O3N0cm9rZUNvbG9yPSM2NjY2NjY7Zm9udENvbG9yPSM2NjY2NjY7Zm9udFNpemU9MTA7IiB2ZXJ0ZXg9IjEiIHBhcmVudD0iMSI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSI0MCIgeT0iNDQwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjQwIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPCEtLSAuZW52IC0tPgogICAgICAgIDxteENlbGwgaWQ9ImRvdGVudiIgdmFsdWU9Ii5lbnYmI3hhOyhhbGwgY29uZmlndXJhdGlvbikiIHN0eWxlPSJyb3VuZGVkPTE7d2hpdGVTcGFjZT13cmFwO2h0bWw9MTtmaWxsQ29sb3I9I2Y1ZjVmNTtzdHJva2VDb2xvcj0jNjY2NjY2O2ZvbnRDb2xvcj0jNjY2NjY2O2ZvbnRTaXplPTEwOyIgdmVydGV4PSIxIiBwYXJlbnQ9IjEiPgogICAgICAgICAgPG14R2VvbWV0cnkgeD0iNDAiIHk9IjI0MCIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI0MCIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDwhLS0gRWRnZXMgLS0+CiAgICAgICAgPG14Q2VsbCBpZD0iZV9jdHJsX3B2ZTEiIGVkZ2U9IjEiIHNvdXJjZT0iY3RybCIgdGFyZ2V0PSJwdmUxIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZXhpdFg9MTtleGl0WT0wLjI1O2V4aXREeD0wO2V4aXREeT0wOyI+CiAgICAgICAgICA8bXhHZW9tZXRyeSByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ii8+CiAgICAgICAgPC9teENlbGw+CiAgICAgICAgPG14Q2VsbCBpZD0iZV9jdHJsX3B2ZTFfbGFiZWwiIHZhbHVlPSJQcm94bW94ZXIgQVBJIiBzdHlsZT0iZWRnZUxhYmVsO2h0bWw9MTthbGlnbj1jZW50ZXI7dmVydGljYWxBbGlnbj1taWRkbGU7cmVzaXphYmxlPTA7cG9pbnRzPVtdO2ZvbnRTaXplPTk7IiB2ZXJ0ZXg9IjEiIGNvbm5lY3RhYmxlPSIwIiBwYXJlbnQ9ImVfY3RybF9wdmUxIj4KICAgICAgICAgIDxteEdlb21ldHJ5IHg9Ii0wLjIiIHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiPjxteFBvaW50IGFzPSJvZmZzZXQiLz48L214R2VvbWV0cnk+CiAgICAgICAgPC9teENlbGw+CgogICAgICAgIDxteENlbGwgaWQ9ImVfY3RybF9wdmUyIiBlZGdlPSIxIiBzb3VyY2U9ImN0cmwiIHRhcmdldD0icHZlMiIgcGFyZW50PSIxIiBzdHlsZT0iZWRnZVN0eWxlPW9ydGhvZ29uYWxFZGdlU3R5bGU7cm91bmRlZD0xO29ydGhvZ29uYWxMb29wPTE7amV0dHlTaXplPWF1dG87aHRtbD0xO2V4aXRYPTE7ZXhpdFk9MC43NTtleGl0RHg9MDtleGl0RHk9MDsiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImVfY3RybF9wdmUyX2xhYmVsIiB2YWx1ZT0iUHJveG1veGVyIEFQSSIgc3R5bGU9ImVkZ2VMYWJlbDtodG1sPTE7YWxpZ249Y2VudGVyO3ZlcnRpY2FsQWxpZ249bWlkZGxlO3Jlc2l6YWJsZT0wO3BvaW50cz1bXTtmb250U2l6ZT05OyIgdmVydGV4PSIxIiBjb25uZWN0YWJsZT0iMCIgcGFyZW50PSJlX2N0cmxfcHZlMiI+CiAgICAgICAgICA8bXhHZW9tZXRyeSB4PSItMC4yIiByZWxhdGl2ZT0iMSIgYXM9Imdlb21ldHJ5Ij48bXhQb2ludCBhcz0ib2Zmc2V0Ii8+PC9teEdlb21ldHJ5PgogICAgICAgIDwvbXhDZWxsPgoKICAgICAgICA8bXhDZWxsIGlkPSJlX2RvdGVudl9jdHJsIiBlZGdlPSIxIiBzb3VyY2U9ImRvdGVudiIgdGFyZ2V0PSJjdHJsIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZGFzaGVkPTE7Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPG14Q2VsbCBpZD0iZV9jMV92aXAiIGVkZ2U9IjEiIHNvdXJjZT0iYzEiIHRhcmdldD0ia3ViZXZpcDEiIHBhcmVudD0icHZlMSIgc3R5bGU9ImVkZ2VTdHlsZT1vcnRob2dvbmFsRWRnZVN0eWxlO3JvdW5kZWQ9MTtvcnRob2dvbmFsTG9vcD0xO2pldHR5U2l6ZT1hdXRvO2h0bWw9MTsiPgogICAgICAgICAgPG14R2VvbWV0cnkgcmVsYXRpdmU9IjEiIGFzPSJnZW9tZXRyeSIvPgogICAgICAgIDwvbXhDZWxsPgogICAgICAgIDxteENlbGwgaWQ9ImVfYzJfdmlwIiBlZGdlPSIxIiBzb3VyY2U9ImMyIiB0YXJnZXQ9Imt1YmV2aXAyIiBwYXJlbnQ9InB2ZTIiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgICAgPG14Q2VsbCBpZD0iZV9jdHJsX2t1YmUiIGVkZ2U9IjEiIHNvdXJjZT0iY3RybCIgdGFyZ2V0PSJrdWJlY29uZmlnIiBwYXJlbnQ9IjEiIHN0eWxlPSJlZGdlU3R5bGU9b3J0aG9nb25hbEVkZ2VTdHlsZTtyb3VuZGVkPTE7b3J0aG9nb25hbExvb3A9MTtqZXR0eVNpemU9YXV0bztodG1sPTE7ZGFzaGVkPTE7Ij4KICAgICAgICAgIDxteEdlb21ldHJ5IHJlbGF0aXZlPSIxIiBhcz0iZ2VvbWV0cnkiLz4KICAgICAgICA8L214Q2VsbD4KCiAgICAgIDwvcm9vdD4KICAgIDwvbXhHcmFwaE1vZGVsPgogIDwvZGlhZ3JhbT4KPC9teGZpbGU+">
+  <metadata id="drawio-source">
+  <![CDATA[
+<mxfile host="draw.io">
+  <diagram name="Infrastructure Overview" id="infra-overview">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- External: Ansible Controller (localhost) -->
+        <mxCell id="ctrl" value="Ansible Controller&#xa;(localhost)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Proxmox Host 1 Container -->
+        <mxCell id="pve1" value="Proxmox Host 1 (pve)&#xa;.185" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="40" width="500" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="c1" value="k8s-control-1&#xa;.186" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="pve1">
+          <mxGeometry x="30" y="50" width="130" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="n1" value="k8s-node-1&#xa;.187" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="pve1">
+          <mxGeometry x="30" y="120" width="130" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="kubevip1" value="kube-vip&#xa;VIP: .210" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="pve1">
+          <mxGeometry x="200" y="50" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="iso1" value="Ubuntu ISO&#xa;(autoinstall)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="pve1">
+          <mxGeometry x="360" y="50" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="storage1" value="Secondary Storage&#xa;(LVM thin pool)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="pve1">
+          <mxGeometry x="360" y="130" width="110" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Proxmox Host 2 Container -->
+        <mxCell id="pve2" value="Proxmox Host 2 (pve2)&#xa;.190" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="370" width="500" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" value="k8s-control-2&#xa;.188" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="pve2">
+          <mxGeometry x="30" y="50" width="130" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="n2" value="k8s-node-2&#xa;.189" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="pve2">
+          <mxGeometry x="30" y="120" width="130" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="kubevip2" value="kube-vip&#xa;VIP: .210" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="pve2">
+          <mxGeometry x="200" y="50" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="iso2" value="Ubuntu ISO&#xa;(autoinstall)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="pve2">
+          <mxGeometry x="360" y="50" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="storage2" value="Secondary Storage&#xa;(LVM thin pool)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="pve2">
+          <mxGeometry x="360" y="130" width="110" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Kubeconfig store -->
+        <mxCell id="kubeconfig" value="~/.kube/config" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="440" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- .env -->
+        <mxCell id="dotenv" value=".env&#xa;(all configuration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_ctrl_pve1" edge="1" source="ctrl" target="pve1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ctrl_pve1_label" value="Proxmoxer API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_ctrl_pve1">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_ctrl_pve2" edge="1" source="ctrl" target="pve2" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ctrl_pve2_label" value="Proxmoxer API" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" vertex="1" connectable="0" parent="e_ctrl_pve2">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_dotenv_ctrl" edge="1" source="dotenv" target="ctrl" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_c1_vip" edge="1" source="c1" target="kubevip1" parent="pve1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_c2_vip" edge="1" source="c2" target="kubevip2" parent="pve2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_ctrl_kube" edge="1" source="ctrl" target="kubeconfig" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+  ]]>
+  </metadata>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <g>
+    <rect x="300.2" y="60.0" width="500.0" height="280.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.2" y="60.0" width="500.0" height="30.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.2" y="84.0" width="500.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="550.2" y="75.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">Proxmox Host 1 (pve)</text>
+    <text x="550.2" y="90.6" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">.185</text>
+    <rect x="300.2" y="390.0" width="500.0" height="280.0" rx="6" ry="6" fill="#dae8fc" fill-opacity="0.3" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.2" y="390.0" width="500.0" height="30.0" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.0"/>
+    <rect x="300.2" y="414.0" width="500.0" height="6.0" fill="#dae8fc" stroke="none"/>
+    <text x="550.2" y="405.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">Proxmox Host 2 (pve2)</text>
+    <text x="550.2" y="420.6" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">.190</text>
+    <rect x="60.2" y="360.0" width="160.0" height="60.0" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.0"/>
+    <text x="140.2" y="386.4" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">Ansible Controller</text>
+    <text x="140.2" y="402.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#000000">(localhost)</text>
+    <rect x="330.2" y="110.0" width="130.0" height="50.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="395.2" y="131.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">k8s-control-1</text>
+    <text x="395.2" y="146.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">.186</text>
+    <rect x="330.2" y="180.0" width="130.0" height="50.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="395.2" y="201.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">k8s-node-1</text>
+    <text x="395.2" y="216.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">.187</text>
+    <rect x="500.2" y="110.0" width="120.0" height="50.0" rx="6" ry="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.0"/>
+    <text x="560.2" y="132.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">kube-vip</text>
+    <text x="560.2" y="145.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">VIP: .210</text>
+    <rect x="660.2" y="110.0" width="110.0" height="50.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="715.2" y="132.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">Ubuntu ISO</text>
+    <text x="715.2" y="145.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(autoinstall)</text>
+    <path d="M 660.2 200.0 Q 660.2 190.0 715.2 190.0 Q 770.2 190.0 770.2 200.0 L 770.2 240.0 Q 770.2 250.0 715.2 250.0 Q 660.2 250.0 660.2 240.0 Z" fill="#e1d5e7" stroke="#9673a6"/>
+    <ellipse cx="715.2" cy="200.0" rx="55.0" ry="10.0" fill="#e1d5e7" stroke="#9673a6"/>
+    <text x="715.2" y="222.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Secondary Storage</text>
+    <text x="715.2" y="235.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(LVM thin pool)</text>
+    <rect x="330.2" y="440.0" width="130.0" height="50.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="395.2" y="461.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">k8s-control-2</text>
+    <text x="395.2" y="476.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">.188</text>
+    <rect x="330.2" y="510.0" width="130.0" height="50.0" rx="6" ry="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.0"/>
+    <text x="395.2" y="531.7" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">k8s-node-2</text>
+    <text x="395.2" y="546.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" font-style="normal" fill="#000000">.189</text>
+    <rect x="500.2" y="440.0" width="120.0" height="50.0" rx="6" ry="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.0"/>
+    <text x="560.2" y="462.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">kube-vip</text>
+    <text x="560.2" y="475.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">VIP: .210</text>
+    <rect x="660.2" y="440.0" width="110.0" height="50.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="715.2" y="462.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">Ubuntu ISO</text>
+    <text x="715.2" y="475.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(autoinstall)</text>
+    <path d="M 660.2 530.0 Q 660.2 520.0 715.2 520.0 Q 770.2 520.0 770.2 530.0 L 770.2 570.0 Q 770.2 580.0 715.2 580.0 Q 660.2 580.0 660.2 570.0 Z" fill="#e1d5e7" stroke="#9673a6"/>
+    <ellipse cx="715.2" cy="530.0" rx="55.0" ry="10.0" fill="#e1d5e7" stroke="#9673a6"/>
+    <text x="715.2" y="552.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">Secondary Storage</text>
+    <text x="715.2" y="565.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#000000">(LVM thin pool)</text>
+    <rect x="60.2" y="460.0" width="160.0" height="40.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="140.2" y="483.5" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">~/.kube/config</text>
+    <rect x="60.2" y="260.0" width="160.0" height="40.0" rx="6" ry="6" fill="#f5f5f5" stroke="#666666" stroke-width="1.0"/>
+    <text x="140.2" y="277.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">.env</text>
+    <text x="140.2" y="290.0" text-anchor="middle" dominant-baseline="auto" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="normal" font-style="normal" fill="#666666">(all configuration)</text>
+    <path d="M 220.2 375.0 L 260.2 375.0 L 260.2 200.0 L 300.2 200.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="300.2,200.0 292.2,204.0 292.2,196.0" fill="#000000"/>
+    <path d="M 220.2 405.0 L 260.2 405.0 L 260.2 530.0 L 300.2 530.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="300.2,530.0 292.2,534.0 292.2,526.0" fill="#000000"/>
+    <path d="M 140.2 300.0 L 140.2 330.0 L 140.2 330.0 L 140.2 360.0" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="6 3"/>
+    <polygon points="140.2,360.0 136.2,352.0 144.2,352.0" fill="#000000"/>
+    <path d="M 460.2 135.0 L 480.2 135.0 L 480.2 135.0 L 500.2 135.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="500.2,135.0 492.2,139.0 492.2,131.0" fill="#000000"/>
+    <path d="M 460.2 465.0 L 480.2 465.0 L 480.2 465.0 L 500.2 465.0" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <polygon points="500.2,465.0 492.2,469.0 492.2,461.0" fill="#000000"/>
+    <path d="M 140.2 420.0 L 140.2 440.0 L 140.2 440.0 L 140.2 460.0" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="6 3"/>
+    <polygon points="140.2,460.0 136.2,452.0 144.2,452.0" fill="#000000"/>
+    <text x="260.2" y="313.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">Proxmoxer API</text>
+    <text x="260.2" y="447.0" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="9" fill="#000000">Proxmoxer API</text>
+  </g>
+</svg>

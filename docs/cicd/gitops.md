@@ -4,6 +4,8 @@
 
 ArgoCD watches a Git repository and continuously reconciles the Kubernetes resources defined in it with what's actually running in the cluster. In this environment, it manages all application deployments — Prometheus, Grafana, Alertmanager, Matrix, Thanos, Rook-Ceph, and everything else in the `argocd_applications/` directory.
 
+![GitOps App-of-Apps](../diagrams/gitops-app-of-apps.svg)
+
 ## Why It's Here
 
 Without GitOps, deploying applications means running `kubectl apply` manually or through ad-hoc scripts. ArgoCD makes the Git repository the single source of truth:

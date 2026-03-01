@@ -237,7 +237,7 @@ Deploys a [kube-vip](https://kube-vip.io/) static pod on each control plane node
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `K8S_VIP` | Floating VIP address for the API server | `192.168.178.225` |
+| `K8S_VIP` | Floating VIP address for the API server | `XXX.XXX.XXX.210` |
 | `KUBE_VIP_VERSION` | kube-vip container image version (default: `0.8.7`) | `0.8.7` |
 
 ### Setup

@@ -100,6 +100,10 @@ Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `EN
 │   ├── security/                    ← cert-manager, trust-manager, Keycloak, ArgoCD OIDC
 │   ├── infrastructure/              ← Harbor container registry
 │   └── storage/                     ← CloudNativePG, Rook operator + cluster
+├── .github/
+│   ├── copilot-instructions.md       ← Copilot custom instructions (this file)
+│   └── skills/                      ← Agent skills (auto-loaded by description match)
+│       └── render-drawio-diagram/   ← Creates/edits draw.io diagrams stored as self-contained SVGs
 ├── library/                         ← Custom Ansible modules
 ├── artifacts/                       ← Ansible Runner output (auto-cleaned each run)
 └── docs/                            ← Project documentation (see below)
