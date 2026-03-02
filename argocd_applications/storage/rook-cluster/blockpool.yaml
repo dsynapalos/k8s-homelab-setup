@@ -4,10 +4,10 @@ metadata:
   name: replicapool
   namespace: rook-ceph
 spec:
-  failureDomain: osd  # Single node, so failureDomain must be osd
+  failureDomain: host  # Replicas land on different worker nodes
   replicated:
-    size: 1  # Single replica for single-node cluster
-    requireSafeReplicaSize: false  # Required for size=1
+    size: 2  # 2-way replication across hosts
+    requireSafeReplicaSize: true
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

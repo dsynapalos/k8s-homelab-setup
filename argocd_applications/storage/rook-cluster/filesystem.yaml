@@ -5,20 +5,20 @@ metadata:
   namespace: rook-ceph
 spec:
   metadataPool:
-    failureDomain: osd  # Single node, so failureDomain must be osd
+    failureDomain: host  # Replicas land on different worker nodes
     replicated:
-      size: 1  # Single replica for single-node cluster
-      requireSafeReplicaSize: false  # Required for size=1
+      size: 2  # 2-way replication across hosts
+      requireSafeReplicaSize: true
   dataPools:
     - name: replicated
-      failureDomain: osd  # Single node
+      failureDomain: host  # Replicas land on different worker nodes
       replicated:
-        size: 1  # Single replica
-        requireSafeReplicaSize: false  # Required for size=1
+        size: 2  # 2-way replication across hosts
+        requireSafeReplicaSize: true
   preserveFilesystemOnDelete: true
   metadataServer:
     activeCount: 1
-    activeStandby: false  # No standby for single-node cluster
+    activeStandby: true  # Standby MDS for failover
     resources:
       requests:
         cpu: "10m"

@@ -13,6 +13,15 @@ docs/
 ├── README.md                        ← You are here (index & conventions)
 ├── getting-started.md               ← First-read onboarding guide
 │
+├── diagrams/                        ← Architecture diagrams (self-contained SVGs)
+│   ├── README.md                    ← Diagram index, editing guide, style conventions
+│   ├── AGENTS.md                    ← AI agent instructions for diagram workflows
+│   ├── ansible-pipeline.svg
+│   ├── gitops-app-of-apps.svg
+│   ├── infrastructure-overview.svg
+│   ├── networking-architecture.svg
+│   └── storage-architecture.svg
+│
 ├── infrastructure/                  ← Cluster-level concerns (not apps)
 │   ├── architecture.md              ← Project structure, entry points, role map
 │   ├── configuration.md             ← .env reference, feature flags
@@ -258,3 +267,4 @@ If you are an AI agent navigating this repository:
 7. **The project does not use `ansible` CLI** — only `ansible_runner.run()` from Python. Never suggest `ansible-playbook`, `ansible-inventory`, or `ansible -m ping` commands.
 8. **Agent skills** live in `.github/skills/`. Each skill has a `SKILL.md` with YAML frontmatter (`name`, `description`) and Markdown instructions. Copilot loads a skill automatically when the task matches its `description`. Available skills:
    - `render-drawio-diagram` — generates valid draw.io/mxGraph XML from architecture descriptions (layout rules, style guide, structural conventions).
+9. **Architecture diagrams** live in `docs/diagrams/`. See [`docs/diagrams/AGENTS.md`](diagrams/AGENTS.md) for the editing workflow, renderer script, and diagram inventory.

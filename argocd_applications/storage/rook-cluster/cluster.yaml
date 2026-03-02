@@ -12,12 +12,12 @@ spec:
   continueUpgradeAfterChecksEvenIfNotHealthy: false
   
   mon:
-    count: 1  # Single mon for single-node test cluster
-    allowMultiplePerNode: false  # Only one node, so not needed
+    count: 3  # Quorum requires odd number; 2 workers + allowMultiplePerNode
+    allowMultiplePerNode: true  # Needed with only 2 worker nodes
   
   mgr:
-    count: 1
-    allowMultiplePerNode: false
+    count: 2  # Active + standby for failover
+    allowMultiplePerNode: true  # Needed with only 2 worker nodes
     modules:
       - name: pg_autoscaler
         enabled: true
@@ -52,14 +52,15 @@ spec:
     allowUninstallWithVolumes: false
   
   # Automatic device discovery - uses all available raw devices on worker nodes only
+  # Placement (below) restricts Rook pods to non-control-plane nodes.
+  # Only worker VMs receive secondary disks during provisioning, so
+  # useAllNodes + deviceFilter safely discovers only the intended devices.
   storage:
-    useAllNodes: false
+    useAllNodes: true
     useAllDevices: false
+    deviceFilter: "^sd[b-z]"  # Auto-discover sdb, sdc, sdd, etc. (excludes sda OS disk)
     config:
       osdsPerDevice: "1"  # Single OSD per device for testing
-    nodes:
-      - name: "k8s-node-1"  # Only k8s-node-1 hosts Rook storage
-        deviceFilter: "^sd[b-z]"  # Auto-discover sdb, sdc, sdd, etc. (excludes sda OS disk)
   
   resources:
     mon:
@@ -90,7 +91,7 @@ spec:
     osd: system-node-critical
     mgr: system-cluster-critical
   
-  # Placement: ensure Rook pods only run on k8s-node-1, NOT control plane
+  # Placement: ensure Rook pods only run on worker nodes, NOT control plane
   placement:
     all:
       nodeAffinity:
@@ -108,6 +109,6 @@ spec:
         operator: Exists
   
   disruptionManagement:
-    managePodBudgets: false  # Disable for single-node cluster
+    managePodBudgets: true
     osdMaintenanceTimeout: 30
-    pgHealthCheckTimeout: 0
+    pgHealthCheckTimeout: 60

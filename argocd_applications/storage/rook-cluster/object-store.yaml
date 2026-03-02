@@ -5,21 +5,21 @@ metadata:
   namespace: rook-ceph
 spec:
   metadataPool:
-    failureDomain: osd  # Single node, so failureDomain must be osd
+    failureDomain: host  # Replicas land on different worker nodes
     replicated:
-      size: 1  # Single replica for single-node cluster
-      requireSafeReplicaSize: false  # Required for size=1
+      size: 2  # 2-way replication across hosts
+      requireSafeReplicaSize: true
   dataPool:
-    failureDomain: osd  # Single node
+    failureDomain: host  # Replicas land on different worker nodes
     replicated:
-      size: 1  # Single replica
-      requireSafeReplicaSize: false  # Required for size=1
+      size: 2  # 2-way replication across hosts
+      requireSafeReplicaSize: true
     parameters:
       compression_mode: none  # Disabled compression for testing
   preservePoolsOnDelete: true
   gateway:
     port: 80
-    instances: 1  # Single RGW instance
+    instances: 2  # One per worker node for availability
     resources:
       requests:
         cpu: "10m"

@@ -116,18 +116,19 @@ If you don't have external Ceph infrastructure and want a fully self-contained s
 Operator sync policy: `prune: false` (never auto-delete operator), `selfHeal: true`.
 
 **Single-node optimization**: This setup is designed for a homelab, not production:
-- All component counts set to 1 (1 MON, 1 MGR, 1 MDS)
-- Replication size = 1 with `failureDomain: osd` (not host)
-- `requireSafeReplicaSize: false` — allows single-replica pools
+- MON count 3 with `allowMultiplePerNode: true` (quorum across 2 workers)
+- MGR count 2 (active + standby)
+- Replication size = 2 with `failureDomain: host` (replicas on different workers)
+- `osd_pool_default_min_size = 1` allows degraded I/O during single-node outages
 
 **CephCluster configuration** (`cluster.yaml`):
 
 | Component | Config | Notes |
 |-----------|--------|--------|
-| **Monitor (MON)** | 1 instance, `system-node-critical` priority | Maintains cluster map |
-| **Manager (MGR)** | 1 instance, `pg_autoscaler` enabled | Automatic placement group tuning |
+| **Monitor (MON)** | 3 instances, `allowMultiplePerNode: true`, `system-node-critical` priority | Maintains cluster map; quorum requires majority |
+| **Manager (MGR)** | 2 instances (active + standby), `pg_autoscaler` enabled | Automatic placement group tuning |
 | **Dashboard** | HTTP (no SSL), port 8443 | Local cluster access only |
-| **Storage discovery** | `useAllNodes: false`, `useAllDevices: false` | Targets `k8s-node-1` only with `deviceFilter: "^sd[b-z]"` (excludes sda OS disk) |
+| **Storage discovery** | `useAllNodes: true`, `useAllDevices: false` | All worker nodes with `deviceFilter: "^sd[b-z]"` (excludes sda OS disk); placement excludes control plane |
 | **Placement** | Node affinity excludes control plane | `node-role.kubernetes.io/control-plane: DoesNotExist` |
 | **Resources** | 250m CPU, 512Mi–1Gi memory per component | Conservative for test clusters; OSD: 10m/2Gi req, 4Gi limit |
 | **Log collector** | Enabled, 24h periodicity | Collects Ceph daemon logs |
@@ -137,7 +138,7 @@ Operator sync policy: `prune: false` (never auto-delete operator), `selfHeal: tr
 
 **Config override** (`rook-config-override.yaml`):
 ```yaml
-osd_pool_default_size = 1
+osd_pool_default_size = 2
 osd_pool_default_min_size = 1
 ```
 
@@ -171,9 +172,9 @@ Before Rook can use storage, physical disks on the Proxmox host need to become v
 
 | StorageClass | Type | Access Modes | Pool Config | Use Case |
 |-------------|------|-------------|-------------|----------|
-| `rook-ceph-block` | RBD (block) | ReadWriteOnce | Pool: `replicapool`, size=1, failureDomain: osd, `requireSafeReplicaSize: false` | Databases, StatefulSets (Matrix, Thanos) |
-| `rook-cephfs` | CephFS (filesystem) | ReadWriteMany | Metadata + data pools, both size=1; 1 active MDS, no standby; `preserveFilesystemOnDelete: true` | Shared storage across pods |
-| `rook-ceph-bucket` | S3 (object) | Via ObjectBucketClaim | RADOS Gateway: 1 instance, HTTP port 80; `preservePoolsOnDelete: true` | Thanos metrics, backups, artifacts |
+| `rook-ceph-block` | RBD (block) | ReadWriteOnce | Pool: `replicapool`, size=2, failureDomain: host | Databases, StatefulSets (Matrix, Thanos) |
+| `rook-cephfs` | CephFS (filesystem) | ReadWriteMany | Metadata + data pools, both size=2; 1 active MDS + 1 standby; `preserveFilesystemOnDelete: true` | Shared storage across pods |
+| `rook-ceph-bucket` | S3 (object) | Via ObjectBucketClaim | RADOS Gateway: 2 instances, HTTP port 80; `preservePoolsOnDelete: true` | Thanos metrics, backups, artifacts |
 
 All StorageClasses support volume expansion. Block uses ext4 filesystem with Delete reclaim policy.
 
@@ -191,9 +192,8 @@ kubectl port-forward -n rook-ceph svc/rook-ceph-mgr-dashboard 8443:8443
 kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph status
 ```
 
-**Expected warnings** (normal for single-node):
-- `POOL_NO_REDUNDANCY` — pools have `size=1`, no replication
-- `MDS_UP_LESS_THAN_MAX` — no standby MDS configured
+**Expected warnings** (normal for homelab):
+- `MON_CLOCK_SKEW` — minor clock drift between nodes (resolve with NTP if persistent)
 
 ### Cleanup for Re-provisioning
 

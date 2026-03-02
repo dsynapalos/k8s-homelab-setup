@@ -14,40 +14,38 @@ This is what actually stores data for Matrix (Synapse DB), Thanos (metric blocks
 
 **Ceph version**: v19.2.3 (Squid stable)
 
-**Single-node optimization**: All components run with count=1, `failureDomain: osd` (not host), and `requireSafeReplicaSize: false`. This is intentional for a homelab — production would use replication across hosts.
+**Multi-node replication**: All pools use 2-way replication with `failureDomain: host`, ensuring data survives the loss of an entire worker node. MON quorum (3 instances) and MGR standby provide control-plane redundancy for Ceph itself.
 
 ### Core Components
 
 | Component | Count | Purpose |
 |-----------|-------|---------|
-| **MON** (Monitor) | 1 | Maintains cluster map and consensus |
-| **MGR** (Manager) | 1 | Metrics, dashboard, pg_autoscaler module |
+| **MON** (Monitor) | 3 | Maintains cluster map and consensus (quorum) |
+| **MGR** (Manager) | 2 (active + standby) | Metrics, dashboard, pg_autoscaler module |
 | **OSD** (Object Storage Daemon) | Per-disk | One per raw block device, stores actual data |
-| **MDS** (Metadata Server) | 1 active, 0 standby | Required for CephFS filesystem access |
-| **RGW** (RADOS Gateway) | 1 | S3-compatible API for object storage |
+| **MDS** (Metadata Server) | 1 active, 1 standby | Required for CephFS filesystem access |
+| **RGW** (RADOS Gateway) | 2 | S3-compatible API for object storage |
 
 ### Storage Discovery
 
 ```yaml
 storage:
-  useAllNodes: false
+  useAllNodes: true
   useAllDevices: false
-  nodes:
-    - name: "k8s-node-1"
-      deviceFilter: "^sd[b-z]"
+  deviceFilter: "^sd[b-z]"
 ```
 
-Only targets `k8s-node-1`, matching `/dev/sdb`, `/dev/sdc`, etc. (excludes `/dev/sda` OS disk). These devices are secondary disks attached to the VM during provisioning by the `setup_localhost` role.
+Auto-discovers `/dev/sdb`, `/dev/sdc`, etc. on all nodes (excludes `/dev/sda` OS disk). Placement rules restrict Rook pods to worker nodes, and only worker VMs receive secondary disks during provisioning, so control-plane nodes are naturally excluded. No need to whitelist nodes by name — new workers are picked up automatically.
 
 ### Config Override
 
 ```ini
 [global]
-osd_pool_default_size = 1
+osd_pool_default_size = 2
 osd_pool_default_min_size = 1
 ```
 
-Single-replica pools — appropriate for a single-node lab, not for production.
+2-way replication by default. `min_size = 1` allows degraded I/O when one replica is temporarily unavailable (e.g., during OSD restart), preventing a single node outage from blocking all writes.
 
 ### Dashboard
 
@@ -113,11 +111,10 @@ placement:
             operator: DoesNotExist
 ```
 
-## Expected Health Warnings (Single-Node)
+## Expected Health Warnings
 
 These are normal and expected:
-- `POOL_NO_REDUNDANCY` — pools have `size=1` (no replication)
-- `MDS_UP_LESS_THAN_MAX` — no standby MDS configured
+- `MON_CLOCK_SKEW` — minor clock drift between nodes (resolve with NTP if persistent)
 
 ## Integration Points
 

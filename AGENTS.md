@@ -195,3 +195,5 @@ Skills live in `.github/skills/<skill-name>/SKILL.md`. Each skill has YAML front
 | Skill | Description |
 |-------|-------------|
 | `render-drawio-diagram` | Creates or edits draw.io architecture diagrams stored as self-contained SVGs — includes workflows, edge routing rules, waypoint placement, and the pure-Python renderer |
+
+Diagram-specific agent instructions are also available in [`docs/diagrams/AGENTS.md`](docs/diagrams/AGENTS.md) — covers the editing workflow, renderer usage, current diagram inventory, and key rules.

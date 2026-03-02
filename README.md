@@ -63,6 +63,7 @@ All documentation lives in [`docs/`](docs/README.md). The [Documentation Guide](
 
 ### Infrastructure & platform
 
+- [Architecture Diagrams](docs/diagrams/README.md) — Self-contained SVG diagrams (pipeline, GitOps, infrastructure, networking, storage)
 - [Networking](docs/infrastructure/networking.md) — Cilium CNI, Istio Ambient, ingress
 - [Storage](docs/infrastructure/storage.md) — CephFS CSI and Rook-Ceph options
 - [GPU Support](docs/infrastructure/gpu-support.md) — NVIDIA passthrough, drivers, monitoring
