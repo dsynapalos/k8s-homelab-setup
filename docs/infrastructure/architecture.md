@@ -84,11 +84,11 @@ Labels are only updated when a key is missing or its value differs from what's i
 | Role | Runs On | Purpose |
 |------|---------|---------|
 | `setup_pki` | k8s-control | Generates Root CA (ECC secp384r1, 10-year) and Intermediate CA (5-year, pathlen:0), fetches certs to controller |
-| `distribute_pki` | k8s (all) | Installs root CA in system trust store, configures CRI-O registry mirrors for Harbor proxy cache |
-| `bootstrap_pki_secret` | localhost | Pre-creates the `homelab-ca-secret` Secret in `cert-manager` namespace (intermediate cert+key, root CA) |
+| `distribute_pki` | k8s (all) | Installs root CA in system trust store, configures CRI-O registry mirrors for Dragonfly P2P (fallback: direct upstream) |
+| `bootstrap_pki_secret` | localhost | Pre-creates the `homelab-ca-secret` Secret in `cert-manager` namespace (intermediate cert+key, root CA). Conditionally creates `dragonfly-ca-cert` Secret in `dragonfly-system` namespace (`ENABLE_DRAGONFLY`) |
 | `bootstrap_harbor_secret` | localhost | Pre-creates the `harbor-admin-password` Secret with a random 32-char password (idempotent) |
 
-**PKI chain**: Root CA → Intermediate CA → cert-manager leaf certificates. The root CA private key never leaves the control plane node. Only the certificates and the intermediate key are fetched to the Ansible controller for distribution. CRI-O mirrors route image pulls through Harbor's proxy cache (`harbor.k8s.local/{registry}-cache`).
+**PKI chain**: Root CA → Intermediate CA → cert-manager leaf certificates. The root CA private key never leaves the control plane node. Only the certificates and the intermediate key are fetched to the Ansible controller for distribution. CRI-O mirrors route image pulls through Dragonfly P2P (`127.0.0.1:4001`) which pulls from Harbor's proxy cache (`harbor.k8s.local/{registry}-cache`), falling back to upstream registries when Dragonfly is unavailable.
 
 ### Networking Layer
 

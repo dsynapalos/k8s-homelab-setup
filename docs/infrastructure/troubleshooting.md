@@ -245,6 +245,12 @@ See [Harbor — Troubleshooting](../applications/infrastructure/harbor.md#troubl
 
 ---
 
+## Dragonfly / P2P Image Distribution
+
+See [Dragonfly — Troubleshooting](../applications/infrastructure/dragonfly.md#troubleshooting) for diagnostic commands and common issues (client CrashLoopBackOff, CRI-O mirror config, seed client caching, Harbor preheat setup).
+
+---
+
 ## Vulnerability Scanning & CVE Reporting
 
 See [Security — Troubleshooting](security.md#troubleshooting) for diagnostic commands and common issues (CVE reporter not posting, empty scan results, signature verification failures).

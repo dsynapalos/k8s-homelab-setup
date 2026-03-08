@@ -57,6 +57,7 @@ docs/
         ├── trust-manager.md         ← CA trust bundle distribution across namespaces
         └── keycloak.md              ← Identity & access management, OIDC/SSO provider
     └── infrastructure/
+        ├── dragonfly.md            ← P2P image distribution, CRI-O proxy, Harbor preheat
         └── harbor.md               ← Container registry, proxy cache, OIDC, image management
 ```
 
@@ -74,6 +75,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | `argocd_applications/security/keycloak/` | `docs/applications/security/keycloak.md` |
 | `argocd_applications/security/trust-manager/` | `docs/applications/security/trust-manager.md` |
 | `argocd_applications/infrastructure/harbor/` | `docs/applications/infrastructure/harbor.md` |
+| `argocd_applications/infrastructure/dragonfly/` | `docs/applications/infrastructure/dragonfly.md` |
 
 ---
 
@@ -189,6 +191,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 
 | Document | Purpose |
 |---|---|
+| [dragonfly.md](applications/infrastructure/dragonfly.md) | P2P image distribution. CRI-O registry mirror proxy, peer-to-peer layer transfer, Harbor preheat integration. Seed client → Harbor → upstream pull chain. |
 | [harbor.md](applications/infrastructure/harbor.md) | Container registry & proxy cache. Pull-through cache for Docker Hub, Quay.io, registry.k8s.io, and NVCR. Rook-Ceph storage, cert-manager TLS, Keycloak OIDC, Trivy scanning. CRI-O mirror integration. |
 
 ---

@@ -192,6 +192,7 @@
         | rejectattr('path', 'search', 'rook-ceph-operator')
         | rejectattr('path', 'search', 'rook-ceph-cluster')
         | rejectattr('path', 'search', 'dcgm-exporter')
+        | rejectattr('path', 'search', 'dragonfly')
         | list
       }}
 
@@ -213,6 +214,15 @@
         (all_app_cr_files | selectattr('path', 'search', 'dcgm-exporter') | list)
       }}
   when: lookup('env', 'ENABLE_CUDA') == 'true'
+
+- name: Add Dragonfly Application CR when enabled
+  ansible.builtin.set_fact:
+    app_cr_files_filtered: >-
+      {{
+        app_cr_files_filtered +
+        (all_app_cr_files | selectattr('path', 'search', 'dragonfly') | list)
+      }}
+  when: lookup('env', 'ENABLE_DRAGONFLY') == 'true'
 
 - name: Create ConfigMaps from Application CRs
   kubernetes.core.k8s:
@@ -247,6 +257,7 @@
         | rejectattr('path', 'search', 'rook-ceph-operator')
         | rejectattr('path', 'search', 'rook-ceph-cluster')
         | rejectattr('path', 'search', 'dcgm-exporter')
+        | rejectattr('path', 'search', 'dragonfly')
         | list
       }}
 
@@ -268,6 +279,15 @@
         (profile_files.files | selectattr('path', 'search', 'dcgm-exporter') | list)
       }}
   when: lookup('env', 'ENABLE_CUDA') == 'true'
+
+- name: Add Dragonfly ClusterProfile when enabled
+  ansible.builtin.set_fact:
+    profile_files_filtered: >-
+      {{
+        profile_files_filtered +
+        (profile_files.files | selectattr('path', 'search', 'dragonfly') | list)
+      }}
+  when: lookup('env', 'ENABLE_DRAGONFLY') == 'true'
 
 - name: Apply ClusterProfile manifests
   kubernetes.core.k8s:

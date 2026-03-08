@@ -30,3 +30,31 @@
         ca.crt: "{{ lookup('file', '/tmp/homelab-pki/root-ca.crt') | b64encode }}"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   no_log: true
+
+# Pre-create Dragonfly namespace and CA Secret so dfdaemon pods can
+# mount the root CA cert at startup (before trust-manager is available).
+- name: create dragonfly-system namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: dragonfly-system
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: lookup('env', 'ENABLE_DRAGONFLY') == 'true'
+
+- name: create root CA Secret for Dragonfly
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: dragonfly-ca-cert
+        namespace: dragonfly-system
+      type: Opaque
+      data:
+        root-ca.crt: "{{ lookup('file', '/tmp/homelab-pki/root-ca.crt') | b64encode }}"
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: lookup('env', 'ENABLE_DRAGONFLY') == 'true'

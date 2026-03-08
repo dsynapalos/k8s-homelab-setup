@@ -268,6 +268,95 @@ spec:
           configure_retention "k8s-registry-cache"
           configure_retention "nvcr-cache"
 
+          # ── Dragonfly P2P preheat (only if Dragonfly is deployed) ──────
+          DRAGONFLY_MANAGER="dragonfly-manager.dragonfly-system.svc.cluster.local"
+          DRAGONFLY_PORT=65003
+          if nslookup "$DRAGONFLY_MANAGER" > /dev/null 2>&1; then
+            echo "Dragonfly detected — configuring preheat..."
+
+            # Register preheat provider instance (idempotent)
+            EXISTING_INSTANCE=$(curl -sk -u "$AUTH" \
+              "$HARBOR_API/p2p/preheat/instances" | \
+              jq -r '.[] | select(.name == "dragonfly") | .id')
+
+            if [ -n "$EXISTING_INSTANCE" ] && [ "$EXISTING_INSTANCE" != "null" ]; then
+              echo "  Preheat instance 'dragonfly' already exists (id=$EXISTING_INSTANCE)."
+            else
+              INSTANCE_PAYLOAD=$(jq -n \
+                --arg endpoint "http://${DRAGONFLY_MANAGER}:${DRAGONFLY_PORT}" \
+                '{
+                  name: "dragonfly",
+                  vendor: "dragonfly",
+                  description: "Dragonfly P2P preheat provider",
+                  endpoint: $endpoint,
+                  enabled: true,
+                  insecure: true,
+                  default: true
+                }')
+              INST_HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+                -X POST "$HARBOR_API/p2p/preheat/instances" \
+                -H "Content-Type: application/json" \
+                -d "$INSTANCE_PAYLOAD")
+              if [ "$INST_HTTP" = "201" ]; then
+                echo "  Preheat instance 'dragonfly' registered."
+              elif [ "$INST_HTTP" = "409" ]; then
+                echo "  Preheat instance 'dragonfly' already exists."
+              else
+                echo "  WARNING: Preheat instance registration returned HTTP $INST_HTTP"
+              fi
+            fi
+
+            # Create preheat policies on each proxy cache project
+            create_preheat_policy() {
+              local PROJECT_NAME="$1"
+
+              # Check if policy already exists
+              local EXISTING_POLICY
+              EXISTING_POLICY=$(curl -sk -u "$AUTH" \
+                "$HARBOR_API/projects/$PROJECT_NAME/preheat/policies" | \
+                jq -r '.[] | select(.name == "dragonfly-preheat") | .id')
+
+              if [ -n "$EXISTING_POLICY" ] && [ "$EXISTING_POLICY" != "null" ]; then
+                echo "  Preheat policy already exists on '$PROJECT_NAME' (id=$EXISTING_POLICY), skipping."
+                return 0
+              fi
+
+              echo "  Creating preheat policy on '$PROJECT_NAME'..."
+              local POLICY_PAYLOAD
+              POLICY_PAYLOAD=$(jq -n \
+                --arg project "$PROJECT_NAME" \
+                '{
+                  name: "dragonfly-preheat",
+                  description: ("Preheat all images via Dragonfly for " + $project),
+                  provider_id: 1,
+                  enabled: true,
+                  filters: "[]",
+                  trigger: "{\"type\":\"event_based\",\"trigger_setting\":{\"cron\":\"\"}}"
+                }')
+
+              local POLICY_HTTP
+              POLICY_HTTP=$(curl -sk -o /dev/null -w "%{http_code}" -u "$AUTH" \
+                -X POST "$HARBOR_API/projects/$PROJECT_NAME/preheat/policies" \
+                -H "Content-Type: application/json" \
+                -d "$POLICY_PAYLOAD")
+
+              if [ "$POLICY_HTTP" = "201" ]; then
+                echo "  Preheat policy created on '$PROJECT_NAME'."
+              elif [ "$POLICY_HTTP" = "409" ]; then
+                echo "  Preheat policy already exists on '$PROJECT_NAME'."
+              else
+                echo "  WARNING: Preheat policy on '$PROJECT_NAME' returned HTTP $POLICY_HTTP"
+              fi
+            }
+
+            create_preheat_policy "dockerhub-cache"
+            create_preheat_policy "quay-cache"
+            create_preheat_policy "k8s-registry-cache"
+            create_preheat_policy "nvcr-cache"
+          else
+            echo "Dragonfly not detected — skipping preheat configuration."
+          fi
+
           echo "Harbor bootstrap complete."
         env:
           - name: HARBOR_ADMIN_PASSWORD

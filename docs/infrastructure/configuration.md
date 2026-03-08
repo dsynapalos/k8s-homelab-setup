@@ -247,6 +247,45 @@ For networking internals and Cilium integration, see [Networking](networking.md)
 
 ---
 
+## Dragonfly P2P Image Distribution
+
+### What It Does
+
+Deploys [Dragonfly](https://d7y.io/) as a peer-to-peer layer between CRI-O and Harbor. A DaemonSet client on every node intercepts image pulls via a local proxy (port 4001), coordinates piece-based P2P transfer through a scheduler, and caches layers on a seed client. Reduces bandwidth and speeds up multi-node image pulls.
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ENABLE_DRAGONFLY` | Feature flag | `true` |
+
+No version variable — the Helm chart version (`1.6.14`) and image tags (`v2.4.2` for manager/scheduler, `v1.2.11` for client) are pinned in the ArgoCD Application CR.
+
+### What Changes
+
+When `ENABLE_DRAGONFLY=true`:
+
+- The `bootstrap_pki_secret` role pre-creates the `dragonfly-system` namespace and `dragonfly-ca-cert` Secret (root CA for TLS trust with Harbor)
+- The `distribute_pki` role configures CRI-O registry mirrors to route pulls through `127.0.0.1:4001` (the local Dragonfly client)
+- The `bootstrap_sveltos` role (if Sveltos is enabled) includes the Dragonfly ClusterProfile with `dependsOn: [cert-manager, trust-manager, rook-ceph-cluster]`
+- The Harbor bootstrap Job registers Dragonfly as a preheat provider and creates event-based preheat policies on all proxy cache projects
+
+When `ENABLE_DRAGONFLY=false` (default):
+
+- No Dragonfly components are deployed
+- CRI-O mirrors still route through Harbor proxy cache (without Dragonfly P2P)
+- Harbor preheat configuration is skipped
+
+### Setup
+
+1. Set `ENABLE_DRAGONFLY=true` in `.env`
+2. Run `setup-clusters.py` — the automation will provision the CA Secret and CRI-O mirrors
+3. Run `setup-applications.py` — deploys the Dragonfly ArgoCD Application via Sveltos
+
+For architecture, proxy rules, and tuning details, see [Dragonfly](../applications/infrastructure/dragonfly.md).
+
+---
+
 ## Sveltos Orchestration Layer
 
 ### What It Does
@@ -282,7 +321,7 @@ When `ENABLE_SVELTOS=false` (default):
    - Label the management cluster SveltosCluster with `cluster: homelab`
    - Create ConfigMaps from each Application CR in `argocd_applications/cluster-apps/infra/` and `platform/`
    - Apply ClusterProfile manifests from `sveltos_profiles/` with dependency ordering
-   - Conditionally include/exclude profiles for `ENABLE_ROOK` and `ENABLE_CUDA`
+   - Conditionally include/exclude profiles for `ENABLE_ROOK`, `ENABLE_CUDA`, and `ENABLE_DRAGONFLY`
 
 ### Directory Structure
 
@@ -291,10 +330,11 @@ Application CRs are organized by node placement:
 ```
 argocd_applications/cluster-apps/
 ├── infra.yaml                    ← Parent CR for infra tier (wave 1)
-├── infra/                        ← Infra-node apps (8 CRs, tolerate role=infra)
+├── infra/                        ← Infra-node apps (9 CRs, tolerate role=infra)
 │   ├── cert-manager.yaml
 │   ├── trust-manager.yaml
 │   ├── cloudnative-pg.yaml
+│   ├── dragonfly.yaml
 │   ├── harbor.yaml
 │   ├── keycloak.yaml
 │   ├── argocd-oidc.yaml
@@ -452,6 +492,7 @@ Secondary disks for Rook-Ceph OSDs are only attached to infra-role nodes during 
 | GPU passthrough | `ENABLE_CUDA` | `false` | IOMMU + vfio-pci on host, `compute: cuda` label |
 | Istio Ambient | `ENABLE_ISTIO` | `false` | `VM_CPU_TYPE=host` |
 | Sveltos | `ENABLE_SVELTOS` | `false` | None (replaces app-of-apps when enabled) |
+| Dragonfly | `ENABLE_DRAGONFLY` | `false` | `ENABLE_ROOK` (Rook-Ceph for PVCs), Harbor, cert-manager |
 | Gateway API | `ENABLE_GATEWAY_API` | `false` | Mutually exclusive with Ingress Controller mode |
 | API Server HA | `K8S_VIP` + `KUBE_VIP_VERSION` | unset / `0.8.7` | VIP must be outside DHCP range and LB pool |
 

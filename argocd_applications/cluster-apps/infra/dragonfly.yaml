@@ -1,0 +1,295 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dragonfly
+  namespace: argocd
+  labels:
+    category: infrastructure
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: homelab
+  sources:
+    - repoURL: https://dragonflyoss.github.io/helm-charts/
+      chart: dragonfly
+      targetRevision: 1.6.14
+      helm:
+        releaseName: dragonfly
+        valuesObject:
+          clusterDomain: cluster.local
+
+          # ============================================================
+          # Manager: single replica on infra nodes
+          # ============================================================
+          manager:
+            enable: true
+            replicas: 1
+            image:
+              registry: docker.io
+              repository: dragonflyoss/manager
+              tag: v2.4.2
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+            nodeSelector:
+              role: infra
+            tolerations:
+              - key: role
+                operator: Equal
+                value: infra
+                effect: NoSchedule
+            config:
+              console: true
+              server:
+                rest:
+                  tls:
+                    cert: ""
+                    key: ""
+              # Support preheat for Harbor with the homelab self-signed CA
+              job:
+                preheat:
+                  tls:
+                    insecureSkipVerify: false
+                    caCert: /etc/dragonfly-certs/root-ca.crt
+            extraVolumes:
+              - name: dragonfly-ca
+                secret:
+                  secretName: dragonfly-ca-cert
+            extraVolumeMounts:
+              - name: dragonfly-ca
+                mountPath: /etc/dragonfly-certs
+
+          # ============================================================
+          # Scheduler: single replica on infra nodes
+          # ============================================================
+          scheduler:
+            enable: true
+            replicas: 1
+            image:
+              registry: docker.io
+              repository: dragonflyoss/scheduler
+              tag: v2.4.2
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+            nodeSelector:
+              role: infra
+            tolerations:
+              - key: role
+                operator: Equal
+                value: infra
+                effect: NoSchedule
+            config:
+              console: true
+
+          # ============================================================
+          # Seed Client: single replica on infra nodes (super seed peer)
+          # Downloads from Harbor proxy cache and distributes to peers
+          # ============================================================
+          seedClient:
+            enable: true
+            replicas: 1
+            image:
+              registry: docker.io
+              repository: dragonflyoss/client
+              tag: v1.2.11
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "4"
+                memory: 4Gi
+            nodeSelector:
+              role: infra
+            tolerations:
+              - key: role
+                operator: Equal
+                value: infra
+                effect: NoSchedule
+            persistence:
+              enable: true
+              accessModes:
+                - ReadWriteOnce
+              size: 50Gi
+              storageClass: rook-ceph-block
+            config:
+              verbose: false
+              console: true
+              log:
+                level: info
+              proxy:
+                rules:
+                  - regex: 'blobs/sha256.*'
+                registryMirror:
+                  # Seed peers pull through Harbor proxy cache.
+                  # CRI-O path-encodes the Harbor project name so
+                  # /v2/dockerhub-cache/library/nginx/... maps to the
+                  # Harbor dockerhub-cache proxy cache project.
+                  addr: https://harbor.k8s.local
+                  cert: /etc/dragonfly-certs/root-ca.crt
+                  enableTaskIDBasedBlobDigest: true
+                disableBackToSource: false
+                prefetch: true
+                prefetchBandwidthLimit: 10GB
+              scheduler:
+                enableBackToSource: true
+            extraVolumes:
+              - name: dragonfly-ca
+                secret:
+                  secretName: dragonfly-ca-cert
+            extraVolumeMounts:
+              - name: dragonfly-ca
+                mountPath: /etc/dragonfly-certs
+
+          # ============================================================
+          # Client (dfdaemon): DaemonSet on ALL nodes
+          # Must tolerate control-plane, infra, and platform taints
+          # ============================================================
+          client:
+            enable: true
+            image:
+              registry: docker.io
+              repository: dragonflyoss/client
+              tag: v1.2.11
+            hostNetwork: true
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+            tolerations:
+              - key: role
+                operator: Exists
+                effect: NoSchedule
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
+            # dfinit disabled — CRI-O mirrors managed by Ansible
+            # (distribute_pki role writes registries.conf.d)
+            dfinit:
+              enable: false
+            config:
+              verbose: false
+              console: true
+              log:
+                level: info
+              proxy:
+                server:
+                  port: 4001
+                rules:
+                  - regex: 'blobs/sha256.*'
+                registryMirror:
+                  addr: https://harbor.k8s.local
+                  cert: /etc/dragonfly-certs/root-ca.crt
+                  enableTaskIDBasedBlobDigest: true
+                disableBackToSource: false
+                prefetch: true
+                prefetchBandwidthLimit: 10GB
+              scheduler:
+                enableBackToSource: true
+                scheduleTimeout: 3h
+              download:
+                protocol: tcp
+                pieceTimeout: 360s
+                concurrentPieceCount: 16
+              upload:
+                server:
+                  port: 4000
+              gc:
+                interval: 900s
+                policy:
+                  taskTTL: 720h
+                  distHighThresholdPercent: 90
+                  distLowThresholdPercent: 70
+            extraVolumes:
+              - name: dragonfly-ca
+                secret:
+                  secretName: dragonfly-ca-cert
+            extraVolumeMounts:
+              - name: dragonfly-ca
+                mountPath: /etc/dragonfly-certs
+
+          # ============================================================
+          # MySQL: single-replica on infra nodes (manager backend)
+          # ============================================================
+          mysql:
+            enable: true
+            image:
+              repository: bitnamilegacy/mysql
+            auth:
+              rootPassword: dragonfly-root
+              username: dragonfly
+              password: dragonfly
+              database: manager
+            primary:
+              service:
+                port: 3306
+              persistence:
+                enabled: true
+                size: 5Gi
+                storageClass: rook-ceph-block
+              tolerations:
+                - key: role
+                  operator: Equal
+                  value: infra
+                  effect: NoSchedule
+              nodeSelector:
+                role: infra
+
+          # ============================================================
+          # Redis: single-replica on infra nodes (scheduler backend)
+          # ============================================================
+          redis:
+            enable: true
+            image:
+              repository: bitnamilegacy/redis
+            auth:
+              enabled: true
+              password: dragonfly
+            master:
+              service:
+                ports:
+                  redis: 6379
+              persistence:
+                enabled: true
+                size: 2Gi
+                storageClass: rook-ceph-block
+              tolerations:
+                - key: role
+                  operator: Equal
+                  value: infra
+                  effect: NoSchedule
+              nodeSelector:
+                role: infra
+            replica:
+              replicaCount: 0
+    - repoURL: "git@gitlab.com:dsynapalos/cluster-setup.git"
+      targetRevision: main
+      path: argocd_applications/infrastructure/dragonfly
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dragonfly-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
