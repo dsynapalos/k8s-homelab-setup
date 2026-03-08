@@ -203,24 +203,27 @@
       chdir: "{{ role_path }}/files/.iso_workdir"  # Work from extracted ISO location
       creates: "{{ role_path }}/files/iso/ubuntu-{{ ubuntu_release_version }}-live-server-amd64-autoinstall.iso"  # Idempotent
 
-  # Remove temporary files after ISO creation (disk space cleanup)
-  # Requires become because 7z/xorriso create root-owned files
-  - name: cleanup iso workdir
-    ansible.builtin.file:
-      path: "{{ role_path }}/files/{{ item }}"
-      state: absent
-    become: true
-    loop:
-      - .iso_workdir
-      - "[BOOT]"
-
   # Conditional: Only build if at least one cluster needs it AND local copy doesn't exist
   when:
     - clusters_needing_iso | length > 0
     - not (role_path + '/files/iso/ubuntu-' + ubuntu_release_version + '-live-server-amd64-autoinstall.iso') is file
 
+# Remove temporary files after ISO creation (disk space cleanup).
+# Outside the block so the condition is evaluated independently — the block's
+# "not ... is file" flips to False after xorriso creates the ISO, which would
+# skip cleanup if it were inside the block.
+- name: cleanup iso workdir
+  ansible.builtin.file:
+    path: "{{ role_path }}/files/{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - .iso_workdir
+    - "[BOOT]"
+  when: clusters_needing_iso | length > 0
+
 # Upload the autoinstall ISO to every Proxmox cluster that is missing it.
-- name: "Upload ISO to Proxmox cluster {{ item.key }}"
+- name: Upload ISO to Proxmox cluster
   ansible.builtin.script: upload_to_proxmox.py
   args:
     executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"

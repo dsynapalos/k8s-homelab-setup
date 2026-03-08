@@ -21,7 +21,17 @@
   block:
   - name: Calculate stagger delay for host {{ inventory_hostname }}
     ansible.builtin.set_fact:
-      stagger_delay: "{{ ( (groups['proxmox'].index(inventory_hostname) + 3) * 5) | int }}"
+      stagger_delay: >-
+        {%- set my_cluster = vm_provision.proxmox_cluster -%}
+        {%- set clusters = groups['proxmox'] | map('extract', hostvars, ['vm_provision', 'proxmox_cluster']) | unique | sort | list -%}
+        {%- set num_clusters = clusters | length -%}
+        {%- set cluster_offset = clusters.index(my_cluster) -%}
+        {%- set same_cluster = [] -%}
+        {%- for h in groups['proxmox'] if hostvars[h].vm_provision.proxmox_cluster == my_cluster -%}
+          {%- if same_cluster.append(h) -%}{%- endif -%}
+        {%- endfor -%}
+        {%- set my_index = same_cluster.index(inventory_hostname) -%}
+        {{ ((my_index * num_clusters + cluster_offset) * 5) | int }}
       
   - name: Stagger VM creation to avoid Proxmox serial assignment conflicts
     ansible.builtin.wait_for:
@@ -54,9 +64,9 @@
       VM_NAMESERVER: "{{ vm_nameserver | default('1.1.1.1') }}"
       GPU_PCI_ADDRESS: "{{ lookup('env', 'GPU_PCI_ADDRESS') if labels.compute is defined and labels.compute == 'cuda' else '' }}"
       # Secondary disks for node VMs (Rook-Ceph storage, etc.)
-      # Only passed for k8s-nodes, not control plane
+      # Only passed for infra-role k8s-nodes (Rook OSD targets)
       # Uses per-cluster cached spec from localhost (set in setup_localhost play before this)
-      SECONDARY_DISKS: "{{ hostvars['localhost'].cached_secondary_disks_spec[vm_provision.proxmox_cluster] | default('') if inventory_hostname in groups['k8s-nodes'] else '' }}"
+      SECONDARY_DISKS: "{{ hostvars['localhost'].cached_secondary_disks_spec[vm_provision.proxmox_cluster] | default('') if (inventory_hostname in groups['k8s-nodes'] and labels.role | default('') == 'infra') else '' }}"
     delegate_to: localhost
     register: create_vm_result
     changed_when: "'Starting VM' in create_vm_result.stdout"
@@ -67,22 +77,58 @@
       vm_id: "{{ (create_vm_result.stdout | regex_findall('[Starting|Existing] VM\\s+(\\d+)') | first) | default('') }}"
     when: create_vm_result.rc == 0
 
-  - name: run python script to poll for IP assignment
-    ansible.builtin.script: poll_for_ip.py
-    args:
-      executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
-    no_log: true
-    environment:
-      PROXMOX_HOST: "{{ proxmox_api_host }}"
-      PROXMOX_USER: "{{ proxmox_api_user }}"
-      PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
-      PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
-      PROXMOX_NODE: "{{ proxmox_node }}"
-      VM_ID: "{{ vm_id }}"
-      POLL_TIMEOUT: "1800"
-    delegate_to: localhost
-    register: poll_for_ip_result
-    changed_when: poll_for_ip_result.rc != 0  # Only changed when IP not found
+  - name: Poll for IP assignment with autoinstall retry
+    block:
+      - name: run python script to poll for IP assignment
+        ansible.builtin.script: poll_for_ip.py
+        args:
+          executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+        no_log: true
+        environment:
+          PROXMOX_HOST: "{{ proxmox_api_host }}"
+          PROXMOX_USER: "{{ proxmox_api_user }}"
+          PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+          PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+          PROXMOX_NODE: "{{ proxmox_node }}"
+          VM_ID: "{{ vm_id }}"
+          POLL_TIMEOUT: "1200"
+        delegate_to: localhost
+        register: poll_for_ip_result
+        changed_when: poll_for_ip_result.rc != 0  # Only changed when IP not found
+
+    rescue:
+      # IP poll timed out — the autoinstall likely failed or the VM did not
+      # get a DHCP lease.  Re-trigger the autoinstall by booting from the ISO
+      # again and then re-poll for the IP after installation completes.
+      - name: "Autoinstall retry: reboot {{ inventory_hostname }} from ISO"
+        ansible.builtin.script: reinstall_vm.py
+        args:
+          executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+        no_log: true
+        environment:
+          PROXMOX_HOST: "{{ proxmox_api_host }}"
+          PROXMOX_USER: "{{ proxmox_api_user }}"
+          PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+          PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+          PROXMOX_NODE: "{{ proxmox_node }}"
+          VM_ID: "{{ vm_id }}"
+        delegate_to: localhost
+
+      - name: "Autoinstall retry: re-poll for IP assignment on {{ inventory_hostname }}"
+        ansible.builtin.script: poll_for_ip.py
+        args:
+          executable: "{{ playbook_dir }}/library/.venv_proxmox/bin/python3"
+        no_log: true
+        environment:
+          PROXMOX_HOST: "{{ proxmox_api_host }}"
+          PROXMOX_USER: "{{ proxmox_api_user }}"
+          PROXMOX_PASSWORD: "{{ proxmox_api_password }}"
+          PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+          PROXMOX_NODE: "{{ proxmox_node }}"
+          VM_ID: "{{ vm_id }}"
+          POLL_TIMEOUT: "1200"
+        delegate_to: localhost
+        register: poll_for_ip_result
 
   - name: set ansible_host fact
     set_fact:

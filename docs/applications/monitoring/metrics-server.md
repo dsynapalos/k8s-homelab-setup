@@ -40,6 +40,7 @@ Without Metrics Server, the Kubernetes API has no concept of actual resource con
 | kubelet | Scraped every 15s for node and pod resource usage via `/metrics/resource` |
 | HPA controller | Reads pod CPU/memory from the Metrics API to make scaling decisions |
 | `kubectl top` | Queries the Metrics API to display resource consumption |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

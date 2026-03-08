@@ -55,15 +55,20 @@
   register: cluster_storage_setup
   when: _cluster_disk_devices | length > 0
 
-# Count how many k8s-nodes target THIS Proxmox cluster
-- name: "Count node VMs for {{ pxcluster.key }}"
+# Count how many infra-role k8s-nodes target THIS Proxmox cluster
+# Only infra nodes receive secondary storage (for Rook-Ceph OSDs)
+- name: "Count infra node VMs for {{ pxcluster.key }}"
   ansible.builtin.set_fact:
     _cluster_node_count: >-
-      {{ groups['k8s-nodes'] | default([]) |
-         select('in', groups['proxmox']) |
-         map('extract', hostvars, ['vm_provision', 'proxmox_cluster']) |
-         select('equalto', pxcluster.key) |
-         list | length }}
+      {%- set count = [] -%}
+      {%- for host in groups['k8s-nodes'] | default([]) -%}
+        {%- if host in groups['proxmox']
+            and hostvars[host].vm_provision.proxmox_cluster == pxcluster.key
+            and hostvars[host].labels.role | default('') == 'infra' -%}
+          {%- set _ = count.append(1) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ count | length }}
 
 - name: "Calculate per-node disk sizes for {{ pxcluster.key }}"
   ansible.builtin.set_fact:

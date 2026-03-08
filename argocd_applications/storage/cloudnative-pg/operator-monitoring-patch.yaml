@@ -1,5 +1,6 @@
 # Adds Prometheus annotations so OTel Collector can auto-discover and scrape
 # the CloudNativePG operator metrics endpoint.
+# Also adds tolerations for scheduling on infra-tainted nodes.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,3 +13,9 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
+    spec:
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule

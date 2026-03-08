@@ -99,16 +99,16 @@ The automation auto-detects the Git provider from the SSH URL:
 
 ## Application Deployment Flow
 
-Applications are deployed through a **three-tier app-of-app-of-apps** pattern that gives ArgoCD full control over deployment ordering.
+Applications are deployed through a **three-tier app-of-app-of-apps** pattern that gives ArgoCD full control over deployment ordering. When `ENABLE_SVELTOS=true`, this pattern is replaced by Sveltos ClusterProfiles — see [Sveltos Orchestration Alternative](#sveltos-orchestration-alternative) below.
 
 ### How It Works
 
 1. The `bootstrap_applications` role applies a single parent manifest (`cluster-apps_manifest.yaml`) to the cluster
 2. This creates the **first-order** Application (`cluster-apps`) which reads `argocd_applications/cluster-apps/` with `directory.recurse: false`
-3. ArgoCD discovers two **second-order** Applications inside that directory: `cluster-platform` (sync wave 1) and `cluster-services` (sync wave 4)
+3. ArgoCD discovers two **second-order** Applications inside that directory: `cluster-infra` (sync wave 1) and `cluster-platform` (sync wave 4)
 4. Each second-order Application points to a subdirectory containing **third-order** Application manifests — the actual apps
-5. Sync waves at the second order ensure all platform apps are Healthy before any service apps begin deploying
-6. Within the platform tier, sync waves on individual apps enforce fine-grained ordering (cert-manager before Harbor before Keycloak)
+5. Sync waves at the second order ensure all infra apps are Healthy before any platform apps begin deploying
+6. Within the infra tier, sync waves on individual apps enforce fine-grained ordering (cert-manager before Harbor before Keycloak)
 
 **Implementation detail**: The role uses `kubernetes.core.k8s` with `definition: "{{ lookup('file', item) }}"` and iterates via `loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) }}"`. Currently there is only one manifest (`cluster-apps_manifest.yaml`), but the glob pattern keeps the role extensible.
 
@@ -143,19 +143,23 @@ The script defaults to "Progressing" (blocking the next wave) and only passes th
 
 ### Application Manifest Structure
 
+Applications are organized into two tiers based on which node role they target. Infra-tier apps run on nodes tainted `role=infra:NoSchedule`, platform-tier apps on nodes tainted `role=platform:NoSchedule`. Every pod spec must include a toleration matching its tier.
+
 ```
 argocd_applications/
 ├── cluster-apps/                          ← App-of-app-of-apps hierarchy
-│   ├── platform.yaml                      ← 2nd order: sync wave 1 (cluster-platform)
-│   ├── platform/                          ← 3rd order: platform apps
+│   ├── infra.yaml                         ← 2nd order: sync wave 1 (cluster-infra)
+│   ├── infra/                             ← 3rd order: infra apps (tolerate role=infra)
 │   │   ├── cert-manager.yaml              (wave 1)
 │   │   ├── trust-manager.yaml             (wave 1)
 │   │   ├── cloudnative-pg.yaml            (wave 1)
+│   │   ├── rook-ceph-operator.yaml        (wave 1, conditional: ENABLE_ROOK)
+│   │   ├── rook-ceph-cluster.yaml         (wave 1, conditional: ENABLE_ROOK)
 │   │   ├── harbor.yaml                    (wave 2)
 │   │   ├── keycloak.yaml                  (wave 3)
 │   │   └── argocd-oidc.yaml               (wave 3)
-│   ├── services.yaml                      ← 2nd order: sync wave 4 (cluster-services)
-│   └── services/                          ← 3rd order: service apps (no waves)
+│   ├── platform.yaml                      ← 2nd order: sync wave 4 (cluster-platform)
+│   └── platform/                          ← 3rd order: platform apps (tolerate role=platform, no waves)
 │       ├── alertmanager.yaml
 │       ├── dcgm-exporter.yaml
 │       ├── grafana.yaml
@@ -196,18 +200,18 @@ The three-tier structure enforces dependencies through sync waves at two levels:
 
 | Wave | Application | Purpose |
 |------|-------------|---------|
-| 1 | `cluster-platform` | Platform dependencies must all be Healthy first |
-| 4 | `cluster-services` | Monitoring and application stack, deploys only after platform is ready |
+| 1 | `cluster-infra` | Infrastructure dependencies must all be Healthy first |
+| 4 | `cluster-platform` | Monitoring and application stack, deploys only after infra is ready |
 
-**Third-order** (within platform tier):
+**Third-order** (within infra tier):
 
 | Wave | Applications | Why This Order |
-|------|-------------|---------------|
-| 1 | cert-manager, trust-manager, CloudNativePG | Infrastructure CRDs + operators must exist before dependents |
+|------|-------------|----------------|
+| 1 | cert-manager, trust-manager, CloudNativePG, rook-ceph-operator, rook-ceph-cluster | Infrastructure CRDs + operators must exist before dependents |
 | 2 | Harbor | Registry + proxy cache — must be operational before apps pulling from `harbor.k8s.local` |
 | 3 | Keycloak, ArgoCD OIDC | Identity provider after Harbor (image pulled from cache). OIDC patches `argocd-cm` + `argocd-rbac-cm` |
 
-Service-tier apps (wave 2 at the second order) have no internal ordering — they deploy simultaneously once the entire platform tier is Healthy.
+Platform-tier apps have no internal ordering — they deploy simultaneously once the entire infra tier is Healthy.
 
 ### ignoreDifferences and RespectIgnoreDifferences
 
@@ -224,6 +228,57 @@ ignoreDifferences:
 ```
 
 The `RespectIgnoreDifferences=true` syncOption ensures the diffing engine honors these exclusions.
+
+## Sveltos Orchestration Alternative
+
+When `ENABLE_SVELTOS=true`, the app-of-apps pattern described above is replaced by [Project Sveltos](https://projectsveltos.github.io/sveltos/) ClusterProfiles. ArgoCD remains the deployment engine — Sveltos only controls the ordering of Application CR creation.
+
+### How It Works
+
+1. The `bootstrap_sveltos` role installs Sveltos via Helm into the `projectsveltos` namespace
+2. Each Application CR from `cluster-apps/infra/` and `cluster-apps/platform/` is packaged into a ConfigMap in the `projectsveltos` namespace
+3. ClusterProfile manifests (one per app, stored in `sveltos_profiles/`) reference these ConfigMaps via `policyRefs` with `deploymentType: Remote`
+4. `dependsOn` fields encode the dependency graph — Sveltos only creates an Application CR once all its dependencies report Healthy
+5. `validateHealths` Lua scripts check Deployments, StatefulSets, or CephCluster status before unblocking dependents
+6. ArgoCD picks up the Application CRs and syncs workloads from Git as before
+
+### What Gets Disabled
+
+When Sveltos is enabled, the following legacy mechanisms are skipped:
+
+| Component | Condition | Why |
+|-----------|-----------|-----|
+| Lua health-check hack in `argocd-cm` | `ENABLE_SVELTOS != 'true'` | Sveltos `validateHealths` replaces sync-wave blocking |
+| `bootstrap_applications` role | `ENABLE_SVELTOS != 'true'` | No app-of-apps parent CR needed |
+| `bootstrap_rook_ceph` role | `ENABLE_SVELTOS != 'true'` | Rook ordering handled by Sveltos `dependsOn` chain |
+
+The sync-wave annotations on Application CRs are preserved (harmless when Sveltos is active) so the `ENABLE_SVELTOS=false` fallback works without modification.
+
+### Dependency Graph
+
+All apps that pull images from the Harbor proxy cache include `harbor` in their `dependsOn` list. The graph below shows full dependency edges:
+
+```
+cert-manager ──► trust-manager ──► harbor ◄── rook-ceph-cluster ◄── rook-ceph-operator
+                                      │
+                                      ├◄─ node-exporter
+                                      ├◄─ dcgm-exporter
+                                      ├◄─ kube-state-metrics
+                                      ├◄─ metrics-server
+                                      ├◄─ otel-collector
+                                      │
+cloudnative-pg ──► keycloak ──► argocd-oidc
+                       │
+                       ├──► grafana ◄── thanos ◄── otel-collector
+                       │                  │
+                       └──► matrix        ├──► alertmanager
+                              │           │
+                              └───────────┴──► matrix-bridge
+```
+
+Every app except `cert-manager`, `trust-manager`, `rook-ceph-operator`, `rook-ceph-cluster`, and `argocd-oidc` depends on `harbor` (directly or transitively). Apps like `node-exporter`, `dcgm-exporter`, `kube-state-metrics`, `metrics-server`, and `otel-collector` depend _only_ on `harbor`.
+
+For Sveltos configuration variables, see [Configuration — Sveltos](../infrastructure/configuration.md#sveltos-orchestration-layer).
 
 ## Configuration
 
@@ -265,4 +320,7 @@ kubectl get secret argocd-repo-ssh-key -n argocd
 - [ArgoCD Documentation](https://argo-cd.readthedocs.io/en/stable/)
 - [ArgoCD Application CRD](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/)
 - [ArgoCD Sync Waves](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/)
+- [GitLab Deploy Keys API](https://docs.gitlab.com/ee/api/deploy_keys.html)
+- [Project Sveltos Documentation](https://projectsveltos.github.io/sveltos/)
+- [Sveltos ClusterProfile Reference](https://projectsveltos.github.io/sveltos/addons/addons/)
 - [GitLab Deploy Keys API](https://docs.gitlab.com/ee/api/deploy_keys.html)

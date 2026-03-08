@@ -54,10 +54,27 @@ spec:
                 size: 5Gi
           database:
             type: internal
+            internal:
+              tolerations:
+              - key: role
+                operator: Equal
+                value: infra
+                effect: NoSchedule
           redis:
             type: internal
+            internal:
+              tolerations:
+              - key: role
+                operator: Equal
+                value: infra
+                effect: NoSchedule
           trivy:
             enabled: true
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
           internalTLS:
             enabled: false
           metrics:
@@ -65,7 +82,36 @@ spec:
             serviceMonitor:
               enabled: false
           caBundleSecretName: harbor-ca-bundle
+          registry:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
+          jobservice:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
+          portal:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
+          exporter:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
           core:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
             extraEnvVars:
               - name: CONFIG_OVERWRITE_JSON
                 value: '{"auth_mode":"oidc_auth","primary_auth_mode":true,"oidc_name":"Keycloak","oidc_endpoint":"https://keycloak.k8s.local/realms/homelab","oidc_client_id":"harbor","oidc_client_secret":"harbor-keycloak-secret","oidc_scope":"openid,profile,email,roles","oidc_groups_claim":"roles","oidc_admin_group":"cluster-admins","oidc_verify_cert":true,"oidc_auto_onboard":true,"oidc_user_claim":"preferred_username"}'

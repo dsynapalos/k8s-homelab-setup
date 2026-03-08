@@ -1,0 +1,16 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: argocd-oidc
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - keycloak
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-argocd-oidc
+      namespace: projectsveltos
+      deploymentType: Remote

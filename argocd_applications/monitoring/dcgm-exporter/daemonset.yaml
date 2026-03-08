@@ -22,6 +22,10 @@ spec:
       - key: nvidia.com/gpu
         operator: Exists
         effect: NoSchedule
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       runtimeClassName: nvidia
       containers:
       - name: dcgm-exporter

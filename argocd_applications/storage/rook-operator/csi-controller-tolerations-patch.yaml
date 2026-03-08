@@ -1,0 +1,14 @@
+# Allows the CSI controller manager to schedule on infra-tainted nodes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ceph-csi-controller-manager
+  namespace: rook-ceph
+spec:
+  template:
+    spec:
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule

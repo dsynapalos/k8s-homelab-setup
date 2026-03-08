@@ -8,6 +8,9 @@ resources:
   - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/common.yaml
   - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/csi-operator.yaml
   - https://raw.githubusercontent.com/rook/rook/v1.19.1/deploy/examples/operator.yaml
+  - csi-operator-config-patch.yaml
 
 patches:
   - path: operator-config-patch.yaml
+  - path: operator-tolerations-patch.yaml
+  - path: csi-controller-tolerations-patch.yaml

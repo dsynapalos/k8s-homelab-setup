@@ -19,6 +19,11 @@ spec:
         prometheus.io/port: "8888"
     spec:
       serviceAccountName: otel-collector
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: otel-collector
         image: harbor.k8s.local/dockerhub-cache/otel/opentelemetry-collector-contrib:0.145.0

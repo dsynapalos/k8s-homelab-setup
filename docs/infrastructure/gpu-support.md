@@ -56,6 +56,7 @@ A DaemonSet (`nvidia-device-plugin-daemonset`) in the `kube-system` namespace ru
 - Pods request GPUs via `resources.limits."nvidia.com/gpu": 1`
 - Adds node labels: `accelerator: nvidia-gpu`, `gpu-type: gtx-1060`
 - **Security context**: `allowPrivilegeEscalation: false`, drops all capabilities
+- **Tolerations**: Tolerates `nvidia.com/gpu` (device plugin taint) and all `role` taints via `operator: Exists` (GPU nodes have role taints like `role=platform:NoSchedule`)
 - **`FAIL_ON_INIT_ERROR=false`**: The plugin continues running even if GPU initialization fails (useful during node startup races)
 
 > **Note**: The `gpu-type: gtx-1060` label is currently hardcoded in the device plugin deployment, not auto-detected from the actual GPU hardware. If you have a different GPU, update the label in the DaemonSet manifest or remove it.

@@ -14,6 +14,74 @@
     src: https://raw.githubusercontent.com/argoproj/argo-cd/v{{ ARGOCD_VERSION }}/manifests/install.yaml
     namespace: argocd
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  retries: 5
+  delay: 15
+  register: argocd_install_result
+  until: argocd_install_result is success
+
+# Patch ArgoCD workloads to tolerate infra-tainted nodes.
+# ArgoCD's upstream manifests tolerate control-plane taints but not custom role taints.
+- name: add infra taint toleration to ArgoCD deployments
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ item }}"
+        namespace: argocd
+      spec:
+        template:
+          spec:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    merge_type: strategic-merge
+  loop:
+    - argocd-server
+    - argocd-repo-server
+    - argocd-redis
+    - argocd-dex-server
+    - argocd-notifications-controller
+    - argocd-applicationset-controller
+
+- name: add infra taint toleration to ArgoCD StatefulSet
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: argocd-application-controller
+        namespace: argocd
+      spec:
+        template:
+          spec:
+            tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    merge_type: strategic-merge
+  register: argocd_sts_toleration
+
+# The upstream manifest creates the application-controller pod without the
+# infra toleration.  The strategic-merge patch above updates the StatefulSet
+# template, but the existing Pending pod keeps the old spec.  Deleting it
+# lets the StatefulSet controller recreate it with the toleration.
+- name: restart application-controller pod to pick up toleration
+  kubernetes.core.k8s:
+    state: absent
+    kind: Pod
+    namespace: argocd
+    label_selectors:
+      - app.kubernetes.io/name=argocd-application-controller
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  when: argocd_sts_toleration.changed
 
 - name: configure argocd server for TLS termination at ingress
   kubernetes.core.k8s:
@@ -69,6 +137,7 @@
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   register: argocd_cm_health_check
   changed_when: argocd_cm_health_check.method == 'create'
+  when: lookup('env', 'ENABLE_SVELTOS') != 'true'
 
 - name: restart argocd-server to apply insecure mode
   kubernetes.core.k8s:

@@ -1,0 +1,14 @@
+# Allows the Rook operator to schedule on infra-tainted nodes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rook-ceph-operator
+  namespace: rook-ceph
+spec:
+  template:
+    spec:
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule

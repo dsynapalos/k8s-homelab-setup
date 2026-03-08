@@ -43,6 +43,10 @@ spec:
     # Prometheus metrics on port 2112
     - name: prometheus_server
       value: ":2112"
+    # Explicit kubeconfig path — kube-vip defaults to in-cluster auth
+    # (service account token) which doesn't exist for static pods.
+    - name: vip_kubeconfig
+      value: "/etc/kubernetes/admin.conf"
     securityContext:
       capabilities:
         add:

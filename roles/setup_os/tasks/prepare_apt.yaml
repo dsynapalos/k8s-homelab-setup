@@ -3,6 +3,10 @@
     name: '*'
     state: latest
     update_cache: yes
+  retries: 5
+  delay: 10
+  register: apt_upgrade_result
+  until: apt_upgrade_result is success
 
 - name: apt install prerequisites
   ansible.builtin.apt:
@@ -13,3 +17,7 @@
       - gpg
     state: latest
     update_cache: yes
+  retries: 5
+  delay: 10
+  register: apt_prereqs_result
+  until: apt_prereqs_result is success

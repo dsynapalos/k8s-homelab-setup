@@ -28,3 +28,6 @@ spec:
         - /spec/syncPolicy/automated
         - /metadata/annotations/argocd.argoproj.io~1refresh
         - /operation
+      jqPathExpressions:
+        - .spec.source.targetRevision
+        - .spec.sources[]?.targetRevision

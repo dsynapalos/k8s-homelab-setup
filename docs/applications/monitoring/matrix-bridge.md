@@ -71,8 +71,8 @@ Harbor webhook policies are registered during Harbor bootstrap (wave 2 PostSync)
 | Component | Relationship |
 |-----------|-------------|
 | [Alertmanager](alertmanager.md) | Sends firing/resolved alert webhooks to port 3000 |
-| [Harbor](../infrastructure/harbor.md) | Sends `SCANNING_COMPLETED` webhooks to port 3001 |
 | [Matrix](matrix.md) | Target homeserver for message delivery; source of `matrix-bot` Secret |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`); also sends `SCANNING_COMPLETED` webhooks to port 3001 |
 
 ## Troubleshooting
 

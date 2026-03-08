@@ -1,28 +1,31 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: rook-ceph-cluster
+  name: rook-ceph-operator
   namespace: argocd
+  labels:
+    category: storage
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: homelab
   source:
     repoURL: "git@gitlab.com:dsynapalos/cluster-setup.git"
     targetRevision: main
-    path: argocd_applications/storage/rook-cluster
+    path: argocd_applications/storage/rook-operator
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
   syncPolicy:
     automated:
-      prune: false  # Don't auto-prune storage cluster
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
     retry:
-      limit: 10
+      limit: 5
       backoff:
-        duration: 30s
+        duration: 5s
         factor: 2
-        maxDuration: 10m
+        maxDuration: 3m

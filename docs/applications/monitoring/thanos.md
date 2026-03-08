@@ -108,6 +108,7 @@ OTel Collector → remote write → Thanos Receive → S3 bucket (Rook-Ceph RGW)
 | [Grafana](grafana.md) | Queries Thanos Query as its primary datasource (`uid: prometheus`) |
 | [Alertmanager](alertmanager.md) | Receives firing alerts from Thanos Ruler |
 | [Rook-Ceph Cluster](../storage/rook-cluster.md) | S3 bucket for metric storage, block PVCs for local data |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

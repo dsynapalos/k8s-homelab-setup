@@ -1,0 +1,34 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: rook-ceph-operator
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  # No dependsOn — standalone CRD operator
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-rook-ceph-operator
+      namespace: projectsveltos
+      deploymentType: Remote
+  validateHealths:
+    - name: rook-operator-deployment
+      featureID: Resources
+      group: apps
+      version: v1
+      kind: Deployment
+      namespace: rook-ceph
+      script: |
+        function evaluate()
+          hs = {}
+          hs.healthy = false
+          hs.message = "available replicas not matching requested replicas"
+          if obj.status ~= nil and obj.status.availableReplicas ~= nil then
+            if obj.status.availableReplicas == obj.spec.replicas then
+              hs.healthy = true
+            end
+          end
+          return hs
+        end

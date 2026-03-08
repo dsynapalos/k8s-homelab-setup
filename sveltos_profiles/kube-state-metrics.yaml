@@ -1,0 +1,16 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: kube-state-metrics
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-kube-state-metrics
+      namespace: projectsveltos
+      deploymentType: Remote

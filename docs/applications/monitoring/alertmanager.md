@@ -19,7 +19,7 @@ Metrics without alerting are just dashboards you'd need to watch 24/7. Alertmana
 - Single receiver: `matrix` → webhook at `http://matrix-bridge:3000/alerts/default`
 - `send_resolved: true` — sends recovery notifications when alerts clear
 
-**ArgoCD deployment**: Services tier of the app-of-app-of-apps hierarchy. Deploys simultaneously with other service-tier apps after all platform-tier apps are Healthy.
+**ArgoCD deployment**: Platform tier of the app-of-app-of-apps hierarchy. Deploys simultaneously with other platform-tier apps after all infra-tier apps are Healthy.
 
 ## Alert Flow
 
@@ -42,6 +42,7 @@ Thanos Ruler evaluates rules (via Thanos Query) → Alertmanager groups & dedupl
 |-----------|-------------|
 | [Thanos Ruler](thanos.md#thanos-ruler-statefulset) | Sends firing/resolved alerts (replaced Prometheus rule evaluation) |
 | [Matrix Bridge](matrix-bridge.md) | Receives webhooks and translates to Matrix messages |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

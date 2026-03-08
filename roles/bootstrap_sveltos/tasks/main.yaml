@@ -1,0 +1,280 @@
+---
+- name: Add Sveltos Helm repo
+  kubernetes.core.helm_repository:
+    name: projectsveltos
+    repo_url: https://projectsveltos.github.io/helm-charts
+  delegate_to: localhost
+  retries: 5
+  delay: 15
+  register: sveltos_repo_result
+  until: sveltos_repo_result is success
+
+- name: Install Sveltos
+  kubernetes.core.helm:
+    name: projectsveltos
+    chart_ref: projectsveltos/projectsveltos
+    release_namespace: projectsveltos
+    create_namespace: true
+    chart_version: "{{ lookup('env', 'SVELTOS_VERSION') }}"
+    wait: true
+    wait_timeout: "5m0s"
+    kubeconfig: "~/.kube/config"
+    values:
+      # Sveltos controllers are infrastructure components — schedule on infra nodes.
+      # The chart requires per-component tolerations (no global key).
+      accessManager:
+        tolerations: &infra-toleration
+          - key: role
+            operator: Equal
+            value: infra
+            effect: NoSchedule
+      addonController:
+        tolerations: *infra-toleration
+        driftDetectionManagerPatchConfigMap:
+          data:
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: drift-detection-manager
+              spec:
+                template:
+                  spec:
+                    tolerations:
+                    - key: role
+                      operator: Equal
+                      value: infra
+                      effect: NoSchedule
+      classifierManager:
+        tolerations: *infra-toleration
+        agentPatchConfigMap:
+          data:
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sveltos-agent-manager
+              spec:
+                template:
+                  spec:
+                    tolerations:
+                    - key: role
+                      operator: Equal
+                      value: infra
+                      effect: NoSchedule
+      eventManager:
+        tolerations: *infra-toleration
+      hcManager:
+        tolerations: *infra-toleration
+      scManager:
+        tolerations: *infra-toleration
+      shardController:
+        tolerations: *infra-toleration
+      techsupportController:
+        tolerations: *infra-toleration
+      mcpServer:
+        tolerations: *infra-toleration
+      crdManagerJob:
+        crdManager:
+          tolerations: *infra-toleration
+      registerMgmtClusterJob:
+        registerMgmtCluster:
+          tolerations: *infra-toleration
+  delegate_to: localhost
+  retries: 5
+  delay: 15
+  register: sveltos_install_result
+  until: sveltos_install_result is success
+
+- name: Wait for Sveltos addon-controller to be ready
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: addon-controller
+    namespace: projectsveltos
+    kubeconfig: "~/.kube/config"
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 120
+  delegate_to: localhost
+
+# The addon-controller needs full CRUD on ArgoCD Application CRs to deploy
+# them via ClusterProfile policyRefs.  The Helm chart's built-in
+# addon-controller-role only grants get/list/watch on wildcard resources.
+# Patch the -extra ClusterRole that the chart creates for this purpose.
+- name: Grant addon-controller access to ArgoCD Application resources
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: addon-controller-role-extra
+      rules:
+        - apiGroups:
+            - argoproj.io
+          resources:
+            - applications
+            - appprojects
+          verbs:
+            - create
+            - delete
+            - get
+            - list
+            - patch
+            - update
+            - watch
+    kubeconfig: "~/.kube/config"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
+  delegate_to: localhost
+
+- name: Ensure mgmt namespace exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: mgmt
+    kubeconfig: "~/.kube/config"
+  delegate_to: localhost
+
+- name: Label management cluster
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: lib.projectsveltos.io/v1beta1
+      kind: SveltosCluster
+      metadata:
+        name: mgmt
+        namespace: mgmt
+        labels:
+          cluster: homelab
+    kubeconfig: "~/.kube/config"
+  delegate_to: localhost
+  retries: 5
+  delay: 10
+  register: label_result
+  until: label_result is not failed
+
+- name: Set target revision
+  ansible.builtin.set_fact:
+    argocd_target_revision: "{{ lookup('env', 'ARGOCD_TARGET_REVISION') | default('main', true) }}"
+
+- name: Collect infra Application CR files
+  ansible.builtin.find:
+    paths:
+      - "{{ playbook_dir }}/argocd_applications/cluster-apps/infra"
+    patterns: "*.yaml"
+  register: infra_app_cr_files
+  delegate_to: localhost
+
+- name: Collect platform Application CR files
+  ansible.builtin.find:
+    paths:
+      - "{{ playbook_dir }}/argocd_applications/cluster-apps/platform"
+    patterns: "*.yaml"
+  register: platform_app_cr_files
+  delegate_to: localhost
+
+- name: Set combined Application CR file list
+  ansible.builtin.set_fact:
+    all_app_cr_files: "{{ infra_app_cr_files.files + platform_app_cr_files.files }}"
+
+- name: Filter conditional Application CRs
+  ansible.builtin.set_fact:
+    app_cr_files_filtered: >-
+      {{
+        all_app_cr_files
+        | rejectattr('path', 'search', 'rook-ceph-operator')
+        | rejectattr('path', 'search', 'rook-ceph-cluster')
+        | rejectattr('path', 'search', 'dcgm-exporter')
+        | list
+      }}
+
+- name: Add Rook Application CRs when enabled
+  ansible.builtin.set_fact:
+    app_cr_files_filtered: >-
+      {{
+        app_cr_files_filtered +
+        (all_app_cr_files | selectattr('path', 'search', 'rook-ceph-operator') | list) +
+        (all_app_cr_files | selectattr('path', 'search', 'rook-ceph-cluster') | list)
+      }}
+  when: lookup('env', 'ENABLE_ROOK') == 'true'
+
+- name: Add DCGM exporter Application CR when enabled
+  ansible.builtin.set_fact:
+    app_cr_files_filtered: >-
+      {{
+        app_cr_files_filtered +
+        (all_app_cr_files | selectattr('path', 'search', 'dcgm-exporter') | list)
+      }}
+  when: lookup('env', 'ENABLE_CUDA') == 'true'
+
+- name: Create ConfigMaps from Application CRs
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "sveltos-app-{{ item.path | basename | regex_replace('\\.yaml$', '') }}"
+        namespace: projectsveltos
+      data:
+        application.yaml: "{{ lookup('file', item.path) | regex_replace('targetRevision: main', 'targetRevision: ' + argocd_target_revision) }}"
+    kubeconfig: "~/.kube/config"
+  loop: "{{ app_cr_files_filtered }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: localhost
+
+- name: Collect ClusterProfile manifests
+  ansible.builtin.find:
+    paths:
+      - "{{ playbook_dir }}/sveltos_profiles"
+    patterns: "*.yaml"
+  register: profile_files
+  delegate_to: localhost
+
+- name: Filter conditional ClusterProfiles
+  ansible.builtin.set_fact:
+    profile_files_filtered: >-
+      {{
+        profile_files.files
+        | rejectattr('path', 'search', 'rook-ceph-operator')
+        | rejectattr('path', 'search', 'rook-ceph-cluster')
+        | rejectattr('path', 'search', 'dcgm-exporter')
+        | list
+      }}
+
+- name: Add Rook ClusterProfiles when enabled
+  ansible.builtin.set_fact:
+    profile_files_filtered: >-
+      {{
+        profile_files_filtered +
+        (profile_files.files | selectattr('path', 'search', 'rook-ceph-operator') | list) +
+        (profile_files.files | selectattr('path', 'search', 'rook-ceph-cluster') | list)
+      }}
+  when: lookup('env', 'ENABLE_ROOK') == 'true'
+
+- name: Add DCGM exporter ClusterProfile when enabled
+  ansible.builtin.set_fact:
+    profile_files_filtered: >-
+      {{
+        profile_files_filtered +
+        (profile_files.files | selectattr('path', 'search', 'dcgm-exporter') | list)
+      }}
+  when: lookup('env', 'ENABLE_CUDA') == 'true'
+
+- name: Apply ClusterProfile manifests
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ item.path }}"
+    kubeconfig: "~/.kube/config"
+  loop: "{{ profile_files_filtered }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: localhost

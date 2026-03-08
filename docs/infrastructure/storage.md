@@ -34,6 +34,8 @@ If your Proxmox host already runs Ceph (common in Proxmox clusters), this is the
 
 **Deployment**: Ceph CSI CephFS Helm chart in the `ceph-csi-cephfs` namespace.
 
+**Tolerations**: The provisioner (Deployment) tolerates `role=infra:NoSchedule` to schedule on infra nodes. The nodeplugin (DaemonSet) tolerates all `role` taints with `operator: Exists` since it must run on every worker node to mount CephFS volumes into pods.
+
 **Helm `cephconf`**: Injects monitor host and authentication requirements into `ceph.conf` on each node:
 - `mon_host = <CEPH_MONITOR>`
 - `auth_cluster_required = cephx`, `auth_service_required = cephx`, `auth_client_required = cephx`
@@ -128,8 +130,8 @@ Operator sync policy: `prune: false` (never auto-delete operator), `selfHeal: tr
 | **Monitor (MON)** | 3 instances, `allowMultiplePerNode: true`, `system-node-critical` priority | Maintains cluster map; quorum requires majority |
 | **Manager (MGR)** | 2 instances (active + standby), `pg_autoscaler` enabled | Automatic placement group tuning |
 | **Dashboard** | HTTP (no SSL), port 8443 | Local cluster access only |
-| **Storage discovery** | `useAllNodes: true`, `useAllDevices: false` | All worker nodes with `deviceFilter: "^sd[b-z]"` (excludes sda OS disk); placement excludes control plane |
-| **Placement** | Node affinity excludes control plane | `node-role.kubernetes.io/control-plane: DoesNotExist` |
+| **Storage discovery** | `useAllNodes: true`, `useAllDevices: false` | `deviceFilter: "^sd[b-z]"` (excludes sda OS disk), discovers on all nodes but placement restricts to infra |
+| **Placement** | Node affinity targets infra role + toleration | `role: infra` affinity + `role=infra:NoSchedule` toleration |
 | **Resources** | 250m CPU, 512Mi–1Gi memory per component | Conservative for test clusters; OSD: 10m/2Gi req, 4Gi limit |
 | **Log collector** | Enabled, 24h periodicity | Collects Ceph daemon logs |
 | **Crash collector** | Enabled | Captures crash dumps for debugging |
@@ -146,7 +148,7 @@ osd_pool_default_min_size = 1
 
 ### Secondary Disk Provisioning
 
-Before Rook can use storage, physical disks on the Proxmox host need to become virtual disks inside worker VMs. The `setup_localhost` role handles this automatically:
+Before Rook can use storage, physical disks on the Proxmox host need to become virtual disks inside infra-role worker VMs. The `setup_localhost` role handles this automatically:
 
 1. **Discovery**: `discover_storage.py` queries the Proxmox API for each disk's `used` field:
    - Disks with no `used` field = available raw disks
@@ -158,15 +160,15 @@ Before Rook can use storage, physical disks on the Proxmox host need to become v
    - Registered in Proxmox with `content: images,rootdir` (VM disks + containers)
    - Restricted to the specific Proxmox node
    - Waits for async Proxmox UPID task completion before proceeding
-3. **Allocation**: `calculate_disk_allocation.yaml` divides capacity equally among worker nodes
-4. **Attachment**: Virtual disks appear as `/dev/sdb`, `/dev/sdc`, etc. inside VMs (matching Rook's `deviceFilter: "^sd[b-z]"`)
+3. **Allocation**: `calculate_disk_allocation.yaml` divides capacity equally among infra-role worker nodes (nodes with `role: infra` label)
+4. **Attachment**: Virtual disks are only attached to infra-role VMs during provisioning (the `provision_infra` role checks `labels.role == 'infra'`). They appear as `/dev/sdb`, `/dev/sdc`, etc. inside VMs (matching Rook's `deviceFilter: "^sd[b-z]"`)
 
 **Example allocations**:
 
-| Proxmox Disks | Worker Nodes | Each Node Gets |
+| Proxmox Disks | Infra Nodes | Each Node Gets |
 |--------------|-------------|----------------|
-| 2 × (477G, 447G) | 1 node | 2 disks (477G, 447G) |
-| 2 × (477G, 447G) | 2 nodes | 2 disks each (238G, 223G) |
+| 2 × (477G, 447G) | 1 infra node | 2 disks (477G, 447G) |
+| 2 × (477G, 447G) | 2 infra nodes | 2 disks each (238G, 223G) |
 
 ### StorageClasses Created
 

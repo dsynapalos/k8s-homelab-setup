@@ -16,6 +16,11 @@ spec:
         app: keycloak
     spec:
       serviceAccountName: keycloak
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule
       containers:
       - name: keycloak
         image: harbor.k8s.local/quay-cache/keycloak/keycloak:26.5.3

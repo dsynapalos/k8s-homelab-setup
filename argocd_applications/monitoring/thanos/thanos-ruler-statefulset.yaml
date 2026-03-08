@@ -19,6 +19,11 @@ spec:
       serviceAccountName: thanos
       securityContext:
         fsGroup: 65534
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: thanos-ruler
         image: harbor.k8s.local/quay-cache/thanos/thanos:v0.41.0

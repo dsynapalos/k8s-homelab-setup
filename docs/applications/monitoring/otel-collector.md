@@ -158,6 +158,7 @@ The collector merges `receivers.otlp`, `processors.batch`, `exporters.otlp/jaege
 | [kube-state-metrics](kube-state-metrics.md) | Scraped for Kubernetes object state metrics via `kubernetes-services` annotation-based discovery |
 | [DCGM Exporter](dcgm-exporter.md) | Scraped for GPU metrics via pod annotation discovery (when `ENABLE_CUDA=true`) |
 | [Alertmanager](alertmanager.md) | Not directly connected — the OTel Collector's Prometheus receiver does not support `rule_files` or `alertmanagers`. Alert rule evaluation is handled by [Thanos Ruler](thanos.md#thanos-ruler-statefulset), which queries metrics through Thanos Query and sends firing alerts to Alertmanager. |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

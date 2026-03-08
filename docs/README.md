@@ -132,10 +132,10 @@ Platform-level concerns that exist regardless of which applications are deployed
 
 | Document | Purpose |
 |---|---|
-| [architecture.md](infrastructure/architecture.md) | High-level project map — entry points, Ansible roles, execution phases, data flow between components. |
-| [configuration.md](infrastructure/configuration.md) | Reference for every `.env` variable. Organized by feature flag (`ENABLE_*`) with defaults and required values. |
+| [architecture.md](infrastructure/architecture.md) | High-level project map — entry points, Ansible roles, execution phases, node role isolation (taints/tolerations), data flow between components. |
+| [configuration.md](infrastructure/configuration.md) | Reference for every `.env` variable. Organized by feature flag (`ENABLE_*`) with defaults and required values. Includes node role isolation (taint/toleration strategy). |
 | [networking.md](infrastructure/networking.md) | Cilium CNI (eBPF, WireGuard, L2 announcements, Gateway API), Istio Ambient (ztunnel, HBONE, mTLS), ingress routing. |
-| [storage.md](infrastructure/storage.md) | Two storage paths: external CephFS CSI driver and in-cluster Rook-Ceph. Comparison, configuration, kernel module setup. |
+| [storage.md](infrastructure/storage.md) | Two storage paths: external CephFS CSI driver and in-cluster Rook-Ceph. Comparison, configuration, infra-node-only storage isolation, kernel module setup. |
 | [gpu-support.md](infrastructure/gpu-support.md) | NVIDIA PCI passthrough from Proxmox, LTS driver selection logic, CRI-O runtime handler, RuntimeClass, device plugin. |
 | [security.md](infrastructure/security.md) | Vulnerability scanning (Trivy), signature verification (Cosign), CVE reporting CronJob (weekly CSV to Matrix), real-time webhook notifications. |
 | [troubleshooting.md](infrastructure/troubleshooting.md) | Cross-cutting debug guide. Owns General Debugging, VM Provisioning, Kubernetes Cluster, and ArgoCD sections. Links to per-app troubleshooting sections for everything else. |
@@ -147,7 +147,7 @@ How code and configuration get from your machine into the cluster.
 | Document | Purpose |
 |---|---|
 | [ansible-pipeline.md](cicd/ansible-pipeline.md) | Python entry points (`setup-clusters.py`, `setup-applications.py`, `cleanup-clusters.py`, `expose-ca.py`), Ansible Runner mechanics, playbook structure, artifact debugging. |
-| [gitops.md](cicd/gitops.md) | ArgoCD setup — app-of-app-of-apps deployment ordering, SSH deploy keys, sync waves, Application health checks. |
+| [gitops.md](cicd/gitops.md) | ArgoCD setup — app-of-app-of-apps deployment ordering, SSH deploy keys, sync waves, Application health checks. Sveltos orchestration alternative (`ENABLE_SVELTOS`). |
 
 ### Applications (`applications/`)
 
@@ -247,7 +247,7 @@ Infrastructure docs are longer-form and may have additional sections (e.g., subs
 
 ### When to create a new doc
 
-1. A new ArgoCD application is added → create `docs/applications/<category>/<app>.md` following the skeleton above, add the Application manifest to the appropriate tier in `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`.
+1. A new ArgoCD application is added → create `docs/applications/<category>/<app>.md` following the skeleton above, add the Application manifest to the appropriate tier in `argocd_applications/cluster-apps/infra/` or `argocd_applications/cluster-apps/platform/`.
 2. A new infrastructure concern is added (e.g., a backup system) → create `docs/infrastructure/<topic>.md`.
 3. A new CI/CD mechanism is added → create `docs/cicd/<mechanism>.md`.
 4. Update this index (`docs.md`) with the new entry in the catalog table.

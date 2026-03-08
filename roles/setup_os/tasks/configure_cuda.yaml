@@ -8,6 +8,10 @@
       - ubuntu-drivers-common
     state: present
     update_cache: yes
+  retries: 5
+  delay: 10
+  register: ubuntu_drivers_result
+  until: ubuntu_drivers_result is success
 
 - name: check if any NVIDIA driver is already installed
   ansible.builtin.shell: dpkg -l | grep -E 'nvidia-driver-[0-9]+' | awk '{print $2}' | head -1
@@ -32,7 +36,10 @@
     pkg:
       - "{{ installed_nvidia_driver.stdout if installed_nvidia_driver.stdout else preferred_driver }}"
     state: present
+  retries: 5
+  delay: 10
   register: nvidia_driver_installed
+  until: nvidia_driver_installed is success
 
 - name: check if NVIDIA driver is loaded
   ansible.builtin.command: nvidia-smi
@@ -45,6 +52,10 @@
     url: https://nvidia.github.io/libnvidia-container/gpgkey
     keyring: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
     state: present
+  retries: 5
+  delay: 10
+  register: nvidia_gpg_result
+  until: nvidia_gpg_result is success
 
 - name: detect distribution for NVIDIA Container Toolkit
   ansible.builtin.shell: '. /etc/os-release; echo $ID$VERSION_ID'
@@ -65,6 +76,10 @@
     pkg:
       - nvidia-container-toolkit
     state: present
+  retries: 5
+  delay: 10
+  register: nvidia_toolkit_result
+  until: nvidia_toolkit_result is success
 
 - name: create proper CRI-O nvidia runtime config
   ansible.builtin.copy:

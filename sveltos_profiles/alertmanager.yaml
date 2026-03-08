@@ -1,0 +1,17 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: alertmanager
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - thanos
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-alertmanager
+      namespace: projectsveltos
+      deploymentType: Remote

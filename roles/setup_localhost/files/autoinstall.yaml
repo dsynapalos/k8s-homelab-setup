@@ -3,6 +3,49 @@ locale: en_US.UTF-8
 keyboard:
   layout: us
   variant: ''
+# Fix for subiquity "network send update change enp6s18" infinite loop AND
+# curtin "apt-get install" failures (exit status 100) during autoinstall.
+#
+# Problem 1: On Proxmox with virtio NICs, subiquity's network controller can
+#   get stuck re-processing link-state change events from the vNIC.
+# Problem 2: curtin runs apt in the LIVE installer environment. The apt.conf
+#   section only applies to the TARGET system, so the live apt has zero retries.
+#   If network isn't fully ready when curtin runs, package installs fail.
+#
+# Fix: early-commands run BEFORE subiquity probes network devices. We:
+#   1. Wait for the NIC + carrier
+#   2. Run dhclient to get an actual DHCP lease
+#   3. Verify DNS resolution works (proves end-to-end connectivity)
+#   4. Apply apt retry config to the LIVE system so curtin inherits retries
+early-commands:
+  # 1. Wait for the virtio NIC to appear and carrier signal
+  - |
+    for i in $(seq 1 30); do
+      iface=$(ls /sys/class/net/ | grep -m1 '^en')
+      if [ -n "$iface" ]; then
+        ip link set "$iface" up 2>/dev/null || true
+        [ "$(cat /sys/class/net/$iface/carrier 2>/dev/null)" = "1" ] && break
+      fi
+      sleep 1
+    done
+  # 2. Acquire DHCP lease so we have actual connectivity (not just link)
+  - |
+    iface=$(ls /sys/class/net/ | grep -m1 '^en')
+    if [ -n "$iface" ]; then
+      dhclient -1 -timeout 30 "$iface" 2>/dev/null || true
+    fi
+  # 3. Wait for DNS/connectivity to be working (up to 60s)
+  - |
+    for i in $(seq 1 60); do
+      if getent hosts archive.ubuntu.com >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
+  # 4. Apply apt retry config to the LIVE system so curtin's apt-get has retries
+  - echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/99-retries
+  - echo 'Acquire::http::Timeout "120";' >> /etc/apt/apt.conf.d/99-retries
+  - echo 'Acquire::https::Timeout "120";' >> /etc/apt/apt.conf.d/99-retries
 ssh:
   install-server: true
   allow-pw: true
@@ -12,6 +55,17 @@ identity:
   hostname: "ubuntu"
   password: "$1$3Pga9EsA$QRPZxVsxdt86fooni/RQG1"
   username: "ubuntu"
+apt:
+  # Resilience against intermittent network failures during package downloads.
+  # The default apt configuration has no retries — a single connection timeout
+  # causes curtin's "apt-get install linux-generic" to fail and crash the entire
+  # autoinstall. These settings add retry logic with generous timeouts.
+  conf: |
+    Acquire::Retries "5";
+    Acquire::http::Timeout "120";
+    Acquire::https::Timeout "120";
+    Acquire::ftp::Timeout "120";
+    Acquire::Queue-Mode "access";
 packages:
   - qemu-guest-agent
 storage:
@@ -20,3 +74,7 @@ storage:
     sizing-policy: all
     match:
       path: /dev/sda
+late-commands:
+  # Persist apt retry settings into the installed system so post-install
+  # package operations (setup_os role, etc.) are also resilient.
+  - echo 'Acquire::Retries "3";' > /target/etc/apt/apt.conf.d/80-retries

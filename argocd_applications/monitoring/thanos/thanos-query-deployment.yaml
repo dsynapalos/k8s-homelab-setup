@@ -16,6 +16,11 @@ spec:
         app: thanos-query
     spec:
       serviceAccountName: thanos
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: thanos-query
         image: harbor.k8s.local/quay-cache/thanos/thanos:v0.41.0

@@ -3,7 +3,7 @@
   delegate_to: localhost
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('file', role_path + '/files/rook_operator_manifest.yaml') }}"
+    definition: "{{ lookup('file', playbook_dir + '/argocd_applications/cluster-apps/infra/rook-ceph-operator.yaml') }}"
     server_side_apply:
       field_manager: ansible
       force_conflicts: true
@@ -26,7 +26,7 @@
   delegate_to: localhost
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('file', role_path + '/files/rook_cluster_manifest.yaml') }}"
+    definition: "{{ lookup('file', playbook_dir + '/argocd_applications/cluster-apps/infra/rook-ceph-cluster.yaml') }}"
     server_side_apply:
       field_manager: ansible
       force_conflicts: true

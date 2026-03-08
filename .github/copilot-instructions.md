@@ -15,8 +15,8 @@
 
 | Script | Playbook | Duration | Destructive? | When to use |
 |--------|----------|----------|-------------|-------------|
-| `setup-clusters.py` | `setup_cluster.yaml` (15 plays) | ~26 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
-| `setup-applications.py` | `setup_applications.yaml` (1 play) | Seconds | No | App manifest changes, GitOps iteration |
+| `setup-clusters.py` | `setup_cluster.yaml` (16 plays) | ~26 min | Yes (creates/destroys VMs) | New clusters, infra changes, adding nodes |
+| `setup-applications.py` | `setup_applications.yaml` (2 plays, 1 conditional) | Seconds | No | App manifest changes, GitOps iteration |
 | `cleanup-clusters.py` | `cleanup_cluster.yaml` | ~2 min | Yes (destroys everything) | Full teardown, start over |
 | `expose-ca.py` | `expose_ca.yaml` (1 play) | Seconds | No | Re-display root CA trust scripts |
 
@@ -57,8 +57,9 @@ All Ansible variables use `{{ lookup("env", "VAR_NAME") }}`. No defaults in role
 - `ENABLE_CUDA` — NVIDIA GPU passthrough + drivers
 - `ENABLE_ISTIO` — Istio Ambient service mesh
 - `ENABLE_GATEWAY_API` — Cilium Gateway API mode (vs Ingress Controller)
+- `ENABLE_SVELTOS` — Sveltos orchestration layer (replaces app-of-apps hierarchy)
 
-**Pinned versions** (in `example.env`): `K8S_VERSION`, `CRIO_VERSION`, `CILIUM_VERSION`, `ISTIO_VERSION`, `CEPH_CSI_VERSION`, `ROOK_VERSION`. Never hardcode versions in roles — always read from `.env`.
+**Pinned versions** (in `example.env`): `K8S_VERSION`, `CRIO_VERSION`, `CILIUM_VERSION`, `ISTIO_VERSION`, `CEPH_CSI_VERSION`, `ROOK_VERSION`, `SVELTOS_VERSION`, `ARGOCD_TARGET_REVISION`. Never hardcode versions in roles — always read from `.env`.
 
 → Full variable reference: `docs/infrastructure/configuration.md`
 
@@ -75,14 +76,15 @@ Play  7: k8s (all)     → bootstrap_cillium
 Play  8: k8s-control   → bootstrap_istio_ambient
 Play  9: localhost      → bootstrap_nvidia_device_plugin
 Play 10: localhost      → bootstrap_argocd
-Play 11: localhost      → bootstrap_pki_secret
-Play 12: localhost      → bootstrap_harbor_secret
-Play 13: localhost      → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
-Play 14: localhost      → bootstrap_applications
-Play 15: localhost      → display root CA trust instructions
+Play 11: localhost      → bootstrap_sveltos
+Play 12: localhost      → bootstrap_pki_secret
+Play 13: localhost      → bootstrap_harbor_secret
+Play 14: localhost      → bootstrap_cephfs_storage_class / bootstrap_rook_ceph
+Play 15: localhost      → bootstrap_applications
+Play 16: localhost      → display root CA trust instructions
 ```
 
-Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `ENABLE_CEPH`/`ENABLE_ROOK`. Plays 9-15 target `localhost` for K8s API calls via kubeconfig.
+Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 11 on `ENABLE_SVELTOS`, Play 14 on `ENABLE_CEPH`/`ENABLE_ROOK`. Plays 9-16 target `localhost` for K8s API calls via kubeconfig.
 
 → Full execution flow: `docs/cicd/ansible-pipeline.md`
 
@@ -95,7 +97,7 @@ Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `EN
 ├── inventory/                       ← Ansible inventories (k8s.yaml, localhost.yaml)
 ├── roles/                           ← Ansible roles (one per function)
 ├── argocd_applications/             ← Kustomize manifests deployed via ArgoCD
-│   ├── cluster-apps/                ← App-of-app-of-apps hierarchy (platform + services)
+│   ├── cluster-apps/                ← App-of-app-of-apps hierarchy (infra + platform tiers)
 │   ├── monitoring/                  ← Prometheus, Grafana, Thanos, Alertmanager, Matrix, etc.
 │   ├── security/                    ← cert-manager, trust-manager, Keycloak, ArgoCD OIDC
 │   ├── infrastructure/              ← Harbor container registry
@@ -105,6 +107,7 @@ Play 8 is conditional on `ENABLE_ISTIO`, Play 9 on `ENABLE_CUDA`, Play 13 on `EN
 │   └── skills/                      ← Agent skills (auto-loaded by description match)
 │       └── render-drawio-diagram/   ← Creates/edits draw.io diagrams stored as self-contained SVGs
 ├── library/                         ← Custom Ansible modules
+├── sveltos_profiles/                ← Sveltos ClusterProfile manifests (18 profiles)
 ├── artifacts/                       ← Ansible Runner output (auto-cleaned each run)
 └── docs/                            ← Project documentation (see below)
 ```
@@ -159,6 +162,7 @@ docs/
 - Use `when:` clauses for optional features — not `is defined` checks
 - Use `include_tasks` with conditionals for optional task sets
 - Use `creates:` parameter for file operations
+- **Network resilience**: All network-dependent tasks (`apt`, `get_url`, `helm_repository`, `helm`, `kubernetes.core.k8s` with remote URLs) must include `retries: 5`, `delay: 10-15`, `register: result`, `until: result is success`
 
 **K8s operations**:
 - All cluster API calls delegate to localhost: `delegate_to: localhost`
@@ -169,11 +173,15 @@ docs/
 **ArgoCD applications**:
 - Kustomize-based manifests in `argocd_applications/{category}/{app}/`
 - Each app needs: `kustomization.yaml`, workload definition, `service.yaml`
-- Application CR manifests live in `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`
-- Three-tier app-of-app-of-apps: parent (`cluster-apps`) → tiers (`cluster-platform` wave 1, `cluster-services` wave 4) → individual apps
-- Sync waves within the platform tier enforce ordering (1 → CRDs/operators, 2 → Harbor, 3 → Keycloak/OIDC)
-- Service-tier apps deploy simultaneously after the entire platform tier is Healthy
+- Application CR manifests live in `argocd_applications/cluster-apps/infra/` or `argocd_applications/cluster-apps/platform/`
+- Three-tier app-of-app-of-apps: parent (`cluster-apps`) → tiers (`cluster-infra` wave 1, `cluster-platform` wave 4) → individual apps
+- Sveltos ClusterProfiles (optional, `ENABLE_SVELTOS=true`) replace the app-of-apps hierarchy with explicit `dependsOn` ordering
+- Sync waves within the infra tier enforce ordering (1 → CRDs/operators, 2 → Harbor, 3 → Keycloak/OIDC)
+- Platform-tier apps deploy simultaneously after the entire infra tier is Healthy
 - Application health check (Lua script in `argocd-cm`) required for sync waves to block on child apps
+- **Every pod spec must include a taint toleration** matching its target tier (`role=infra:NoSchedule` for infra apps, `role=platform:NoSchedule` for platform apps)
+- DaemonSets that must run on all nodes (CNI, ztunnel, node-exporter, CSI nodeplugin) need `operator: Exists` tolerations for both `role` and `control-plane` taints
+- Upstream apps without authored manifests get tolerations via Kustomize strategic-merge patches or Helm values
 
 **Environment variables**:
 - All config comes from `.env` via `{{ lookup("env", "VAR_NAME") }}`
@@ -186,19 +194,21 @@ docs/
 - **Folders**: match ArgoCD category (`monitoring/`, `storage/`)
 - **Roles**: snake_case matching function (`bootstrap_cillium`, `setup_cluster_master`)
 - **Labels**: inventory `labels:` dict propagates to K8s node labels
+- **Taints**: inventory `taints:` list propagates to K8s node taints (e.g., `role=infra:NoSchedule`)
 
 ### Idempotency patterns
 
 - **SSH keys**: Check ConfigMap existence before generating (`bootstrap_argocd`)
 - **Deploy keys**: Query GitLab API for existing keys before registering
 - **Node labels**: Declarative — applies inventory labels, removes unlabeled keys (excludes system namespaces)
+- **Node taints**: Declarative — applies inventory taints, removes stale user-managed taints (excludes `kubernetes.io/*`, `k8s.io/*`, `nvidia.com/*`)
 - **Packages**: `apt: state=present` (installs only if missing)
 - **Kernel modules**: `modprobe: state=present` + persist to `/etc/modules-load.d/`
 - **K8s resources**: `kubernetes.core.k8s: state=present` (creates or updates)
 
 ### When making changes
 
-- **New application**: Create manifests in `argocd_applications/`, add Application CR to `argocd_applications/cluster-apps/platform/` or `argocd_applications/cluster-apps/services/`, create doc in `docs/applications/`, update `docs/README.md` catalog
+- **New application**: Create manifests in `argocd_applications/`, add Application CR to `argocd_applications/cluster-apps/infra/` or `argocd_applications/cluster-apps/platform/`, add taint toleration matching the target tier (`role=infra` or `role=platform`), create Sveltos ClusterProfile in `sveltos_profiles/` (if using Sveltos), create doc in `docs/applications/`, update `docs/README.md` catalog
 - **New node**: Update `.env` and `inventory/k8s.yaml`, run `setup-clusters.py`
 - **New optional feature**: Add `ENABLE_*` flag to `example.env`, use conditionals in roles, document in `docs/infrastructure/configuration.md`
 - **Config change**: Update `.env`, decide which entry point to run based on what changed

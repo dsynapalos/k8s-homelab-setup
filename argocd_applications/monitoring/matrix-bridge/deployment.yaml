@@ -15,6 +15,11 @@ spec:
       labels:
         app: matrix-bridge
     spec:
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       initContainers:
       - name: generate-config
         image: harbor.k8s.local/dockerhub-cache/library/alpine:3.21

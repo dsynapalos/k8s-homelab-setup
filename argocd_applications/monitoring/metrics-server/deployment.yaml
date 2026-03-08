@@ -74,3 +74,8 @@ spec:
         emptyDir: {}
       nodeSelector:
         kubernetes.io/os: linux
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule

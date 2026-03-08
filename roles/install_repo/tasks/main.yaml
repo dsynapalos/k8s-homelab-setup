@@ -5,6 +5,10 @@
     mode: '0644'
     force: true
   become: true
+  retries: 5
+  delay: 10
+  register: gpg_key_result
+  until: gpg_key_result is success
 
 - name: add {{ REPO }} repo
   ansible.builtin.apt_repository:
@@ -20,6 +24,10 @@
     state: present
     update_cache: yes
   become: true
+  retries: 5
+  delay: 10
+  register: apt_install_result
+  until: apt_install_result is success
 
 - name: apt-mark hold {{ REPO }}
   ansible.builtin.dpkg_selections:

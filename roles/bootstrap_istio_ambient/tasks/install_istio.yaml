@@ -9,6 +9,10 @@
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   delegate_to: localhost
   become: false
+  retries: 5
+  delay: 15
+  register: istio_repo_result
+  until: istio_repo_result is success
 
 - name: Install Istio base (CRDs)
   kubernetes.core.helm:
@@ -22,6 +26,9 @@
   register: istio_base_installed
   delegate_to: localhost
   become: false
+  retries: 5
+  delay: 15
+  until: istio_base_installed is success
 
 - name: Wait for Istio CRDs to be established
   ansible.builtin.pause:
@@ -37,10 +44,22 @@
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
     values:
       profile: ambient  # Use ambient profile (not sidecar mode)
+      # CNI is a DaemonSet that must run on ALL nodes (infra + platform + control-plane)
+      cni:
+        tolerations:
+          - key: role
+            operator: Exists
+            effect: NoSchedule
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
     update_repo_cache: true
   register: istio_cni_installed
   delegate_to: localhost
   become: false
+  retries: 5
+  delay: 15
+  until: istio_cni_installed is success
 
 - name: Install Istio discovery (istiod control plane)
   kubernetes.core.helm:
@@ -79,10 +98,20 @@
           enabled: true
           prometheus:
             enabled: true  # Expose Prometheus metrics for monitoring stack
+      
+      # istiod is an infrastructure control-plane component — schedule on infra nodes
+      tolerations:
+        - key: role
+          operator: Equal
+          value: infra
+          effect: NoSchedule
     update_repo_cache: true
   register: istiod_installed
   delegate_to: localhost
   become: false
+  retries: 5
+  delay: 15
+  until: istiod_installed is success
 
 - name: Wait for istiod to be ready
   ansible.builtin.shell: |
@@ -114,10 +143,21 @@
         limits:
           cpu: 500m
           memory: 512Mi
+      # ztunnel must run on ALL nodes to intercept pod traffic
+      tolerations:
+        - key: role
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     update_repo_cache: true
   register: ztunnel_installed
   delegate_to: localhost
   become: false
+  retries: 5
+  delay: 15
+  until: ztunnel_installed is success
 
 - name: Display Istio installation summary
   ansible.builtin.debug:

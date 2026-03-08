@@ -33,3 +33,14 @@
   ansible.builtin.debug:
     msg: "Node {{ inventory_hostname }} will have labels: {{ node_labels }}"
   when: node_labels | default({}) | length > 0
+
+# Aggregate taints from inventory (host-level only — no group-level taint merging needed)
+- name: Set node taints from inventory
+  ansible.builtin.set_fact:
+    node_taints: "{{ hostvars[inventory_hostname].get('taints', []) }}"
+    cacheable: yes
+
+- name: Debug aggregated taints for host
+  ansible.builtin.debug:
+    msg: "Node {{ inventory_hostname }} will have taints: {{ node_taints }}"
+  when: node_taints | default([]) | length > 0

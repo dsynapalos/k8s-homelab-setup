@@ -36,3 +36,11 @@ r = ansible_runner.run(
 print(r.stats)
 minutes, seconds = divmod(int(time.time() - start_time), 60)
 print(f"--- {minutes}:{seconds:02d} ---")
+
+# Clean up stale state so next run uses only .env as source of truth
+envvars_path = os.path.join(dir_path, 'env', 'envvars')
+if os.path.exists(envvars_path):
+    os.remove(envvars_path)
+
+if os.path.exists(artifact_path):
+    shutil.rmtree(artifact_path)

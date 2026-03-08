@@ -1,0 +1,35 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: trust-manager
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - cert-manager
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-trust-manager
+      namespace: projectsveltos
+      deploymentType: Remote
+  validateHealths:
+    - name: trust-manager-deployment
+      featureID: Resources
+      group: apps
+      version: v1
+      kind: Deployment
+      namespace: cert-manager
+      script: |
+        function evaluate()
+          hs = {}
+          hs.healthy = false
+          hs.message = "available replicas not matching requested replicas"
+          if obj.status ~= nil and obj.status.availableReplicas ~= nil then
+            if obj.status.availableReplicas == obj.spec.replicas then
+              hs.healthy = true
+            end
+          end
+          return hs
+        end

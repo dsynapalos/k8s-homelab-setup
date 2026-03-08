@@ -40,6 +40,14 @@ metadata:
 spec:
   instances: 1
 
+  # Schedule on infra nodes (tolerate role=infra taint).
+  affinity:
+    tolerations:
+    - key: role
+      operator: Equal
+      value: infra
+      effect: NoSchedule
+
   # cert-manager TLS — server certificate from homelab CA chain.
   # The same Secret contains tls.crt, tls.key, and ca.crt.
   certificates:

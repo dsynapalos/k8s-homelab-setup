@@ -1,0 +1,38 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: harbor
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - cert-manager
+    - trust-manager
+    - rook-ceph-cluster
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-harbor
+      namespace: projectsveltos
+      deploymentType: Remote
+  validateHealths:
+    - name: harbor-core
+      featureID: Resources
+      group: apps
+      version: v1
+      kind: Deployment
+      name: harbor-core
+      namespace: harbor
+      script: |
+        function evaluate()
+          hs = {}
+          hs.healthy = false
+          hs.message = "available replicas not matching requested replicas"
+          if obj.status ~= nil and obj.status.availableReplicas ~= nil then
+            if obj.status.availableReplicas == obj.spec.replicas then
+              hs.healthy = true
+            end
+          end
+          return hs
+        end

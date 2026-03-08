@@ -94,7 +94,7 @@ K8S_NODE_2_CPU=4
 VM_CPU_TYPE=host              # 'host' exposes full CPU features (required for Istio); 'kvm64' for baseline x86-64
 
 # Ansible behavior
-ANSIBLE_HOST_KEY_CHECKING=False
+ANSIBLE_HOST_KEY_CHECKING=False       # Also bypassed at SSH level via inventory ansible_ssh_common_args
 ANSIBLE_VERBOSITY=0           # 0 = minimal output, 1-4 = increasing debug detail
 
 # Ubuntu ISO
@@ -188,8 +188,10 @@ The first run takes approximately 26 minutes, most of which is spent downloading
 |-------|----------|-------------|
 | Local setup | ~2 min | Installs kubectl, Helm, Cilium CLI on your machine |
 | VM provisioning | ~8 min | Creates VMs, boots from autoinstall ISO, configures networking |
-| Kubernetes init | ~3 min | kubeadm init/join, Cilium CNI, node labeling |
+| Kubernetes init | ~3 min | kubeadm init/join, Cilium CNI, node labeling and tainting |
 | Platform services | ~4 min | ArgoCD, storage drivers, GPU plugin, app-of-apps hierarchy |
+
+All network-dependent operations (package installs, Helm chart downloads, manifest fetches) have built-in retry logic with exponential backoff. The autoinstall ISO also stabilizes the network before Ubuntu's installer probes devices, preventing intermittent failures on Proxmox virtio NICs. See [Troubleshooting](infrastructure/troubleshooting.md#common-root-causes) for details.
 
 ### Subsequent Runs and Partial Execution
 

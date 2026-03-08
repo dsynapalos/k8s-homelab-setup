@@ -1,0 +1,23 @@
+# Adds tolerations to CSI controller and node plugins so they can
+# schedule on tainted nodes (role=infra, role=platform, control-plane)
+apiVersion: csi.ceph.io/v1
+kind: OperatorConfig
+metadata:
+  name: ceph-csi-operator-config
+  namespace: rook-ceph
+spec:
+  driverSpecDefaults:
+    controllerPlugin:
+      tolerations:
+        - key: role
+          operator: Equal
+          value: infra
+          effect: NoSchedule
+    nodePlugin:
+      tolerations:
+        - key: role
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule

@@ -43,7 +43,7 @@ Within the Keycloak Application, ArgoCD sync waves ensure resources are created 
 | 1 | `keycloak-db` CNPG Cluster | Provisions PostgreSQL, generates `keycloak-db-app` Secret |
 | 2 | `keycloak` Deployment | Keycloak server, reads database credentials from CNPG Secret |
 
-The ArgoCD Application lives in the platform tier of the app-of-app-of-apps hierarchy at sync wave 3, running after cert-manager and CloudNativePG operator (wave 1) and Harbor (wave 2) so that CRDs, issuers, and the container registry proxy cache are available. The Keycloak container image is pulled from `harbor.k8s.local/quay-cache`, requiring Harbor to be operational first.
+The ArgoCD Application lives in the infra tier of the app-of-app-of-apps hierarchy at sync wave 3, running after cert-manager and CloudNativePG operator (wave 1) and Harbor (wave 2) so that CRDs, issuers, and the container registry proxy cache are available. The Keycloak container image is pulled from `harbor.k8s.local/quay-cache`, requiring Harbor to be operational first.
 
 ### CloudNativePG Database
 
@@ -151,6 +151,7 @@ Keycloak exposes health endpoints on management port 9000:
 | → ArgoCD | OIDC provider | SSO via `argocd` client in homelab realm (role → RBAC policy mapping) |
 | → Matrix Synapse | OIDC provider | SSO via `synapse` client in homelab realm (backchannel logout enabled) |
 | → Harbor | OIDC provider | SSO via `harbor` client in homelab realm (`cluster-admins` → admin) |
+| ← Harbor | Image source | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ### OIDC Client Integration
 

@@ -1,0 +1,16 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: otel-collector
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-otel-collector
+      namespace: projectsveltos
+      deploymentType: Remote

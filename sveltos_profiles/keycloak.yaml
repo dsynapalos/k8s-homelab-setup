@@ -1,0 +1,39 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: keycloak
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - cloudnative-pg
+    - cert-manager
+    - rook-ceph-cluster
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-keycloak
+      namespace: projectsveltos
+      deploymentType: Remote
+  validateHealths:
+    - name: keycloak-ready
+      featureID: Resources
+      group: apps
+      version: v1
+      kind: Deployment
+      name: keycloak
+      namespace: security
+      script: |
+        function evaluate()
+          hs = {}
+          hs.healthy = false
+          hs.message = "ready replicas not matching requested replicas"
+          if obj.status ~= nil and obj.status.readyReplicas ~= nil then
+            if obj.status.readyReplicas == obj.status.replicas then
+              hs.healthy = true
+            end
+          end
+          return hs
+        end

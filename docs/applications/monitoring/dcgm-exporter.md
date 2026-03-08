@@ -46,6 +46,7 @@ prometheus.io/port: "9400"
 | [Prometheus](prometheus.md) | Scrapes `/metrics` on port 9400 via service discovery |
 | [Grafana](grafana.md) | NVIDIA GPU Dashboard visualizes DCGM metrics |
 | [Alertmanager](alertmanager.md) | `GPUHighTemperature` alert fires on `DCGM_FI_DEV_GPU_TEMP > 60` |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

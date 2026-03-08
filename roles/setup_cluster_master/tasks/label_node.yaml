@@ -58,3 +58,51 @@
   when: 
     - node_labels | length > 0
     - (item.key not in current_labels) or (current_labels[item.key] | default('') != item.value)
+
+# ── Taint management ──────────────────────────────────────────────
+- name: Get current node taints
+  ansible.builtin.command:
+    cmd: "kubectl get node {{ inventory_hostname }} -o jsonpath='{.spec.taints}'"
+  register: current_taints_json
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Parse current taints
+  ansible.builtin.set_fact:
+    current_taints: "{{ current_taints_json.stdout | default('[]') | from_json | default([]) }}"
+
+- name: Build desired taint strings
+  ansible.builtin.set_fact:
+    desired_taint_keys: "{{ node_taints | default([]) | map(attribute='key') | list }}"
+    desired_taint_strings: "{{ node_taints | default([]) | map('regex_replace', '^(?P<all>.*)$', '\\g<all>') | list }}"
+
+- name: Identify user-managed taints to remove (not in desired state, exclude system taints)
+  ansible.builtin.set_fact:
+    taints_to_remove: >-
+      {%- set remove = [] -%}
+      {%- for taint in current_taints -%}
+        {%- if taint.key not in desired_taint_keys
+            and 'kubernetes.io' not in taint.key
+            and 'k8s.io' not in taint.key -%}
+          {%- set _ = remove.append(taint.key) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ remove }}
+
+- name: Remove obsolete taints
+  ansible.builtin.command:
+    cmd: "kubectl taint nodes {{ inventory_hostname }} {{ item }}-"
+  loop: "{{ taints_to_remove }}"
+  delegate_to: localhost
+  become: false
+  when: taints_to_remove | length > 0
+  failed_when: false
+
+- name: Apply desired taints
+  ansible.builtin.command:
+    cmd: "kubectl taint nodes {{ inventory_hostname }} {{ item.key }}={{ item.value }}:{{ item.effect }} --overwrite"
+  loop: "{{ node_taints | default([]) }}"
+  delegate_to: localhost
+  become: false
+  when: node_taints | default([]) | length > 0

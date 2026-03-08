@@ -8,8 +8,8 @@ spec:
     image: quay.io/ceph/ceph:v19.2.3
     allowUnsupported: false
   dataDirHostPath: /var/lib/rook
-  skipUpgradeChecks: false
-  continueUpgradeAfterChecksEvenIfNotHealthy: false
+  skipUpgradeChecks: true  # Required for size=1 pools — ok-to-stop always fails
+  continueUpgradeAfterChecksEvenIfNotHealthy: true
   
   mon:
     count: 3  # Quorum requires odd number; 2 workers + allowMultiplePerNode
@@ -51,10 +51,7 @@ spec:
       iteration: 1
     allowUninstallWithVolumes: false
   
-  # Automatic device discovery - uses all available raw devices on worker nodes only
-  # Placement (below) restricts Rook pods to non-control-plane nodes.
-  # Only worker VMs receive secondary disks during provisioning, so
-  # useAllNodes + deviceFilter safely discovers only the intended devices.
+  # Automatic device discovery - placement affinity restricts to role=infra nodes
   storage:
     useAllNodes: true
     useAllDevices: false
@@ -91,7 +88,7 @@ spec:
     osd: system-node-critical
     mgr: system-cluster-critical
   
-  # Placement: ensure Rook pods only run on worker nodes, NOT control plane
+  # Placement: ensure Rook pods only run on infra-role nodes
   placement:
     all:
       nodeAffinity:
@@ -100,7 +97,15 @@ spec:
           - matchExpressions:
             - key: node-role.kubernetes.io/control-plane
               operator: DoesNotExist
+            - key: role
+              operator: In
+              values:
+              - infra
       tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule
       - effect: NoSchedule
         key: node.kubernetes.io/not-ready
         operator: Exists

@@ -58,12 +58,12 @@ Troubleshooting is distributed: each doc has its own `## Troubleshooting` sectio
 
 | Script | Playbook | Destructive? | Use case |
 |--------|----------|-------------|----------|
-| `setup-clusters.py` | `setup_cluster.yaml` (15 plays) | Yes | New clusters, infra changes, adding nodes |
-| `setup-applications.py` | `setup_applications.yaml` (1 play) | No | App manifest updates |
+| `setup-clusters.py` | `setup_cluster.yaml` (16 plays) | Yes | New clusters, infra changes, adding nodes |
+| `setup-applications.py` | `setup_applications.yaml` (2 plays, 1 conditional) | No | App manifest updates |
 | `cleanup-clusters.py` | `cleanup_cluster.yaml` | Yes | Full teardown |
 | `expose-ca.py` | `expose_ca.yaml` (1 play) | No | Re-display CA trust scripts |
 
-The playbook execution order (15 plays) is documented in [`docs/cicd/ansible-pipeline.md`](docs/cicd/ansible-pipeline.md).
+The playbook execution order (16 plays) is documented in [`docs/cicd/ansible-pipeline.md`](docs/cicd/ansible-pipeline.md).
 
 ---
 
@@ -72,8 +72,8 @@ The playbook execution order (15 plays) is documented in [`docs/cicd/ansible-pip
 **Single source of truth**: `.env` file (copy from `example.env`). All Ansible variables use `{{ lookup("env", "VAR_NAME") }}`.
 
 - **No defaults in roles** — missing vars fail fast
-- **Feature flags** (`ENABLE_ROOK`, `ENABLE_CEPH`, `ENABLE_CUDA`, `ENABLE_ISTIO`, `ENABLE_GATEWAY_API`) all default `false`
-- **Pinned versions** (`K8S_VERSION`, `CRIO_VERSION`, `CILIUM_VERSION`, etc.) — never hardcode in roles
+- **Feature flags** (`ENABLE_ROOK`, `ENABLE_CEPH`, `ENABLE_CUDA`, `ENABLE_ISTIO`, `ENABLE_GATEWAY_API`, `ENABLE_SVELTOS`) all default `false`
+- **Pinned versions** (`K8S_VERSION`, `CRIO_VERSION`, `CILIUM_VERSION`, `SVELTOS_VERSION`, `ARGOCD_TARGET_REVISION`, etc.) — never hardcode in roles
 - **Multi-Proxmox**: `PROXMOX_API_HOST_1`/`_2`, `PROXMOX_NODE_1`/`_2` — each host in inventory maps to a cluster via `vm_provision.proxmox_cluster`
 - **API server HA**: `K8S_VIP` + `KUBE_VIP_VERSION` for kube-vip floating VIP
 
@@ -91,6 +91,7 @@ Full variable reference: [`docs/infrastructure/configuration.md`](docs/infrastru
 - `creates:` parameter for idempotent file/command operations
 - `delegate_to: localhost` for all K8s API calls
 - `no_log: true` on any task that handles Proxmox passwords, join tokens, or certificate keys
+- **Network resilience**: All network-dependent tasks (`apt`, `get_url`, `helm_repository`, `helm`, `kubernetes.core.k8s` with remote URLs) must include `retries: 5`, `delay: 10-15`, `register: result`, `until: result is success`
 
 ### K8s resources
 
@@ -101,9 +102,13 @@ Full variable reference: [`docs/infrastructure/configuration.md`](docs/infrastru
 ### ArgoCD applications
 
 - Kustomize manifests in `argocd_applications/{category}/{app}/`
-- Application CRs in `argocd_applications/cluster-apps/platform/` or `services/`
-- Three-tier hierarchy: parent → tiers (platform wave 1, services wave 4) → individual apps
-- Sync waves enforce ordering within platform tier
+- Application CRs in `argocd_applications/cluster-apps/infra/` or `platform/`
+- Three-tier hierarchy: parent → tiers (infra wave 1, platform wave 4) → individual apps
+- Sveltos ClusterProfiles (optional, `ENABLE_SVELTOS=true`) replace the app-of-apps hierarchy with explicit `dependsOn` ordering
+- Sync waves enforce ordering within the infra tier (when using app-of-apps)
+- **Every pod spec must include a taint toleration** matching its target tier (`role=infra:NoSchedule` for infra apps, `role=platform:NoSchedule` for platform apps)
+- DaemonSets that must run on all nodes (CNI, ztunnel, node-exporter, CSI nodeplugin) need `operator: Exists` tolerations for both `role` and `control-plane` taints
+- Upstream apps without authored manifests get tolerations via Kustomize strategic-merge patches or Helm values
 
 ### Environment variables
 
@@ -117,7 +122,7 @@ Full variable reference: [`docs/infrastructure/configuration.md`](docs/infrastru
 
 Two files — described fully in [`docs/infrastructure/architecture.md`](docs/infrastructure/architecture.md#inventory-structure):
 
-- **`inventory/k8s.yaml`**: Cluster nodes with host groups (`proxmox`, `k8s-control`, `k8s-nodes`), per-host `proxmox_cluster` field, node labels, `k8s_vip`/`kube_vip_version` group vars
+- **`inventory/k8s.yaml`**: Cluster nodes with host groups (`proxmox`, `k8s-control`, `k8s-nodes`), per-host `proxmox_cluster` field, node labels, node taints (`role=infra:NoSchedule` or `role=platform:NoSchedule`), `k8s_vip`/`kube_vip_version` group vars
 - **`inventory/localhost.yaml`**: Control machine with `proxmox_cluster` dict map (one entry per Proxmox host), Ceph/GPU/ArgoCD credentials
 
 ---
@@ -140,10 +145,11 @@ Every role must be safe to re-run. Key patterns:
 - SSH keys: check ConfigMap existence before generating
 - Deploy keys: query Git provider API before registering
 - Node labels: declarative (add missing, remove stale, protect system namespaces)
+- Node taints: declarative (add missing, remove stale user-managed taints, protect system taints from `kubernetes.io/*`, `k8s.io/*`, `nvidia.com/*`)
 - Packages: `apt: state=present`
 - K8s resources: `kubernetes.core.k8s: state=present`
 - kubeadm init: `creates: /etc/kubernetes/admin.conf`
-- kube-vip: guarded by `admin_conf_stat` on primary control plane (`delegate_to: k8s-control-1`, `run_once: true`)
+- kube-vip: guarded by `admin_conf_stat` on primary control plane (`delegate_to: k8s-control-1`, `run_once: true`). Primary mounts `super-admin.conf` (K8s 1.29+ RBAC-free), secondaries mount `admin.conf`.
 
 ---
 
@@ -151,7 +157,7 @@ Every role must be safe to re-run. Key patterns:
 
 | Change type | Steps |
 |-------------|-------|
-| New application | Create manifests in `argocd_applications/`, add Application CR to `cluster-apps/platform/` or `services/`, create doc in `docs/applications/`, update [`docs/README.md`](docs/README.md) catalog |
+| New application | Create manifests in `argocd_applications/`, add Application CR to `cluster-apps/infra/` or `platform/`, add taint toleration matching the target tier (`role=infra` or `role=platform`), create Sveltos ClusterProfile in `sveltos_profiles/` (if using Sveltos), create doc in `docs/applications/`, update [`docs/README.md`](docs/README.md) catalog |
 | New node | Update `.env` and `inventory/k8s.yaml`, run `setup-clusters.py` |
 | New optional feature | Add `ENABLE_*` to `example.env`, conditionals in roles, document in [`docs/infrastructure/configuration.md`](docs/infrastructure/configuration.md) |
 | Config change | Update `.env`, choose entry point based on scope |

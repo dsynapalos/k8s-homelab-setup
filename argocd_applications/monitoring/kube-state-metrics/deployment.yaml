@@ -20,6 +20,11 @@ spec:
     spec:
       serviceAccountName: kube-state-metrics
       automountServiceAccountToken: true
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: kube-state-metrics
         image: harbor.k8s.local/k8s-registry-cache/kube-state-metrics/kube-state-metrics:v2.18.0

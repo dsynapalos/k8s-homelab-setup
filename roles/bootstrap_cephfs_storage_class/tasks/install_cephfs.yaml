@@ -10,6 +10,10 @@
     name: ceph-csi
     repo_url: "https://ceph.github.io/csi-charts"
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+  retries: 5
+  delay: 15
+  register: ceph_csi_repo_result
+  until: ceph_csi_repo_result is success
 
 # Create namespace for Ceph CSI components
 - name: create ceph-csi-cephfs namespace
@@ -81,11 +85,22 @@
         name: provisioner
         replicaCount: "{{ 2 if groups['k8s-nodes'] | length >= 2 else 1 }}"
         timeout: 60s
+        # Provisioner is an infrastructure component — schedule on infra nodes
+        tolerations:
+          - key: role
+            operator: Equal
+            value: infra
+            effect: NoSchedule
         
       # Node plugin configuration
       nodeplugin:
         name: nodeplugin
         updateStrategy: RollingUpdate
+        # Nodeplugin is a DaemonSet that must run on ALL nodes to mount CephFS volumes
+        tolerations:
+          - key: role
+            operator: Exists
+            effect: NoSchedule
         
       # Let Helm create default StorageClass
       storageClass:
@@ -115,6 +130,9 @@
     update_repo_cache: true
   changed_when: "'has been upgraded' in ceph_csi_installed.stdout or 'You have successfully installed' in ceph_csi_installed.stdout or 'Installing it now' in ceph_csi_installed.stdout"
   register: ceph_csi_installed
+  retries: 5
+  delay: 15
+  until: ceph_csi_installed is success
 
 # Wait for CSI provisioner to be ready
 - name: wait for ceph-csi-cephfs provisioner to be ready

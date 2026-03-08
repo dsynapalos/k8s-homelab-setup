@@ -36,8 +36,12 @@ proxmox:
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
         proxmox_cluster: cluster_1
       labels:
-        role: main-node
-        compute: cuda
+        role: infra
+        compute: cpu
+      taints:
+        - key: role
+          value: infra
+          effect: NoSchedule
     k8s-node-2:
       ansible_host: '{{ lookup("env", "K8S_NODE_2_IP") }}'
       vm_provision:
@@ -47,10 +51,48 @@ proxmox:
         ip: '{{ lookup("env", "K8S_NODE_2_IP") }}'
         ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
         ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_1
+      labels:
+        role: platform
+        compute: cuda
+      taints:
+        - key: role
+          value: platform
+          effect: NoSchedule
+    k8s-node-3:
+      ansible_host: '{{ lookup("env", "K8S_NODE_3_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_NODE_3_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_NODE_3_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_NODE_3_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_NODE_3_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
         proxmox_cluster: cluster_2
       labels:
-        role: secondary-node
+        role: infra
         compute: cpu
+      taints:
+        - key: role
+          value: infra
+          effect: NoSchedule
+    k8s-node-4:
+      ansible_host: '{{ lookup("env", "K8S_NODE_4_IP") }}'
+      vm_provision:
+        cpu: '{{ lookup("env", "K8S_NODE_4_CPU") | default("2") }}'
+        memory_mb: '{{ lookup("env", "K8S_NODE_4_MEM_MB") | default("4096") }}'
+        disk_gb: '{{ lookup("env", "K8S_NODE_4_DISK_GB") | default("20") }}'
+        ip: '{{ lookup("env", "K8S_NODE_4_IP") }}'
+        ssh_user: '{{ lookup("env", "K8S_SSH_USER") }}'
+        ssh_key: '{{ lookup("env", "K8S_SSH_KEY") }}'
+        proxmox_cluster: cluster_2
+      labels:
+        role: platform
+        compute: cpu
+      taints:
+        - key: role
+          value: platform
+          effect: NoSchedule
   vars:
     labels:
       infra: proxmox
@@ -73,6 +115,10 @@ k8s:
           ansible_host: '{{ lookup("env", "K8S_NODE_1_IP") }}'
         k8s-node-2:
           ansible_host: '{{ lookup("env", "K8S_NODE_2_IP") }}'
+        k8s-node-3:
+          ansible_host: '{{ lookup("env", "K8S_NODE_3_IP") }}'
+        k8s-node-4:
+          ansible_host: '{{ lookup("env", "K8S_NODE_4_IP") }}'
   vars:
     K8S_VERSION: '{{ lookup("env", "K8S_VERSION") | default("1.34") }}'
     CRIO_VERSION: '{{ lookup("env", "CRIO_VERSION") | default("1.33") }}'
@@ -90,4 +136,5 @@ k8s:
     ansible_ssh_public_key_file: '{{ lookup("env", "K8S_SSH_PUB_KEY") | default("~/.ssh/id_rsa.pub") }}'
     ansible_python_interpreter: /usr/bin/python3
     ansible_connection: ssh
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 

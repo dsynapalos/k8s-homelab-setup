@@ -15,8 +15,13 @@ spec:
         spec:
           serviceAccountName: harbor-bootstrap
           restartPolicy: OnFailure
+          tolerations:
+          - key: role
+            operator: Equal
+            value: infra
+            effect: NoSchedule
           containers:
-          - name: indexer
+          - name: artifact-indexer
             image: docker.io/library/alpine:3.21
             command:
             - /bin/sh

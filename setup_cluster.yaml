@@ -71,6 +71,14 @@
   roles:
     - bootstrap_argocd
 
+- name: bootstrap Sveltos orchestration
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - role: bootstrap_sveltos
+      when: lookup('env', 'ENABLE_SVELTOS') == 'true'
+
 - name: bootstrap PKI secret for cert-manager
   hosts: localhost
   gather_facts: false
@@ -93,7 +101,9 @@
     - role: bootstrap_cephfs_storage_class
       when: lookup('env', 'ENABLE_CEPH') == 'true'
     - role: bootstrap_rook_ceph
-      when: lookup('env', 'ENABLE_ROOK') == 'true'
+      when:
+        - lookup('env', 'ENABLE_ROOK') == 'true'
+        - lookup('env', 'ENABLE_SVELTOS') != 'true'
 
 - name: setup applications
   hosts: localhost

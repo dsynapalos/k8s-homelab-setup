@@ -19,6 +19,11 @@ spec:
         prometheus.io/port: "9090"
     spec:
       serviceAccountName: prometheus
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: prometheus
         image: harbor.k8s.local/dockerhub-cache/prom/prometheus:v3.9.1

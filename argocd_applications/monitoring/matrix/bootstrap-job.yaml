@@ -13,6 +13,11 @@ spec:
     spec:
       serviceAccountName: matrix
       restartPolicy: OnFailure
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
       containers:
       - name: bootstrap
         image: harbor.k8s.local/dockerhub-cache/library/alpine:3.21

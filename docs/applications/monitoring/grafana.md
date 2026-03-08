@@ -52,6 +52,7 @@ The default local admin (`admin`/`admin`) no longer works as a fallback — the 
 | [Node Exporter](node-exporter.md) | Host metrics rendered in K8s Cluster Dashboard |
 | [Keycloak](../security/keycloak.md) | OIDC provider — SSO authentication via `grafana` client in homelab realm |
 | [trust-manager](../security/trust-manager.md) | Distributes homelab CA certificate for OIDC TLS verification |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

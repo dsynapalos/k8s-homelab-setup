@@ -42,6 +42,7 @@ Without kube-state-metrics, the monitoring stack has no visibility into Kubernet
 | [OTel Collector](otel-collector.md) | Scraped via `kubernetes-services` catch-all job (annotation-based discovery) |
 | [Thanos](thanos.md) | Metrics shipped via OTel Collector's remote write exporter |
 | [Grafana](grafana.md) | Metrics rendered in K8s Cluster Dashboard (deployment health, pod status) |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

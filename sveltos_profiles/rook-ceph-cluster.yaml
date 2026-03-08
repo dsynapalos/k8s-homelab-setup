@@ -1,0 +1,39 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: rook-ceph-cluster
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - rook-ceph-operator
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-rook-ceph-cluster
+      namespace: projectsveltos
+      deploymentType: Remote
+  validateHealths:
+    - name: ceph-cluster-healthy
+      featureID: Resources
+      group: ceph.rook.io
+      version: v1
+      kind: CephCluster
+      name: rook-ceph
+      namespace: rook-ceph
+      script: |
+        function evaluate()
+          hs = {}
+          hs.healthy = false
+          hs.message = "CephCluster not ready"
+          if obj.status ~= nil then
+            if obj.status.phase == "Ready" or obj.status.phase == "Connected" then
+              hs.healthy = true
+              hs.message = "CephCluster phase: " .. obj.status.phase
+            else
+              hs.message = "CephCluster phase: " .. (obj.status.phase or "unknown")
+            end
+          end
+          return hs
+        end

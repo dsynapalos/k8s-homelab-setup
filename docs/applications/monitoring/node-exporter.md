@@ -45,6 +45,7 @@ volumes:
 |-----------|-------------|
 | [Prometheus](prometheus.md) | Scraped via `node-exporter` job (EndpointSlice discovery) |
 | [Grafana](grafana.md) | Metrics rendered in K8s Cluster Dashboard |
+| [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
 

@@ -1,7 +1,11 @@
-- name: upload argocd app-of-apps manifest
+- name: Set target revision
+  ansible.builtin.set_fact:
+    argocd_target_revision: "{{ lookup('env', 'ARGOCD_TARGET_REVISION') | default('main', true) }}"
+
+- name: Upload argocd app-of-apps manifest
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('file', item) }}"
+    definition: "{{ lookup('file', item) | regex_replace('targetRevision: main', 'targetRevision: ' + argocd_target_revision) | from_yaml }}"
     server_side_apply:
       field_manager: ansible
       force_conflicts: true
@@ -9,3 +13,53 @@
   register: app_of_apps_result
   changed_when: app_of_apps_result.method == 'create'
   loop: "{{ lookup('fileglob', role_path + '/files/*_manifest.yaml', wantlist=True) | list }}"
+  when: lookup('env', 'ENABLE_SVELTOS') != 'true'
+
+- name: Override targetRevision on Application CRs
+  when:
+    - lookup('env', 'ENABLE_SVELTOS') != 'true'
+    - argocd_target_revision != 'main'
+  block:
+    - name: Collect infra Application CR files
+      ansible.builtin.find:
+        paths:
+          - "{{ playbook_dir }}/argocd_applications/cluster-apps/infra"
+        patterns: "*.yaml"
+      register: infra_cr_files
+
+    - name: Collect platform Application CR files
+      ansible.builtin.find:
+        paths:
+          - "{{ playbook_dir }}/argocd_applications/cluster-apps/platform"
+        patterns: "*.yaml"
+      register: platform_cr_files
+
+    - name: Collect tier Application CR files
+      ansible.builtin.set_fact:
+        tier_cr_files:
+          - "{{ playbook_dir }}/argocd_applications/cluster-apps/infra.yaml"
+          - "{{ playbook_dir }}/argocd_applications/cluster-apps/platform.yaml"
+
+    - name: Apply tier CRs with overridden targetRevision
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', item) | regex_replace('targetRevision: main', 'targetRevision: ' + argocd_target_revision) | from_yaml }}"
+        server_side_apply:
+          field_manager: ansible
+          force_conflicts: true
+        kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+      loop: "{{ tier_cr_files }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: Apply individual Application CRs with overridden targetRevision
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', item.path) | regex_replace('targetRevision: main', 'targetRevision: ' + argocd_target_revision) | from_yaml }}"
+        server_side_apply:
+          field_manager: ansible
+          force_conflicts: true
+        kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+      loop: "{{ infra_cr_files.files + platform_cr_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"

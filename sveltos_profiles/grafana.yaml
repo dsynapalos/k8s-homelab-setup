@@ -1,0 +1,19 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: grafana
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - thanos
+    - keycloak
+    - trust-manager
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-grafana
+      namespace: projectsveltos
+      deploymentType: Remote

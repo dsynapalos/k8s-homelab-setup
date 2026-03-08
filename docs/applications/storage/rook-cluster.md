@@ -6,7 +6,7 @@ Defines the actual Ceph storage cluster running inside Kubernetes — the monito
 
 ## Why It's Here
 
-When `ENABLE_ROOK=true`, the cluster needs persistent storage without relying on external infrastructure. Rook-Ceph turns raw block devices attached to worker VMs into a fully functional distributed storage system, providing block, filesystem, and object storage — all managed through Kubernetes CRDs.
+When `ENABLE_ROOK=true`, the cluster needs persistent storage without relying on external infrastructure. Rook-Ceph turns raw block devices attached to infra-role worker VMs into a fully functional distributed storage system, providing block, filesystem, and object storage — all managed through Kubernetes CRDs.
 
 This is what actually stores data for Matrix (Synapse DB), Thanos (metric blocks), and any other stateful workload.
 
@@ -35,7 +35,7 @@ storage:
   deviceFilter: "^sd[b-z]"
 ```
 
-Auto-discovers `/dev/sdb`, `/dev/sdc`, etc. on all nodes (excludes `/dev/sda` OS disk). Placement rules restrict Rook pods to worker nodes, and only worker VMs receive secondary disks during provisioning, so control-plane nodes are naturally excluded. No need to whitelist nodes by name — new workers are picked up automatically.
+Discovery runs on all nodes, but placement (see below) restricts OSD pods to infra-role nodes. The `deviceFilter` matches `/dev/sdb`, `/dev/sdc`, etc. (excludes `/dev/sda` OS disk). Only infra-role nodes have secondary disks attached during VM provisioning, so platform nodes have no matching devices.
 
 ### Config Override
 
@@ -99,7 +99,8 @@ Three StorageClasses are created for different workload needs:
 
 ## Placement
 
-All Ceph components are placed on worker nodes only:
+All Ceph components are placed on infra-role worker nodes using both node affinity and taint tolerations:
+
 ```yaml
 placement:
   all:
@@ -107,9 +108,24 @@ placement:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: node-role.kubernetes.io/control-plane
-            operator: DoesNotExist
+          - key: role
+            operator: In
+            values:
+            - infra
+    tolerations:
+    - key: role
+      operator: Equal
+      value: infra
+      effect: NoSchedule
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+      effect: NoSchedule
+    - key: node.kubernetes.io/unreachable
+      operator: Exists
+      effect: NoSchedule
 ```
+
+The `not-ready` and `unreachable` tolerations ensure Ceph pods stay running during node disruptions (important for storage availability). The `CephObjectStore` and `CephFilesystem` CRs have matching placement to keep RGW and MDS pods on infra nodes as well.
 
 ## Expected Health Warnings
 
@@ -123,7 +139,7 @@ These are normal and expected:
 | [Rook Operator](rook-operator.md) | Operator reconciles this CephCluster CR |
 | [Matrix](../monitoring/matrix.md) | Block PVC for Synapse data |
 | [Thanos](../monitoring/thanos.md) | Block PVCs for local data + S3 bucket for long-term storage |
-| `setup_localhost` role | Provisions secondary disks on Proxmox that become Ceph OSDs |
+| `setup_localhost` role | Provisions secondary disks on Proxmox for infra-role VMs that become Ceph OSDs |
 
 ## Troubleshooting
 

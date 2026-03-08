@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cluster-services
+  name: cluster-infra
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: homelab
   source:
     repoURL: "git@gitlab.com:dsynapalos/cluster-setup.git"
     targetRevision: main
-    path: argocd_applications/cluster-apps/services
+    path: argocd_applications/cluster-apps/infra
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -28,3 +28,6 @@ spec:
         - /spec/syncPolicy/automated
         - /metadata/annotations/argocd.argoproj.io~1refresh
         - /operation
+      jqPathExpressions:
+        - .spec.source.targetRevision
+        - .spec.sources[]?.targetRevision

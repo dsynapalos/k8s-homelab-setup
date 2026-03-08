@@ -1,0 +1,20 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: matrix
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - cloudnative-pg
+    - keycloak
+    - cert-manager
+    - rook-ceph-cluster
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-matrix
+      namespace: projectsveltos
+      deploymentType: Remote

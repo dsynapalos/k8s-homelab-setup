@@ -4,4 +4,12 @@
   become: false
   roles:
     - bootstrap_applications
+
+- name: setup Sveltos orchestration
+  hosts: localhost
+  gather_facts: false
+  become: false
+  roles:
+    - role: bootstrap_sveltos
+      when: lookup('env', 'ENABLE_SVELTOS') == 'true'
   

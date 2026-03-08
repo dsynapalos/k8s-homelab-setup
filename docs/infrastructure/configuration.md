@@ -29,6 +29,7 @@ ArgoCD watches your Git repository and automatically syncs Kubernetes manifests 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `ARGOCD_VERSION` | ArgoCD version to install | `3.3.0` |
+| `ARGOCD_TARGET_REVISION` | Git branch for all ArgoCD Application CRs (default: `main`) | `main` |
 | `REPOSITORY_SSH_URL` | Git repo SSH URL | `git@gitlab.com:user/repo.git` |
 | `REPOSITORY_TOKEN` | Personal Access Token with `api` scope | `glpat-xxxxxxxxxxxx` |
 
@@ -45,6 +46,25 @@ ArgoCD watches your Git repository and automatically syncs Kubernetes manifests 
    - Create an ArgoCD repository Secret with the private key
 
 For the SSH key management architecture, see [GitOps](../cicd/gitops.md).
+
+### Branch Testing
+
+Set `ARGOCD_TARGET_REVISION` to override which Git branch all ArgoCD Application CRs sync from. This works for both the app-of-apps and Sveltos orchestration paths.
+
+```bash
+# In .env — point all apps at a feature branch
+ARGOCD_TARGET_REVISION=feature/my-change
+
+# Then deploy
+python3 setup-applications.py
+```
+
+**How it works**:
+- The `bootstrap_applications` role substitutes `targetRevision: main` → `targetRevision: <your-branch>` on the parent manifest, tier CRs, and all individual Application CRs before applying them
+- The `bootstrap_sveltos` role does the same substitution when creating ConfigMaps from Application CRs
+- The parent and tier Application CRs include `ignoreDifferences` with `RespectIgnoreDifferences` so ArgoCD won't revert the overridden `targetRevision` during auto-sync
+- Helm chart version references (e.g., `1.18.2`, `v0.20.3`) are unaffected — only `targetRevision: main` is replaced
+- Set back to `main` (or remove the variable) and re-run to restore normal operation
 
 ---
 
@@ -97,7 +117,7 @@ For storage architecture details, see [Storage](storage.md).
 
 ### What It Does
 
-Runs a full Ceph cluster inside Kubernetes using raw block devices on worker VMs. No external storage infrastructure needed — Rook discovers attached disks and turns them into block, filesystem, and object storage.
+Runs a full Ceph cluster inside Kubernetes using raw block devices on infra-role worker VMs. No external storage infrastructure needed — Rook discovers attached disks and turns them into block, filesystem, and object storage.
 
 ### Environment Variables
 
@@ -105,7 +125,7 @@ Runs a full Ceph cluster inside Kubernetes using raw block devices on worker VMs
 |----------|-------------|---------|
 | `ENABLE_ROOK` | Feature flag | `true` |
 
-Rook uses the secondary disks automatically provisioned by the `setup_localhost` role. Disks must be raw (no LVM signatures) — the automation handles this on fresh runs, but see [Troubleshooting](troubleshooting.md#rook-ceph) if re-provisioning.
+Rook uses the secondary disks automatically provisioned by the `setup_localhost` role. Disks are only attached to workers with `role: infra` — platform-role nodes do not receive secondary disks. Disks must be raw (no LVM signatures) — the automation handles this on fresh runs, but see [Troubleshooting](troubleshooting.md#rook-ceph) if re-provisioning.
 
 ### Setup
 
@@ -113,8 +133,8 @@ Rook uses the secondary disks automatically provisioned by the `setup_localhost`
 2. Set `ENABLE_ROOK=true` in `.env`
 3. The automation will:
    - Discover raw disks on each Proxmox host independently
-   - Create LVM thin pools and attach virtual disks to worker VMs on the corresponding host
-   - Deploy the Rook operator and CephCluster via ArgoCD
+   - Create LVM thin pools and attach virtual disks to infra-role worker VMs on the corresponding host
+   - Deploy the Rook operator and CephCluster via ArgoCD (placement targets infra nodes)
    - Create three StorageClasses: `rook-ceph-block`, `rook-cephfs`, `rook-ceph-bucket`
 
 For storage architecture details, see [Storage](storage.md).
@@ -180,7 +200,7 @@ Adds transparent mTLS encryption between all pods in enrolled namespaces, withou
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `ENABLE_ISTIO` | Feature flag | `true` |
-| `ISTIO_VERSION` | Istio version | `1.26.6` |
+| `ISTIO_VERSION` | Istio version | `1.28.3` |
 | `ISTIO_MESH_ID` | Mesh ID (same across federated clusters) | `mesh1` |
 | `ISTIO_CLUSTER_NAME` | Unique cluster name within mesh | `cluster-1` |
 | `ISTIO_NETWORK` | Network identifier | `network-1` |
@@ -224,6 +244,71 @@ kubectl get namespaces -L istio.io/dataplane-mode
 Start with PERMISSIVE. Use `AuthorizationPolicy` for fine-grained access control rather than jumping to STRICT mode.
 
 For networking internals and Cilium integration, see [Networking](networking.md).
+
+---
+
+## Sveltos Orchestration Layer
+
+### What It Does
+
+Replaces the ArgoCD app-of-apps pattern with [Project Sveltos](https://projectsveltos.github.io/sveltos/) ClusterProfiles for fine-grained dependency ordering. ArgoCD remains the deployment engine — Sveltos only controls **when** each ArgoCD Application CR is created, using `dependsOn` chains and `validateHealths` Lua scripts.
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ENABLE_SVELTOS` | Feature flag | `true` |
+| `SVELTOS_VERSION` | Sveltos Helm chart version | `1.5.4` |
+
+### What Changes
+
+When `ENABLE_SVELTOS=true`:
+
+- The Lua health-check hack in `argocd-cm` is **skipped** (Sveltos handles ordering, not sync waves)
+- The `bootstrap_applications` role is **skipped** (no app-of-apps parent CR needed)
+- The `bootstrap_rook_ceph` Ansible role is **skipped** (Rook ordering handled by Sveltos `dependsOn`)
+- The `bootstrap_sveltos` role installs Sveltos via Helm, creates ConfigMaps from all Application CRs, and applies ClusterProfile manifests
+
+When `ENABLE_SVELTOS=false` (default):
+
+- The existing app-of-apps pattern with sync waves is used unchanged
+- No Sveltos components are installed
+
+### Setup
+
+1. Set `ENABLE_SVELTOS=true` in `.env`
+2. Run `setup-clusters.py` — the automation will:
+   - Install Sveltos via Helm chart into the `projectsveltos` namespace
+   - Label the management cluster SveltosCluster with `cluster: homelab`
+   - Create ConfigMaps from each Application CR in `argocd_applications/cluster-apps/infra/` and `platform/`
+   - Apply ClusterProfile manifests from `sveltos_profiles/` with dependency ordering
+   - Conditionally include/exclude profiles for `ENABLE_ROOK` and `ENABLE_CUDA`
+
+### Directory Structure
+
+Application CRs are organized by node placement:
+
+```
+argocd_applications/cluster-apps/
+├── infra.yaml                    ← Parent CR for infra tier (wave 1)
+├── infra/                        ← Infra-node apps (8 CRs, tolerate role=infra)
+│   ├── cert-manager.yaml
+│   ├── trust-manager.yaml
+│   ├── cloudnative-pg.yaml
+│   ├── harbor.yaml
+│   ├── keycloak.yaml
+│   ├── argocd-oidc.yaml
+│   ├── rook-ceph-operator.yaml
+│   └── rook-ceph-cluster.yaml
+├── platform.yaml                 ← Parent CR for platform tier (wave 4)
+└── platform/                     ← Platform-node apps (10 CRs, tolerate role=platform)
+    ├── alertmanager.yaml
+    ├── grafana.yaml
+    ├── thanos.yaml
+    └── ... (7 more monitoring apps)
+```
+
+ClusterProfile manifests live in `sveltos_profiles/` (one per Application CR, 18 total).
 
 ---
 
@@ -292,6 +377,72 @@ For full details, see [cert-manager](../applications/security/cert-manager.md). 
 
 ---
 
+## Node Role Isolation (Taints & Tolerations)
+
+### What It Does
+
+Worker nodes are divided into two roles — **infra** and **platform** — using both labels and `NoSchedule` taints. This ensures workloads only schedule on nodes designated for their tier, preventing resource contention between infrastructure services (storage, PKI, registry) and application workloads (monitoring, alerting, dashboards).
+
+### How It Works
+
+Each worker node in `inventory/k8s.yaml` has a `role` label and a matching taint:
+
+| Node | Role | Label | Taint |
+|------|------|-------|-------|
+| k8s-node-1 | Infra | `role: infra` | `role=infra:NoSchedule` |
+| k8s-node-2 | Platform | `role: platform` | `role=platform:NoSchedule` |
+| k8s-node-3 | Infra | `role: infra` | `role=infra:NoSchedule` |
+| k8s-node-4 | Platform | `role: platform` | `role=platform:NoSchedule` |
+
+Control-plane nodes are already tainted by kubeadm with `node-role.kubernetes.io/control-plane:NoSchedule`.
+
+### Inventory Definition
+
+Taints are defined per-host in `inventory/k8s.yaml`:
+
+```yaml
+k8s-node-1:
+  labels:
+    role: infra
+  taints:
+    - key: role
+      value: infra
+      effect: NoSchedule
+```
+
+The `provision_infra` role aggregates taints from inventory (similar to label aggregation). The `setup_cluster_master` and `setup_cluster_node` roles apply taints declaratively — adding missing taints, removing stale user-managed taints, and preserving system-managed taints (`kubernetes.io/*`, `k8s.io/*`, `nvidia.com/*`).
+
+### Toleration Strategy
+
+Every application manifest includes a toleration matching its target node role:
+
+| Tier | Toleration | Applications |
+|------|-----------|-------------|
+| **Infra** | `role=infra:NoSchedule` | ArgoCD, cert-manager, trust-manager, CloudNativePG, Harbor, Keycloak, Rook (operator + cluster), istiod, Sveltos, CephFS CSI provisioner |
+| **Platform** | `role=platform:NoSchedule` | Prometheus, Grafana, Thanos, Alertmanager, Matrix, matrix-bridge, OTel Collector, kube-state-metrics, metrics-server, dcgm-exporter |
+| **All nodes** | `operator: Exists` | node-exporter, istio-cni, ztunnel, CephFS CSI nodeplugin, NVIDIA device plugin (DaemonSets on every node including control-plane) |
+
+**Upstream application patching**: Applications installed from upstream manifests (not authored in this repo) receive tolerations via Kustomize strategic-merge patches or Helm values:
+
+| Application | Patching Method |
+|-------------|----------------|
+| cert-manager | Kustomize patch (`tolerations-patch.yaml`) for 3 Deployments |
+| Rook operator | Kustomize patch (`operator-tolerations-patch.yaml`) |
+| CloudNativePG | Extended existing Kustomize patch (`operator-monitoring-patch.yaml`) |
+| Harbor | Helm `valuesObject` tolerations for all components |
+| ArgoCD | Ansible `kubernetes.core.k8s` strategic-merge patches after install |
+| Istio (istiod) | Helm `tolerations` value — `role=infra:NoSchedule` |
+| Istio (CNI, ztunnel) | Helm `tolerations` values — `role operator: Exists` + `control-plane operator: Exists` |
+| CephFS CSI | Helm `tolerations` values — provisioner: `role=infra`, nodeplugin: `role operator: Exists` |
+| NVIDIA device plugin | Inline DaemonSet manifest — `role operator: Exists` alongside `nvidia.com/gpu` |
+| Sveltos | Helm `tolerations` value — `role=infra:NoSchedule` |
+
+### Storage Isolation
+
+Secondary disks for Rook-Ceph OSDs are only attached to infra-role nodes during VM provisioning. The CephCluster CR uses `useAllNodes: true` with placement affinity restricting OSD pods to `role: infra` nodes, so Ceph storage services don't consume resources on platform nodes.
+
+---
+
 ## Feature Flag Summary
 
 | Feature | Variable | Default | Dependencies |
@@ -300,6 +451,7 @@ For full details, see [cert-manager](../applications/security/cert-manager.md). 
 | Rook-Ceph | `ENABLE_ROOK` | `true` in `example.env` | Secondary disks on Proxmox |
 | GPU passthrough | `ENABLE_CUDA` | `false` | IOMMU + vfio-pci on host, `compute: cuda` label |
 | Istio Ambient | `ENABLE_ISTIO` | `false` | `VM_CPU_TYPE=host` |
+| Sveltos | `ENABLE_SVELTOS` | `false` | None (replaces app-of-apps when enabled) |
 | Gateway API | `ENABLE_GATEWAY_API` | `false` | Mutually exclusive with Ingress Controller mode |
 | API Server HA | `K8S_VIP` + `KUBE_VIP_VERSION` | unset / `0.8.7` | VIP must be outside DHCP range and LB pool |
 

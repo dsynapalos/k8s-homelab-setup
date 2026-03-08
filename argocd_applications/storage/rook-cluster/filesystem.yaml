@@ -32,6 +32,15 @@ spec:
           - matchExpressions:
             - key: node-role.kubernetes.io/control-plane
               operator: DoesNotExist
+            - key: role
+              operator: In
+              values:
+              - infra
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

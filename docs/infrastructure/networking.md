@@ -144,9 +144,9 @@ Four Helm charts are deployed in sequence, with pauses between each to allow res
 | Component | Type | Key Configuration | Purpose |
 |-----------|------|-------------------|----------|
 | **istio-base** | CRDs | 10-second pause after install | Installs Istio Custom Resource Definitions |
-| **istio-cni** | DaemonSet | `profile: ambient` | Transparent traffic redirection |
-| **istiod** | Deployment | `profile: ambient`, `pilot.replicas: 1`, `PILOT_ENABLE_AMBIENT_CONTROLLERS: "true"` | Control plane with ambient controllers |
-| **ztunnel** | DaemonSet | Waits for istiod rollout (300s timeout) | Per-node L4 proxy handling mTLS encryption |
+| **istio-cni** | DaemonSet | `profile: ambient`, tolerates `role` + `control-plane` taints | Transparent traffic redirection on all nodes |
+| **istiod** | Deployment | `profile: ambient`, `pilot.replicas: 1`, `PILOT_ENABLE_AMBIENT_CONTROLLERS: "true"`, tolerates `role=infra:NoSchedule` | Control plane with ambient controllers |
+| **ztunnel** | DaemonSet | Waits for istiod rollout (300s timeout), tolerates `role` + `control-plane` taints | Per-node L4 proxy handling mTLS encryption on all nodes |
 
 Critical istiod settings:
 - **`PILOT_ENABLE_AMBIENT_CONTROLLERS: "true"`**: Environment variable in the pilot container that activates ambient mesh support. Without this, ambient enrollment has no effect.

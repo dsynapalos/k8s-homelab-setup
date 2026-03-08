@@ -6,6 +6,10 @@
       - ceph-common  # Provides mount.ceph and ceph CLI tools
     state: present
     update_cache: yes
+  retries: 5
+  delay: 10
+  register: ceph_apt_result
+  until: ceph_apt_result is success
 
 - name: load ceph kernel module immediately
   community.general.modprobe:

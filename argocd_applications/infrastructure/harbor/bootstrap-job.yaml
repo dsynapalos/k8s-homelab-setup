@@ -13,8 +13,13 @@ spec:
     spec:
       serviceAccountName: harbor-bootstrap
       restartPolicy: OnFailure
+      tolerations:
+      - key: role
+        operator: Equal
+        value: infra
+        effect: NoSchedule
       containers:
-      - name: bootstrap
+      - name: harbor-bootstrap
         image: docker.io/library/alpine:3.21
         command:
         - /bin/sh

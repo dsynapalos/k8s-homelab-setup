@@ -1,0 +1,18 @@
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: matrix-bridge
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: homelab
+  syncMode: Continuous
+  dependsOn:
+    - matrix
+    - alertmanager
+    - harbor
+  policyRefs:
+    - kind: ConfigMap
+      name: sveltos-app-matrix-bridge
+      namespace: projectsveltos
+      deploymentType: Remote

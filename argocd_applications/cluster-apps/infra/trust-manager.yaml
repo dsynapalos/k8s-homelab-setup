@@ -16,6 +16,11 @@ spec:
       helm:
         releaseName: trust-manager
         valuesObject:
+          tolerations:
+            - key: role
+              operator: Equal
+              value: infra
+              effect: NoSchedule
           app:
             trust:
               namespace: cert-manager
