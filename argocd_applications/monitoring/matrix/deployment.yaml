@@ -41,6 +41,7 @@ spec:
         value: platform
         effect: NoSchedule
       initContainers:
+      - name: generate-config
         image: harbor.k8s.local/dockerhub-cache/matrixdotorg/synapse:v1.147.1
         command:
         - /bin/sh
