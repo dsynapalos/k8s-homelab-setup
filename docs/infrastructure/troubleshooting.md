@@ -218,9 +218,10 @@ See the individual application docs for diagnostic commands and common issues:
 ## Monitoring Stack
 
 See the individual application docs for diagnostic commands and common issues:
-- [OTel Collector](../applications/monitoring/otel-collector.md#troubleshooting) — Prometheus scraping, remote write to Thanos, pipeline health
+- [OTel Collector](../applications/monitoring/otel-collector.md#troubleshooting) — Prometheus scraping, remote write to Thanos, pipeline health, label diagnostics
+- [Loki](../applications/monitoring/loki.md#troubleshooting) — Log ingestion, OTel Collector log pipelines, Grafana connectivity
 - [Prometheus](../applications/monitoring/prometheus.md#troubleshooting) — *(deprecated, replaced by OTel Collector)*
-- [Grafana](../applications/monitoring/grafana.md#troubleshooting) — datasource configuration, dashboard provisioning
+- [Grafana](../applications/monitoring/grafana.md#troubleshooting) — datasource configuration, dashboard provisioning, template variable resolution
 - [Thanos](../applications/monitoring/thanos.md#troubleshooting) — remote write from OTel Collector, S3 bucket, component health
 - [DCGM Exporter](../applications/monitoring/dcgm-exporter.md#troubleshooting) — GPU metrics, scheduling, deduplication
 - [Node Exporter](../applications/monitoring/node-exporter.md#troubleshooting) — DaemonSet status, collector errors

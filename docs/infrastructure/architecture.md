@@ -6,6 +6,8 @@ A high-level map of how the project is structured — the entry points, the Ansi
 
 ![Infrastructure Overview](../diagrams/infrastructure-overview.svg)
 
+![Service Dependency Graph](../diagrams/service-dependency-graph.svg)
+
 ## Two Execution Paths
 
 The project has two independent entry points with very different risk profiles:

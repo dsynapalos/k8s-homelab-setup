@@ -164,6 +164,7 @@ argocd_applications/
 │       ├── dcgm-exporter.yaml
 │       ├── grafana.yaml
 │       ├── kube-state-metrics.yaml
+│       ├── loki.yaml
 │       ├── matrix.yaml
 │       ├── matrix-bridge.yaml
 │       ├── metrics-server.yaml
@@ -266,6 +267,7 @@ cert-manager ──► trust-manager ──► harbor ◄── rook-ceph-cluste
                                       ├◄─ kube-state-metrics
                                       ├◄─ metrics-server
                                       ├◄─ otel-collector
+                                      ├◄─ loki
                                       │
 cloudnative-pg ──► keycloak ──► argocd-oidc
                        │
@@ -276,7 +278,7 @@ cloudnative-pg ──► keycloak ──► argocd-oidc
                               └───────────┴──► matrix-bridge
 ```
 
-Every app except `cert-manager`, `trust-manager`, `rook-ceph-operator`, `rook-ceph-cluster`, and `argocd-oidc` depends on `harbor` (directly or transitively). Apps like `node-exporter`, `dcgm-exporter`, `kube-state-metrics`, `metrics-server`, and `otel-collector` depend _only_ on `harbor`.
+Every app except `cert-manager`, `trust-manager`, `rook-ceph-operator`, `rook-ceph-cluster`, and `argocd-oidc` depends on `harbor` (directly or transitively). Apps like `node-exporter`, `dcgm-exporter`, `kube-state-metrics`, `metrics-server`, `otel-collector`, and `loki` depend _only_ on `harbor`.
 
 For Sveltos configuration variables, see [Configuration — Sveltos](../infrastructure/configuration.md#sveltos-orchestration-layer).
 
@@ -299,6 +301,13 @@ kubectl describe application <app-name> -n argocd | tail -30
 kubectl get configmap argocd-ssh-public-key -n argocd
 kubectl get secret argocd-repo-ssh-key -n argocd
 ```
+
+**Repo-server CrashLoopBackOff (copyutil symlink)**:
+- Upstream bug [#26595](https://github.com/argoproj/argo-cd/issues/26595): the `copyutil` init container uses `ln -s` without `-f`, so any container restart within the same pod fails with `File exists`
+- Fixed in v3.4.0 ([PR #26613](https://github.com/argoproj/argo-cd/pull/26613)), not backported to 3.3.x
+- Workaround applied in `roles/bootstrap_argocd/tasks/main.yaml` — patches the init container args to use `ln -sf`
+- **TODO: Remove the workaround patch after upgrading to ArgoCD >= v3.4.0**
+- Immediate recovery: `kubectl delete pod -n argocd -l app.kubernetes.io/name=argocd-repo-server`
 
 **Application out of sync**:
 - Check ArgoCD UI at `https://argocd.k8s.local`

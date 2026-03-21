@@ -1,0 +1,48 @@
+# Kubelet stats pipeline: kubeletstats receiver → Thanos remote write.
+#
+# Queries the local kubelet's /stats/summary endpoint for container, pod,
+# node, and volume resource metrics (CPU, memory, filesystem, network).
+# Node-local — no leader election needed. Each DaemonSet pod scrapes only
+# its own kubelet via the K8S_NODE_NAME environment variable.
+
+receivers:
+  kubeletstats:
+    auth_type: serviceAccount
+    collection_interval: 10s
+    endpoint: "https://${env:K8S_HOST_IP}:10250"
+    insecure_skip_verify: true
+    metric_groups:
+      - node
+      - pod
+      - container
+      - volume
+    extra_metadata_labels:
+      - container.id
+      - k8s.volume.type
+    k8s_api_config:
+      auth_type: serviceAccount
+
+processors:
+  batch/kubeletstats:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+exporters:
+  prometheusremotewrite/kubeletstats:
+    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
+    tls:
+      insecure: true
+    external_labels:
+      cluster: homelab
+    resource_to_telemetry_conversion:
+      enabled: true
+    retry_on_failure:
+      enabled: false
+
+service:
+  pipelines:
+    metrics/kubeletstats:
+      receivers: [kubeletstats]
+      processors: [batch/kubeletstats]
+      exporters: [prometheusremotewrite/kubeletstats]

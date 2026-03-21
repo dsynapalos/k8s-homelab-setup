@@ -395,7 +395,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_deployment_labels{namespace=~\"$namespace\", cluster=\"$cluster\"})",
+          "expr": "sum(kube_deployment_created{namespace=~\"$namespace\", cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Deployments",
           "refId": "D"
@@ -405,7 +405,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_statefulset_labels{namespace=~\"$namespace\", cluster=\"$cluster\"})",
+          "expr": "sum(kube_statefulset_created{namespace=~\"$namespace\", cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Statefulsets",
           "refId": "E"
@@ -415,7 +415,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_daemonset_labels{namespace=~\"$namespace\", cluster=\"$cluster\"})",
+          "expr": "sum(kube_daemonset_created{namespace=~\"$namespace\", cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Daemonsets",
           "refId": "F"
@@ -435,7 +435,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_hpa_labels{namespace=~\"$namespace\", cluster=\"$cluster\"})",
+          "expr": "sum(kube_horizontalpodautoscaler_info{namespace=~\"$namespace\", cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Horizontal Pod Autoscalers",
           "refId": "H"
@@ -465,7 +465,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_networkpolicy_labels{namespace=~\"$namespace\", cluster=\"$cluster\"})",
+          "expr": "sum(kube_networkpolicy_created{namespace=~\"$namespace\", cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Network Policies",
           "refId": "K"

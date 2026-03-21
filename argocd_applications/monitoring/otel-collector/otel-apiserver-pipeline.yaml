@@ -1,0 +1,51 @@
+# API server metrics pipeline: Prometheus scrape → Thanos remote write.
+#
+# Cluster-global — runs in the single-replica otel-cluster-collector
+# Deployment, not the DaemonSet, so the API server is scraped exactly
+# once.
+#
+# Uses a named Prometheus receiver instance (prometheus/apiserver) so
+# it merges cleanly alongside any other prometheus receivers.
+
+receivers:
+  prometheus/apiserver:
+    config:
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+
+      scrape_configs:
+        - job_name: 'kubernetes-apiservers'
+          kubernetes_sd_configs:
+            - role: endpoints
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: default;kubernetes;https
+
+processors:
+  batch/apiserver:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+exporters:
+  prometheusremotewrite/apiserver:
+    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
+    tls:
+      insecure: true
+    external_labels:
+      cluster: homelab
+    retry_on_failure:
+      enabled: false
+
+service:
+  pipelines:
+    metrics/apiserver:
+      receivers: [prometheus/apiserver]
+      processors: [batch/apiserver]
+      exporters: [prometheusremotewrite/apiserver]

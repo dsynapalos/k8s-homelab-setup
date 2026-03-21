@@ -83,6 +83,29 @@
     kubeconfig: /etc/kubernetes/new_cluster_admin.conf
   when: argocd_sts_toleration.changed
 
+# Workaround for https://github.com/argoproj/argo-cd/issues/26595
+# The copyutil init container uses `ln -s` (no force flag) and `cp --update=none`,
+# so any container restart within the same pod fails with "File exists".
+# Fixed upstream in v3.4.0 (PR #26613). Remove this patch after upgrading.
+- name: fix repo-server copyutil init container crash on restart
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-repo-server
+        namespace: argocd
+      spec:
+        template:
+          spec:
+            initContainers:
+            - name: copyutil
+              args:
+              - /bin/cp /usr/local/bin/argocd /var/run/argocd/argocd && /bin/ln -sf /var/run/argocd/argocd /var/run/argocd/argocd-cmp-server
+    kubeconfig: /etc/kubernetes/new_cluster_admin.conf
+    merge_type: strategic-merge
+
 - name: configure argocd server for TLS termination at ingress
   kubernetes.core.k8s:
     state: present

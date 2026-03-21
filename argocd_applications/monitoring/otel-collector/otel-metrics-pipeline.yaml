@@ -2,6 +2,14 @@
 #
 # Merged into the base config at startup. Defines all receivers, processors,
 # and exporters needed for the metrics pipeline, plus the pipeline wiring.
+#
+# Node-local scraping: Each DaemonSet pod only scrapes targets on its own
+# node. The kubernetes-nodes, kubernetes-pods, and kubernetes-nodes-cadvisor
+# jobs filter targets using the K8S_NODE_NAME environment variable injected
+# from the downward API. This avoids duplicate metrics at Thanos Receive.
+#
+# The kubernetes-apiservers job lives in otel-apiserver-pipeline.yaml and is
+# gated by the k8s_leader_elector extension so only one pod scrapes it.
 
 receivers:
   prometheus:
@@ -29,20 +37,7 @@ receivers:
               regex: '.*'
               action: drop
 
-        # Scrape Kubernetes API server
-        - job_name: 'kubernetes-apiservers'
-          kubernetes_sd_configs:
-            - role: endpointslice
-          scheme: https
-          tls_config:
-            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          relabel_configs:
-            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
-              action: keep
-              regex: default;kubernetes;https
-
-        # Scrape Kubernetes nodes
+        # Scrape the local node's kubelet metrics
         - job_name: 'kubernetes-nodes'
           kubernetes_sd_configs:
             - role: node
@@ -51,8 +46,15 @@ receivers:
             ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
           relabel_configs:
+            # Keep only the node this collector instance runs on
+            - source_labels: [__meta_kubernetes_node_name]
+              regex: ${env:K8S_NODE_NAME}
+              action: keep
             - action: labelmap
               regex: __meta_kubernetes_node_label_(.+)
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
             - target_label: __address__
               replacement: kubernetes.default.svc:443
             - source_labels: [__meta_kubernetes_node_name]
@@ -60,7 +62,14 @@ receivers:
               target_label: __metrics_path__
               replacement: /api/v1/nodes/$${1}/proxy/metrics
 
-        # Scrape Kubernetes pods (annotation-based discovery)
+          metric_relabel_configs:
+            # Drop Kubernetes system node labels that have empty values
+            # (e.g. node-role.kubernetes.io/control-plane=""), which cause
+            # Thanos 409 "label set contains a label with empty name or value".
+            - action: labeldrop
+              regex: 'node_role_kubernetes_io_.*|node_kubernetes_io_.*'
+
+        # Scrape pods running on the local node (annotation-based discovery)
         - job_name: 'kubernetes-pods'
           kubernetes_sd_configs:
             - role: pod
@@ -68,6 +77,10 @@ receivers:
             - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
               action: keep
               regex: true
+            # Keep only pods scheduled on this node
+            - source_labels: [__meta_kubernetes_pod_node_name]
+              regex: ${env:K8S_NODE_NAME}
+              action: keep
             - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
               action: replace
               target_label: __metrics_path__
@@ -86,14 +99,21 @@ receivers:
               action: replace
               target_label: kubernetes_pod_name
 
-        # Scrape Kubernetes services (annotation-based discovery)
+        # Scrape service endpoints running on the local node (annotation-based).
+        # Uses endpointslice role so we get the backing pod's node name for
+        # node-local filtering. Catches services with prometheus.io/scrape
+        # whose pods may not carry the annotation themselves.
         - job_name: 'kubernetes-services'
           kubernetes_sd_configs:
-            - role: service
+            - role: endpointslice
           relabel_configs:
             - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
               action: keep
               regex: true
+            # Keep only endpoints whose backing pod runs on this node
+            - source_labels: [__meta_kubernetes_endpointslice_endpoint_node_name]
+              regex: ${env:K8S_NODE_NAME}
+              action: keep
             - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
               action: replace
               target_label: __scheme__
@@ -115,8 +135,11 @@ receivers:
             - source_labels: [__meta_kubernetes_service_name]
               action: replace
               target_label: kubernetes_service_name
+            - source_labels: [__meta_kubernetes_endpointslice_endpoint_node_name]
+              action: replace
+              target_label: node
 
-        # Scrape cAdvisor (container resource metrics via kubelet proxy)
+        # Scrape cAdvisor on the local node (container resource metrics)
         - job_name: 'kubernetes-nodes-cadvisor'
           scrape_interval: 10s
           scrape_timeout: 10s
@@ -127,8 +150,15 @@ receivers:
           kubernetes_sd_configs:
             - role: node
           relabel_configs:
+            # Keep only the node this collector instance runs on
+            - source_labels: [__meta_kubernetes_node_name]
+              regex: ${env:K8S_NODE_NAME}
+              action: keep
             - action: labelmap
               regex: __meta_kubernetes_node_label_(.+)
+            - source_labels: [__meta_kubernetes_node_name]
+              action: replace
+              target_label: node
             - target_label: __address__
               replacement: kubernetes.default.svc:443
             - source_labels: [__meta_kubernetes_node_name]
@@ -146,6 +176,9 @@ receivers:
               regex: '^/system\.slice/(.+)\.service$$'
               target_label: systemd_service_name
               replacement: '$${1}'
+            # Drop Kubernetes system node labels with empty values (same as kubernetes-nodes job)
+            - action: labeldrop
+              regex: 'node_role_kubernetes_io_.*|node_kubernetes_io_.*'
 
 processors:
   batch:
@@ -160,22 +193,6 @@ processors:
         - 'name == "container_tasks_state"'
         - 'name == "container_memory_failures_total"'
         - 'name == "container_blkio_device_usage_total"'
-        - 'name == "container_network_receive_errors_total"'
-        - 'name == "container_network_transmit_errors_total"'
-        - 'name == "container_network_receive_packets_dropped_total"'
-        - 'name == "container_network_transmit_packets_dropped_total"'
-
-  # Remove resource attributes that arrive with empty values from kubelet/cAdvisor
-  # scrapes (net.host.port, server.port). resource_to_telemetry_conversion would
-  # promote these to metric labels with empty values, which Thanos Receive rejects
-  # with HTTP 409 ("label set contains a label with empty name or value").
-  transform:
-    error_mode: ignore
-    metric_statements:
-      - context: resource
-        statements:
-          - delete_key(attributes, "net.host.port") where attributes["net.host.port"] == ""
-          - delete_key(attributes, "server.port") where attributes["server.port"] == ""
 
 exporters:
   prometheus:
@@ -187,8 +204,10 @@ exporters:
     endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
     tls:
       insecure: true
-    resource_to_telemetry_conversion:
-      enabled: true
+    external_labels:
+      cluster: homelab
+    target_info:
+      enabled: false
     retry_on_failure:
       enabled: false
 
@@ -196,5 +215,5 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      processors: [batch, filter, transform]
+      processors: [batch, filter]
       exporters: [prometheusremotewrite, prometheus]

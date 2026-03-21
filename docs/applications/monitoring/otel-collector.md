@@ -2,7 +2,20 @@
 
 ## What It Does
 
-The OpenTelemetry Collector is the cluster's metrics collection pipeline, replacing standalone Prometheus. It uses a Prometheus receiver to scrape all Kubernetes targets (API server, nodes, pods, services, cAdvisor) on a 15-second interval via Kubernetes service discovery, then fans out to two exporters: a Prometheus-compatible `/metrics` endpoint (port 8889) for ad-hoc queries, and a `prometheusremotewrite` exporter that ships all metrics to Thanos Receive for durable long-term storage. Node Exporter, kube-state-metrics, and other services are discovered automatically via the catch-all `kubernetes-services` job using `prometheus.io/scrape: "true"` annotations.
+The OpenTelemetry Collector runs as a DaemonSet on every node in the cluster, providing eight telemetry pipelines across metrics and logs:
+
+**Metrics (→ Thanos Receive)**:
+- **Prometheus** (node-local): Scrapes kubelet, cAdvisor, annotated pods, and annotated service endpoints on the local node
+- **Prometheus/apiserver** (leader-elected): Scrapes the cluster-global Kubernetes API server
+- **k8s_cluster** (leader-elected): Collects cluster-level metrics — deployment replicas, pod phases, node conditions, resource quotas, HPA status
+- **kubeletstats** (node-local): Queries the local kubelet `/stats/summary` for container/pod/node/volume resource metrics
+
+**Logs (→ Loki)**:
+- **filelog** (node-local): Tails container log files from `/var/log/pods`, parses CRI-O/containerd format, extracts K8s metadata
+- **k8s_events** (leader-elected): Watches the Kubernetes Events API for scheduling, scaling, OOM, and other cluster events
+- **k8s_objects** (leader-elected): Watches Kubernetes resources (events, pods, deployments) for audit/change tracking
+
+Node-local pipelines filter to the local node via the `K8S_NODE_NAME` downward API env var. Cluster-global pipelines use the `k8s_leader_elector` extension (Kubernetes Lease) so only one DaemonSet pod actively receives — the rest idle.
 
 ## Why It's Here
 
@@ -14,51 +27,112 @@ The previous Prometheus deployment had two limitations:
 The OTel Collector solves both problems:
 
 - Its `prometheusremotewrite` exporter sends every scraped metric to Thanos Receive immediately, closing the remote-write gap
-- The collector's pipeline architecture is extensible — additional receivers (OTLP for traces, filelog for logs), processors, and exporters can be added independently via separate ConfigMap files without changing the core configuration
+- The collector's pipeline architecture is extensible — native K8s receivers (`k8s_events`, `k8s_cluster`, `k8s_objects`, `kubeletstats`) now provide deep cluster observability alongside Prometheus scraping, and the filelog receiver ships container logs to Loki
 
 ## How It's Configured
 
-**Deployment**: Single replica (`otel/opentelemetry-collector-contrib:0.145.0`) in the `monitoring` namespace.
+**DaemonSet**: One pod per node (`otel/opentelemetry-collector-contrib:0.145.0`) in the `monitoring` namespace. Uses `tolerations: [operator: Exists]` to run on all nodes including control-plane and tainted infra/platform nodes.
 
-**Modular configuration**: The collector loads multiple config files via explicit `--config=file:/etc/otelcol/<name>.yaml` flags in the Deployment args. The collector deep-merges every file at startup — map keys (`receivers`, `processors`, `exporters`, `service.pipelines.<name>`) from different files are combined into a single effective config. This means each pipeline can live in its own self-contained file.
+**Modular configuration**: The collector loads multiple config files via explicit `--config=file:/etc/otelcol/<name>.yaml` flags in the DaemonSet args. The collector deep-merges every file at startup — map keys (`receivers`, `processors`, `exporters`, `service.pipelines.<name>`) from different files are combined into a single effective config. This means each pipeline can live in its own self-contained file.
 
-Two config files are deployed:
+Eight config files are deployed:
 
 | File | ConfigMap | Contains |
 |------|-----------|----------|
-| `otel-base-config.yaml` | `otel-base-config` | Pipeline-independent settings: `extensions` (health check), `service.telemetry`, `service.extensions` |
-| `otel-metrics-pipeline.yaml` | `otel-metrics-pipeline` | Full metrics pipeline: `receivers.prometheus`, `processors` (batch, filter, transform), `exporters.prometheus` + `exporters.prometheusremotewrite`, `service.pipelines.metrics` |
+| `otel-base-config.yaml` | `otel-base-config` | Pipeline-independent settings: extensions (health_check, k8s_leader_elector), `service.telemetry`, `service.extensions` |
+| `otel-metrics-pipeline.yaml` | `otel-metrics-pipeline` | Node-local metrics: `receivers.prometheus` (kubelet, cAdvisor, pods, services), `processors` (batch, filter, transform), `exporters.prometheus` + `exporters.prometheusremotewrite`, `service.pipelines.metrics` |
+| `otel-apiserver-pipeline.yaml` | `otel-apiserver-pipeline` | Leader-elected API server metrics: `receivers.prometheus/apiserver`, `exporters.prometheusremotewrite/apiserver`, `service.pipelines.metrics/apiserver` |
+| `otel-k8s-cluster-pipeline.yaml` | `otel-k8s-cluster-pipeline` | Leader-elected cluster metrics: `receivers.k8s_cluster`, `exporters.prometheusremotewrite/k8s-cluster`, `service.pipelines.metrics/k8s-cluster` |
+| `otel-kubeletstats-pipeline.yaml` | `otel-kubeletstats-pipeline` | Node-local kubelet stats: `receivers.kubeletstats`, `exporters.prometheusremotewrite/kubeletstats`, `service.pipelines.metrics/kubeletstats` |
+| `otel-logs-pipeline.yaml` | `otel-logs-pipeline` | Node-local container logs: `receivers.filelog`, `processors` (batch/logs, resource/loki), `exporters.loki`, `service.pipelines.logs` |
+| `otel-k8s-events-pipeline.yaml` | `otel-k8s-events-pipeline` | Leader-elected K8s events: `receivers.k8s_events`, `processors` (batch/k8s-events, resource/k8s-events-loki), `exporters.loki/k8s-events`, `service.pipelines.logs/k8s-events` |
+| `otel-k8s-objects-pipeline.yaml` | `otel-k8s-objects-pipeline` | Leader-elected K8s objects: `receivers.k8s_objects`, `processors` (batch/k8s-objects, resource/k8s-objects-loki), `exporters.loki/k8s-objects`, `service.pipelines.logs/k8s-objects` |
 
 Each ConfigMap is generated by Kustomize's `configMapGenerator` with `immutable: true`. Config changes produce a new ConfigMap name (hash suffix), which forces a pod rollout.
 
-**Volume mounting**: The Deployment uses a `projected` volume with one `configMap` source per pipeline file. All files land in `/etc/otelcol/` and each is referenced by a `--config=file:` flag in the Deployment args.
+**Volume mounting**: The DaemonSet uses a `projected` volume with one `configMap` source per pipeline file. All files land in `/etc/otelcol/` and each is referenced by a `--config=file:` flag. A `hostPath` volume mounts `/var/log/pods` read-only for the filelog receiver.
+
+**Node-local filtering**: The `K8S_NODE_NAME` environment variable is injected from the downward API (`spec.nodeName`). The Prometheus receiver's `kubernetes-nodes`, `kubernetes-pods`, `kubernetes-services`, and `kubernetes-nodes-cadvisor` scrape jobs use `__meta_kubernetes_pod_node_name` / `__meta_kubernetes_node_name` / `__meta_kubernetes_endpointslice_endpoint_node_name` relabel rules to keep only targets on the local node. The `kubeletstats` receiver connects directly to the local kubelet at `https://${K8S_NODE_NAME}:10250`.
+
+**Node label relabeling**: The `kubernetes-nodes`, `kubernetes-nodes-cadvisor`, and `kubernetes-services` scrape jobs copy the Kubernetes node name into a `node` label on every metric. This is required for Grafana dashboard template variables — the `$node` variable (populated from `kube_node_info`) is used to filter node-level panels (CPU, memory, disk). Without this relabel, metrics from kubelet/cAdvisor would only have an `instance` label (which is the node name for kubelet but a pod IP for service endpoints).
+
+**Regex dollar-sign escaping**: The OTel Collector's confmap resolver treats `$$` as an escaped literal `$`. In Prometheus receiver scrape configs, regex **replacement** fields (e.g., `replacement: $${1}:$${2}`) use `$$` because the `$1` is a regex capture group, not an environment variable. However, regex **match** fields that reference environment variables (e.g., `regex: ${env:K8S_NODE_NAME}`) use a single `$` — using `$$` would produce a literal string that never matches.
+
+**Empty label mitigation**: The `kubernetes-nodes` and `kubernetes-nodes-cadvisor` jobs include a `labeldrop` metric_relabel_config that removes `node_role_kubernetes_io_*` and `node_kubernetes_io_*` labels. These labels are copied from Kubernetes node metadata via `labelmap` and may have empty values (e.g., `node-role.kubernetes.io/control-plane=""`), which Thanos rejects with HTTP 409.
+
+**Leader election**: The `k8s_leader_elector` extension uses a Kubernetes Lease (`otel-collector-leader` in the `monitoring` namespace) to elect a single active pod for cluster-global receivers. The `prometheus/apiserver`, `k8s_cluster`, `k8s_events`, and `k8s_objects` receivers reference this extension — on non-leader pods these receivers are idle.
 
 ### Receivers
 
-| Receiver | Purpose |
-|----------|---------|
-| `prometheus` | Scrapes all Kubernetes targets using the same `scrape_configs` as the former Prometheus deployment |
+| Receiver | Pipeline | Scope | Purpose |
+|----------|----------|-------|--------|
+| `prometheus` | metrics | Node-local | Scrapes kubelet, cAdvisor, annotated pods, and annotated service endpoints on the local node |
+| `prometheus/apiserver` | metrics/apiserver | Leader-elected | Scrapes the Kubernetes API server metrics endpoint |
+| `k8s_cluster` | metrics/k8s-cluster | Leader-elected | Cluster-level metrics: deployments, pods, nodes, DaemonSets, StatefulSets, ReplicaSets, HPA, resource quotas |
+| `kubeletstats` | metrics/kubeletstats | Node-local | Queries local kubelet `/stats/summary` for container, pod, node, and volume resource metrics |
+| `filelog` | logs | Node-local | Tails `/var/log/pods/*/*/*.log`, parses CRI-O/containerd format, extracts K8s metadata from file path |
+| `k8s_events` | logs/k8s-events | Leader-elected | Watches K8s Events API — pod scheduling, image pulls, OOM kills, scaling events |
+| `k8s_objects` | logs/k8s-objects | Leader-elected | Watches K8s resources (events, pods, deployments) for change tracking/audit |
 
 ### Exporters
 
-| Exporter | Port | Purpose |
-|----------|------|---------|
-| `prometheus` | 8889 | Exposes a Prometheus-compatible `/metrics` endpoint for local queries |
-| `prometheusremotewrite` | — | Sends all metrics to `http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive` |
+| Exporter | Port | Pipeline(s) | Purpose |
+|----------|------|-------------|--------|
+| `prometheus` | 8889 | metrics | Exposes a Prometheus-compatible `/metrics` endpoint for local queries |
+| `prometheusremotewrite` | — | metrics | Node-local scraped metrics → Thanos Receive |
+| `prometheusremotewrite/apiserver` | — | metrics/apiserver | API server metrics → Thanos Receive |
+| `prometheusremotewrite/k8s-cluster` | — | metrics/k8s-cluster | Cluster-level metrics → Thanos Receive |
+| `prometheusremotewrite/kubeletstats` | — | metrics/kubeletstats | Kubelet stats → Thanos Receive |
+| `loki` | — | logs | Container logs → Loki |
+| `loki/k8s-events` | — | logs/k8s-events | K8s events → Loki |
+| `loki/k8s-objects` | — | logs/k8s-objects | K8s object changes → Loki |
+
+All four `prometheusremotewrite` exporters are configured with:
+
+- **`external_labels: {cluster: homelab}`** — stamps every metric with `cluster=homelab` so Grafana dashboard template variables (populated from `label_values(..., cluster)`) resolve correctly
+- **`target_info: enabled: false`** (main metrics pipeline only) — prevents the `target_info` time series from being written, avoiding empty `server_port` labels that cause Thanos 409 rejections
+- **`retry_on_failure: enabled: false`** — fail-fast; OTel Collector restarts are preferred over unbounded retry memory growth
 
 ### Processors
 
-| Processor | Purpose |
-|-----------|---------|
-| `batch` | Batches metric points (2000–4000 per batch, 10s timeout) to reduce export overhead |
-| `filter` | Drops noisy/low-value metrics (e.g., `container_tasks_state`, `container_blkio_device_usage_total`) |
-| `transform` | Removes empty resource attributes (`net.host.port`, `server.port`) that cause Thanos Receive 409 rejections |
+| Processor | Pipeline(s) | Purpose |
+|-----------|-------------|--------|
+| `batch` | metrics, metrics/apiserver | Batches metric points (2000–4000 per batch, 10s timeout) |
+| `batch/k8s-cluster` | metrics/k8s-cluster | Batches cluster metrics (2000–4000 per batch, 10s timeout) |
+| `batch/kubeletstats` | metrics/kubeletstats | Batches kubelet stats (2000–4000 per batch, 10s timeout) |
+| `filter` | metrics | Drops noisy/low-value cAdvisor metrics (`container_tasks_state`, `container_memory_failures_total`, `container_blkio_device_usage_total`). Container network error/drop metrics are intentionally preserved for dashboard panels. |
+| `transform` | metrics | Removes empty resource attributes (`net.host.port`, `server.port`) that cause Thanos 409s |
+| `batch/logs` | logs | Batches container log entries (1000–2000 per batch, 5s timeout) |
+| `resource/loki` | logs | Inserts `loki.format` and `loki.resource.labels` for container log Loki label mapping |
+| `batch/k8s-events` | logs/k8s-events | Batches K8s event log entries (500–1000 per batch, 5s timeout) |
+| `resource/k8s-events-loki` | logs/k8s-events | Inserts Loki labels: `k8s.namespace.name`, `k8s.object.kind`, `k8s.object.name` |
+| `batch/k8s-objects` | logs/k8s-objects | Batches K8s object log entries (500–1000 per batch, 5s timeout) |
+| `resource/k8s-objects-loki` | logs/k8s-objects | Inserts Loki labels: `k8s.namespace.name`, `k8s.resource.name` |
 
-### Pipeline
+### Pipelines
 
 ```
-prometheus receiver → batch → filter → transform → prometheusremotewrite exporter
-                                                  → prometheus exporter (port 8889)
+Metrics (node-local):
+  prometheus receiver → batch → filter → transform → prometheusremotewrite exporter
+                                                    → prometheus exporter (port 8889)
+
+Metrics/apiserver (leader-elected):
+  prometheus/apiserver receiver → batch → prometheusremotewrite/apiserver exporter
+
+Metrics/k8s-cluster (leader-elected):
+  k8s_cluster receiver → batch/k8s-cluster → prometheusremotewrite/k8s-cluster exporter
+
+Metrics/kubeletstats (node-local):
+  kubeletstats receiver → batch/kubeletstats → prometheusremotewrite/kubeletstats exporter
+
+Logs (node-local):
+  filelog receiver → batch/logs → resource/loki → loki exporter
+
+Logs/k8s-events (leader-elected):
+  k8s_events receiver → batch/k8s-events → resource/k8s-events-loki → loki/k8s-events exporter
+
+Logs/k8s-objects (leader-elected):
+  k8s_objects receiver → batch/k8s-objects → resource/k8s-objects-loki → loki/k8s-objects exporter
 ```
 
 ### Ports
@@ -73,7 +147,18 @@ prometheus receiver → batch → filter → transform → prometheusremotewrite
 
 ### RBAC
 
-The collector uses its own `ServiceAccount`, `ClusterRole`, and `ClusterRoleBinding` (`otel-collector`) with the same permissions as the former Prometheus RBAC — read access to nodes, pods, services, endpointslices, and `/metrics` endpoints.
+The collector uses its own `ServiceAccount`, `ClusterRole`, and `ClusterRoleBinding` (`otel-collector`) with:
+
+- **Core**: `nodes`, `nodes/proxy`, `nodes/stats`, `pods`, `pods/status`, `services`, `events`, `namespaces`, `namespaces/status`, `replicationcontrollers`, `replicationcontrollers/status`, `resourcequotas` (get/list/watch)
+- **discovery.k8s.io**: `endpointslices` (get/list/watch)
+- **apps**: `deployments`, `daemonsets`, `replicasets`, `statefulsets` (get/list/watch)
+- **batch**: `jobs`, `cronjobs` (get/list/watch)
+- **autoscaling**: `horizontalpodautoscalers` (get/list/watch)
+- **extensions/networking.k8s.io**: `ingresses` (get/list/watch)
+- **policy**: `poddisruptionbudgets` (get/list/watch)
+- **storage.k8s.io**: `storageclasses`, `volumeattachments` (get/list/watch)
+- **coordination.k8s.io**: `leases` (get/list/watch/create/update/patch/delete — for leader election)
+- **nonResourceURLs**: `/metrics`, `/metrics/cadvisor` (get)
 
 **ArgoCD sync-wave**: 2 (deploys alongside other core monitoring components).
 
@@ -123,41 +208,50 @@ service:
       immutable: true
 ```
 
-**3. Add a `projected.sources` entry** in `deployment.yaml`:
+**3. Add a `projected.sources` entry** in `daemonset.yaml`:
 
 ```yaml
           - configMap:
               name: otel-traces-pipeline
 ```
 
-**4. Add a `--config=file:` arg** to the Deployment container args:
+**4. Add a `--config=file:` arg** to the DaemonSet container args:
 
 ```yaml
         args:
           - '--config=file:/etc/otelcol/otel-base-config.yaml'
           - '--config=file:/etc/otelcol/otel-metrics-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-apiserver-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-k8s-cluster-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-kubeletstats-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-logs-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-k8s-events-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-k8s-objects-pipeline.yaml'
           - '--config=file:/etc/otelcol/otel-traces-pipeline.yaml'
 ```
 
-The collector merges `receivers.otlp`, `processors.batch`, `exporters.otlp/jaeger`, and `service.pipelines.traces` into the effective config alongside the existing base and metrics pipeline.
+The collector merges `receivers.otlp`, `processors.batch`, `exporters.otlp/jaeger`, and `service.pipelines.traces` into the effective config alongside all existing pipelines.
 
 ### Rules for pipeline files
 
 - Each file is self-contained: it declares every receiver, processor, and exporter it needs
 - If two files define the same component key (e.g., both define `processors.memory_limiter`), the last file in alphabetical order wins — avoid collisions by using unique names or named instances (`otlp/jaeger`, `batch/traces`)
-- The base config (`otel-base-config.yaml`) owns pipeline-independent settings only: extensions, telemetry, service.extensions
+- The base config (`otel-base-config.yaml`) owns pipeline-independent settings only: extensions (health_check, k8s_leader_elector), telemetry, service.extensions
 - Pipeline files must not redefine `service.telemetry` or `service.extensions` — those belong to the base
+- Cluster-global receivers must reference `k8s_leader_elector: k8s_leader_elector` to avoid redundant work across DaemonSet pods
+- Node-local receivers should use `${env:K8S_NODE_NAME}` for scoping
 
 ## Integration Points
 
 | Component | Relationship |
 |-----------|-------------|
-| [Thanos](thanos.md) | Receives all metrics via `prometheusremotewrite` exporter on port 19291 |
-| [Grafana](grafana.md) | Queries metrics through Thanos Query (datasource `uid: prometheus`) |
-| [Node Exporter](node-exporter.md) | Scraped for host-level metrics via `kubernetes-services` annotation-based discovery |
-| [kube-state-metrics](kube-state-metrics.md) | Scraped for Kubernetes object state metrics via `kubernetes-services` annotation-based discovery |
+| [Thanos](thanos.md) | Receives all metrics (4 pipelines) via `prometheusremotewrite` exporters on port 19291 |
+| [Loki](loki.md) | Receives all logs (3 pipelines) via `loki` exporters on port 3100 |
+| [Grafana](grafana.md) | Queries metrics through Thanos Query, logs through Loki |
+| [Node Exporter](node-exporter.md) | Scraped for host-level metrics via `kubernetes-services` and `kubernetes-pods` annotation-based discovery |
+| [kube-state-metrics](kube-state-metrics.md) | Scraped for Kubernetes object state metrics via annotation-based discovery |
 | [DCGM Exporter](dcgm-exporter.md) | Scraped for GPU metrics via pod annotation discovery (when `ENABLE_CUDA=true`) |
-| [Alertmanager](alertmanager.md) | Not directly connected — the OTel Collector's Prometheus receiver does not support `rule_files` or `alertmanagers`. Alert rule evaluation is handled by [Thanos Ruler](thanos.md#thanos-ruler-statefulset), which queries metrics through Thanos Query and sends firing alerts to Alertmanager. |
+| [Alertmanager](alertmanager.md) | Not directly connected — alert rule evaluation is handled by [Thanos Ruler](thanos.md#thanos-ruler-statefulset) |
 | [Harbor](../infrastructure/harbor.md) | Container images pulled through Harbor proxy cache (`harbor.k8s.local`) |
 
 ## Troubleshooting
@@ -190,7 +284,11 @@ kubectl logs -n monitoring -l app=otel-collector --tail=100 | grep -i "remote\|t
 
 **Thanos has no data**: Check the OTel Collector logs for remote write errors. Verify `thanos-receive` service is reachable: `kubectl get svc thanos-receive -n monitoring`. Confirm the `prometheusremotewrite` exporter endpoint URL is correct in the ConfigMap.
 
-**Pod OOMKilled**: The container memory limit is set to 1 GiB. If scraping many targets, increase `resources.limits.memory` in the Deployment. There is no `memory_limiter` processor — OOM restart is preferred over silently dropping metrics.
+**Thanos 409 "label set contains a label with empty name or value"**: An exported metric has an empty label name or value. Common causes: (1) `target_info` metric with empty `server_port` — fix by setting `target_info: enabled: false` on the PRW exporter. (2) `labelmap` copying Kubernetes node labels with empty values (e.g., `node-role.kubernetes.io/control-plane=""`) — fix by adding a `labeldrop` metric_relabel_config.
+
+**Grafana dashboards show "No data"**: The dashboards use template variables (`$cluster`, `$node`, `$instance`) populated from label queries. If metrics lack the expected labels: (1) Verify `cluster=homelab` exists: `curl -s 'http://thanos-query:9090/api/v1/query?query=kube_node_info' | jq '.data.result[0].metric.cluster'`. (2) Verify `node` label exists on cAdvisor/kubelet metrics: check the relabel rules in the `kubernetes-nodes` and `kubernetes-nodes-cadvisor` scrape jobs. (3) Verify `$instance` resolves: the k8s-views-nodes dashboard resolves `$instance` via `node_cpu_seconds_total{node="$node"}`, not `node_uname_info{nodename}`.
+
+**Pod OOMKilled**: The container memory limit is set to 2 GiB. If scraping many targets, increase `resources.limits.memory` in the DaemonSet. There is no `memory_limiter` processor — OOM restart is preferred over silently dropping metrics.
 
 **Memory growing unboundedly**: The prometheus exporter (port 8889) has a [known bug](https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/41123) where expired metrics are only cleaned up during `Collect()` (i.e., when someone scrapes the endpoint). A dedicated `otel-prom-exporter-gc` scrape job with `action: drop` is configured to trigger cleanup every 60 seconds without ingesting any data. If this job is removed, the exporter's internal map will grow without bound.
 
@@ -201,6 +299,12 @@ kubectl logs -n monitoring -l app=otel-collector --tail=100 | grep -i "remote\|t
 - [OpenTelemetry Collector Documentation](https://opentelemetry.io/docs/collector/)
 - [OpenTelemetry Collector Contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
 - [Prometheus Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/prometheusreceiver)
+- [Kubernetes Cluster Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/k8sclusterreceiver)
+- [Kubernetes Events Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/k8seventsreceiver)
+- [Kubernetes Objects Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/k8sobjectsreceiver)
+- [Kubelet Stats Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/kubeletstatsreceiver)
+- [Filelog Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/filelogreceiver)
+- [K8s Leader Elector Extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/k8sleaderelector)
 - [Prometheus Remote Write Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusremotewriteexporter)
-- [Prometheus Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter)
+- [Loki Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/lokiexporter)
 - [Collector Deployment Patterns](https://opentelemetry.io/docs/collector/deploy/)

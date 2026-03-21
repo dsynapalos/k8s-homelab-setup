@@ -1,0 +1,29 @@
+# Kubernetes Events pipeline: k8s_events receiver → Loki.
+#
+# Watches the Kubernetes Events API for all namespaces and converts each
+# event (pod scheduling, image pulls, OOM kills, scaling, etc.) into a
+# structured log record. Cluster-global — runs in the single-replica
+# otel-cluster-collector Deployment.
+
+receivers:
+  k8s_events:
+    auth_type: serviceAccount
+
+processors:
+  batch/k8s-events:
+    send_batch_size: 500
+    send_batch_max_size: 1000
+    timeout: 5s
+
+exporters:
+  otlp_http/loki-k8s-events:
+    endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs/k8s-events:
+      receivers: [k8s_events]
+      processors: [batch/k8s-events]
+      exporters: [otlp_http/loki-k8s-events]

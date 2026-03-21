@@ -12,7 +12,10 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 
 **Deployment**: Single replica (`grafana/grafana:12.3.3`) in the `monitoring` namespace.
 
-**Datasource**: Thanos Query at `http://thanos-query.monitoring.svc.cluster.local:9090` is configured as the default Prometheus-compatible datasource with `uid: prometheus`. The datasource is **named "Thanos" in the Grafana UI** but uses the `prometheus` type and UID — this means all dashboards reference `uid: prometheus` even though they're querying Thanos. This naming is intentional: Thanos Query speaks the Prometheus API, so Grafana treats it as a Prometheus datasource.
+**Datasource**: Two datasources are provisioned:
+
+- **Thanos Query** at `http://thanos-query.monitoring.svc.cluster.local:9090` — the default Prometheus-compatible datasource with `uid: prometheus`. Named "Thanos" in the Grafana UI but uses the `prometheus` type and UID — all metric dashboards reference `uid: prometheus` even though they're querying Thanos.
+- **Loki** at `http://loki.monitoring.svc.cluster.local:3100` — log aggregation datasource provisioned via `loki-datasource.yaml`. Used for container logs, K8s events, and object change tracking in Grafana Explore.
 
 > **If Thanos has no data**: Grafana will show empty dashboards because its datasource points to Thanos Query, not Prometheus directly. See the [Thanos doc](thanos.md) for the `remote_write` prerequisite.
 
@@ -21,6 +24,10 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 | Dashboard | File | Description |
 |-----------|------|-------------|
 | K8s Cluster | `k8s-cluster-dashboard.json` | Cluster-wide resource utilization |
+| K8s Views / Global | `k8s-views-global.json` | Global overview with resource counts, CPU, memory, network |
+| K8s Views / Namespaces | `k8s-views-namespaces.json` | Per-namespace resource usage and object counts |
+| K8s Views / Nodes | `k8s-views-nodes.json` | Per-node CPU, memory, disk, network with `$node` selector |
+| K8s Views / Pods | `k8s-views-pods.json` | Per-pod resource usage with container breakdown |
 | NVIDIA GPU | `nvidia-gpu-dashboard.json` | 8 GPU panels (utilization, temp, power, memory, clocks, PCIe) |
 
 **Dashboard provider**: Configured to read from `/etc/grafana/provisioning/dashboards/`, with `disableNameSuffixHash: false` in Kustomize. This means ConfigMap names include a content hash (e.g., `grafana-k8s-dashboard-abc123`). When you update a dashboard JSON file, the hash changes, generating a new ConfigMap name. The Deployment references ConfigMaps by name, so this **automatically triggers a Grafana pod restart** to pick up dashboard changes — no manual rollout needed.
@@ -41,12 +48,16 @@ The default local admin (`admin`/`admin`) no longer works as a fallback — the 
 
 - GPU dashboard queries use `max() by (gpu, Hostname)` aggregation to deduplicate per-pod time series from DCGM Exporter
 - All dashboards reference datasource `uid: prometheus` which points to Thanos Query
+- **KSM v2.x metric compatibility**: Dashboards use KSM v2.x metric names (`kube_namespace_created`, `kube_deployment_created`, `kube_statefulset_created`, `kube_daemonset_created`, `kube_horizontalpodautoscaler_info`, `kube_networkpolicy_created`, `kube_endpointslice_info`). The v1.x `*_labels` metrics were removed in KSM 2.0.
+- **k8s-views-nodes `$instance` variable**: Resolved via `node_cpu_seconds_total{node="$node", cluster="$cluster"}` instead of `node_uname_info{nodename}`. The OTel Collector adds a `node` label to all metrics from the prometheus scrape jobs (kubelet, cAdvisor, service endpoints). This avoids dependency on `hostNetwork` for hostname resolution.
+- **`$cluster` template variable**: Dashboards populate `$cluster` from `label_values(kube_node_info, cluster)`. The OTel Collector's `prometheusremotewrite` exporters stamp `external_labels: {cluster: homelab}` on every metric to satisfy this.
 
 ## Integration Points
 
 | Component | Relationship |
 |-----------|-------------|
 | [Thanos](thanos.md) | Default datasource — Grafana queries Thanos Query for all metrics |
+| [Loki](loki.md) | Log datasource — Grafana queries Loki for container logs, K8s events, and object changes |
 | [Prometheus](prometheus.md) | Indirect — metrics flow through Thanos |
 | [DCGM Exporter](dcgm-exporter.md) | GPU metrics rendered in NVIDIA GPU Dashboard |
 | [Node Exporter](node-exporter.md) | Host metrics rendered in K8s Cluster Dashboard |
@@ -77,7 +88,7 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
 
 **Datasource not found**: Ensure the Prometheus datasource ConfigMap has `uid: prometheus` — all dashboards reference this UID. The datasource points to Thanos Query, not Prometheus directly.
 
-**Dashboard shows "No data"**: If Thanos has no data, all dashboards will be empty. See [Thanos troubleshooting](thanos.md#troubleshooting). For GPU dashboards specifically, ensure DCGM Exporter is running with `runtimeClassName: nvidia`.
+**Dashboard shows "No data"**: If Thanos has no data, all dashboards will be empty. See [Thanos troubleshooting](thanos.md#troubleshooting). If only specific panels are empty, check template variable resolution: the `$cluster` variable depends on metrics having a `cluster` label (set by OTel Collector `external_labels`), and the `$node`/`$instance` variables depend on the `node` label being present on kubelet/cAdvisor/service endpoint metrics. See [OTel Collector troubleshooting](otel-collector.md#troubleshooting) for label diagnostics. For GPU dashboards specifically, ensure DCGM Exporter is running with `runtimeClassName: nvidia`.
 
 **Dashboard not updating after JSON change**: Kustomize uses `disableNameSuffixHash: false`, so ConfigMap name changes trigger a pod restart automatically. If the pod didn't restart, check that the ConfigMap name actually changed.
 

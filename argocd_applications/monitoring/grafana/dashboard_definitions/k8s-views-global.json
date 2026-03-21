@@ -581,7 +581,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(kube_namespace_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_namespace_created{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Namespaces",
           "refId": "A"
@@ -621,7 +621,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_endpoint_info{cluster=\"$cluster\"})",
+          "expr": "sum(kube_endpointslice_info{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Endpoints",
           "refId": "D"
@@ -641,7 +641,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_deployment_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_deployment_created{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Deployments",
           "refId": "F"
@@ -651,7 +651,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_statefulset_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_statefulset_created{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Statefulsets",
           "refId": "G"
@@ -661,7 +661,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_daemonset_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_daemonset_created{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Daemonsets",
           "refId": "H"
@@ -681,7 +681,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_hpa_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_horizontalpodautoscaler_info{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Horizontal Pod Autoscalers",
           "refId": "J"
@@ -711,7 +711,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(kube_networkpolicy_labels{cluster=\"$cluster\"})",
+          "expr": "sum(kube_networkpolicy_created{cluster=\"$cluster\"})",
           "interval": "",
           "legendFormat": "Network Policies",
           "refId": "M"

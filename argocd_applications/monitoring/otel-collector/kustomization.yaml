@@ -7,6 +7,7 @@ resources:
   - serviceaccount.yaml
   - clusterrole.yaml
   - clusterrolebinding.yaml
+  - daemonset.yaml
   - deployment.yaml
   - service.yaml
 
@@ -19,5 +20,35 @@ configMapGenerator:
   - name: otel-metrics-pipeline
     files:
       - otel-metrics-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-apiserver-pipeline
+    files:
+      - otel-apiserver-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-k8s-cluster-pipeline
+    files:
+      - otel-k8s-cluster-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-kubeletstats-pipeline
+    files:
+      - otel-kubeletstats-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-logs-pipeline
+    files:
+      - otel-logs-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-k8s-events-pipeline
+    files:
+      - otel-k8s-events-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-k8s-objects-pipeline
+    files:
+      - otel-k8s-objects-pipeline.yaml
     options:
       immutable: true

@@ -1,0 +1,38 @@
+# Kubernetes Objects pipeline: k8sobjects receiver → Loki.
+#
+# Watches Kubernetes resources and emits the full object as a structured log
+# record on every change. Useful for audit trails and change tracking of
+# cluster state. Cluster-global — runs in the single-replica
+# otel-cluster-collector Deployment.
+
+receivers:
+  k8sobjects:
+    auth_type: serviceAccount
+    objects:
+      - name: events
+        mode: watch
+      - name: pods
+        mode: pull
+        interval: 60s
+      - name: deployments
+        mode: pull
+        interval: 60s
+
+processors:
+  batch/k8s-objects:
+    send_batch_size: 500
+    send_batch_max_size: 1000
+    timeout: 5s
+
+exporters:
+  otlp_http/loki-k8s-objects:
+    endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs/k8s-objects:
+      receivers: [k8sobjects]
+      processors: [batch/k8s-objects]
+      exporters: [otlp_http/loki-k8s-objects]

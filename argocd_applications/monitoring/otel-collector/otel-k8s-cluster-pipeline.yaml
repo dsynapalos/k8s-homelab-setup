@@ -1,0 +1,44 @@
+# Kubernetes Cluster metrics pipeline: k8s_cluster receiver → Thanos remote write.
+#
+# Collects cluster-level metrics from the Kubernetes API server: deployment
+# replica counts, pod phase counts, node conditions, container resource
+# requests/limits, DaemonSet/StatefulSet/ReplicaSet status, namespace quotas,
+# and HPA metrics. Cluster-global — runs in the single-replica
+# otel-cluster-collector Deployment.
+
+receivers:
+  k8s_cluster:
+    auth_type: serviceAccount
+    collection_interval: 10s
+    node_conditions_to_report:
+      - Ready
+      - MemoryPressure
+      - DiskPressure
+      - PIDPressure
+    allocatable_types_to_report:
+      - cpu
+      - memory
+      - pods
+
+processors:
+  batch/k8s-cluster:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+exporters:
+  prometheusremotewrite/k8s-cluster:
+    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
+    tls:
+      insecure: true
+    external_labels:
+      cluster: homelab
+    retry_on_failure:
+      enabled: false
+
+service:
+  pipelines:
+    metrics/k8s-cluster:
+      receivers: [k8s_cluster]
+      processors: [batch/k8s-cluster]
+      exporters: [prometheusremotewrite/k8s-cluster]

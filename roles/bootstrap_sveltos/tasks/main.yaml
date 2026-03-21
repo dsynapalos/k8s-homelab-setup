@@ -160,6 +160,116 @@
   register: label_result
   until: label_result is not failed
 
+# --- Management kubeconfig token rotation ---
+# The Helm registerMgmtCluster job creates mgmt-sveltos-kubeconfig with a
+# short-lived bound token (~3 h default).  Replace it with a non-expiring
+# Secret-based SA token so the addon-controller stays authenticated.
+- name: Create persistent service account token for Sveltos
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: projectsveltos-sa-token
+        namespace: projectsveltos
+        annotations:
+          kubernetes.io/service-account.name: projectsveltos
+      type: kubernetes.io/service-account-token
+    kubeconfig: "~/.kube/config"
+  delegate_to: localhost
+
+- name: Wait for service account token to be populated
+  kubernetes.core.k8s_info:
+    kind: Secret
+    name: projectsveltos-sa-token
+    namespace: projectsveltos
+    kubeconfig: "~/.kube/config"
+  delegate_to: localhost
+  register: sa_token_secret
+  until: >-
+    sa_token_secret.resources | length > 0
+    and (sa_token_secret.resources[0].data.token | default('')) != ''
+  retries: 10
+  delay: 3
+
+- name: Read existing management kubeconfig
+  kubernetes.core.k8s_info:
+    kind: Secret
+    name: mgmt-sveltos-kubeconfig
+    namespace: mgmt
+    kubeconfig: "~/.kube/config"
+  delegate_to: localhost
+  register: mgmt_kubeconfig_secret
+
+- name: Update management kubeconfig with persistent token
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: mgmt-sveltos-kubeconfig
+        namespace: mgmt
+      type: Opaque
+      data:
+        kubeconfig: "{{ _updated_kc | b64encode }}"
+        re-kubeconfig: "{{ _updated_rekc | b64encode }}"
+    kubeconfig: "~/.kube/config"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
+  vars:
+    _existing_kc: "{{ mgmt_kubeconfig_secret.resources[0].data.kubeconfig | b64decode }}"
+    _existing_rekc: "{{ mgmt_kubeconfig_secret.resources[0].data['re-kubeconfig'] | b64decode }}"
+    _new_token: "{{ sa_token_secret.resources[0].data.token | b64decode }}"
+    _updated_kc: "{{ _existing_kc | regex_replace('token: .*', 'token: ' + _new_token) }}"
+    _updated_rekc: "{{ _existing_rekc | regex_replace('token: .*', 'token: ' + _new_token) }}"
+  delegate_to: localhost
+  register: kubeconfig_update
+
+- name: Restart addon-controller to pick up new token
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: addon-controller
+        namespace: projectsveltos
+      spec:
+        template:
+          metadata:
+            annotations:
+              ansible/restartedAt: "{{ now(utc=true).isoformat() }}"
+    kubeconfig: "~/.kube/config"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
+  delegate_to: localhost
+  when: kubeconfig_update is changed
+
+- name: Restart sc-manager to pick up new token
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: sc-manager
+        namespace: projectsveltos
+      spec:
+        template:
+          metadata:
+            annotations:
+              ansible/restartedAt: "{{ now(utc=true).isoformat() }}"
+    kubeconfig: "~/.kube/config"
+    server_side_apply:
+      field_manager: ansible
+      force_conflicts: true
+  delegate_to: localhost
+  when: kubeconfig_update is changed
+
 - name: Set target revision
   ansible.builtin.set_fact:
     argocd_target_revision: "{{ lookup('env', 'ARGOCD_TARGET_REVISION') | default('main', true) }}"

@@ -33,6 +33,9 @@ configMapGenerator:
   - name: grafana-prometheus-datasource
     files:
       - prometheus-datasource.yaml
+  - name: grafana-loki-datasource
+    files:
+      - loki-datasource.yaml
 
 generatorOptions:
   disableNameSuffixHash: false

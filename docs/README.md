@@ -47,7 +47,8 @@ docs/
     │   ├── kube-state-metrics.md    ← Kubernetes object state metrics
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
     │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
-    │   └── metrics-server.md        ← kubectl top / HPA metrics aggregator
+    │   ├── metrics-server.md        ← kubectl top / HPA metrics aggregator
+    │   └── loki.md                  ← Log aggregation backend (monolithic mode)
     ├── storage/
     │   ├── cloudnative-pg.md        ← PostgreSQL operator (CNPG) lifecycle & CRDs
     │   ├── rook-operator.md         ← Rook operator lifecycle & CRDs
@@ -170,6 +171,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [node-exporter.md](applications/monitoring/node-exporter.md) | Host metrics DaemonSet. CPU, memory, disk I/O, network, filesystem utilization from every node. |
 | [otel-collector.md](applications/monitoring/otel-collector.md) | Metrics collection pipeline. Prometheus receiver, remote write to Thanos, expandable for traces/logs. |
 | [metrics-server.md](applications/monitoring/metrics-server.md) | Kubernetes Metrics API aggregator. Enables `kubectl top`, HPA, and VPA via kubelet metric collection. |
+| [loki.md](applications/monitoring/loki.md) | Log aggregation backend. Monolithic mode, filesystem storage, LogQL queries, Grafana datasource integration. |
 
 #### Storage (`applications/storage/`)
 

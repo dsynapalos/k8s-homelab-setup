@@ -15,6 +15,7 @@ This directory contains all architecture diagrams for the cluster-setup project.
 | [infrastructure-overview.svg](infrastructure-overview.svg) | Physical and virtual infrastructure — two Proxmox hosts, control-plane and worker VMs, kube-vip HA, secondary storage pools |
 | [networking-architecture.svg](networking-architecture.svg) | Network stack — Cilium CNI, L2 announcements, LoadBalancer IP pool, Ingress Controller, optional Istio Ambient mesh, CoreDNS |
 | [storage-architecture.svg](storage-architecture.svg) | Storage options — Rook-Ceph in-cluster (MON/MGR/OSD/MDS/RGW, 2× replication, block/filesystem/object StorageClasses) and external CephFS CSI |
+| [service-dependency-graph.svg](service-dependency-graph.svg) | Service dependency graph — all components across infra and platform tiers with data-flow edges (Thanos, OTel Collector, Loki, Grafana, cert-manager, Keycloak, Harbor, etc.) |
 
 ## How It Works
 
@@ -94,3 +95,4 @@ Each diagram is embedded in the corresponding documentation page:
 - `infrastructure-overview.svg` → [docs/infrastructure/architecture.md](../infrastructure/architecture.md)
 - `networking-architecture.svg` → [docs/infrastructure/networking.md](../infrastructure/networking.md)
 - `storage-architecture.svg` → [docs/infrastructure/storage.md](../infrastructure/storage.md)
+- `service-dependency-graph.svg` → [docs/infrastructure/architecture.md](../infrastructure/architecture.md)
