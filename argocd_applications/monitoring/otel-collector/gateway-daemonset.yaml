@@ -1,0 +1,100 @@
+# Platform gateway DaemonSet for cluster-level OTel pipelines.
+#
+# Runs on platform nodes only (nodeSelector + toleration). Receives all
+# signals forwarded from node-local agents via OTLP. Also runs
+# cluster-scoped receivers (apiserver, k8s_cluster, k8s_events,
+# k8s_objects) with leader election where supported.
+#
+# In a multi-node platform tier, k8s_cluster uses native leader
+# election (Kubernetes Lease). Other cluster-scoped receivers accept
+# benign duplicate data which backends deduplicate or tolerate:
+#   - apiserver metrics → Thanos deduplication at query time
+#   - k8s_events / k8s_objects → Loki handles duplicate log ingestion
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector-cluster
+  namespace: monitoring
+  labels:
+    app: otel-collector-cluster
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector-cluster
+  template:
+    metadata:
+      labels:
+        app: otel-collector-cluster
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8888"
+    spec:
+      serviceAccountName: otel-collector
+      nodeSelector:
+        role: platform
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
+      containers:
+      - name: otel-collector
+        image: harbor.k8s.local/dockerhub-cache/otel/opentelemetry-collector-contrib:0.145.0
+        args:
+          - '--config=file:/etc/otelcol/otel-gateway-base-config.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-metrics-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-logs-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-traces-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-apiserver-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-k8s-cluster-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-k8s-events-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-gateway-k8s-objects-pipeline.yaml'
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        - containerPort: 8888
+          name: metrics
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/otelcol/
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 15
+      volumes:
+      - name: otel-collector-config
+        projected:
+          sources:
+          - configMap:
+              name: otel-gateway-base-config
+          - configMap:
+              name: otel-gateway-metrics-pipeline
+          - configMap:
+              name: otel-gateway-logs-pipeline
+          - configMap:
+              name: otel-gateway-traces-pipeline
+          - configMap:
+              name: otel-gateway-apiserver-pipeline
+          - configMap:
+              name: otel-gateway-k8s-cluster-pipeline
+          - configMap:
+              name: otel-gateway-k8s-events-pipeline
+          - configMap:
+              name: otel-gateway-k8s-objects-pipeline

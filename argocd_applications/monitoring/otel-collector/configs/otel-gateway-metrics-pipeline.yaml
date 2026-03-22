@@ -1,0 +1,67 @@
+# Gateway metrics pipeline: forwarded node metrics → Thanos Receive.
+#
+# Receives metrics forwarded from node-local OTel agents via OTLP and
+# writes them to Thanos Receive using Prometheus remote write. Heavy
+# batching amortises backend write cost across all nodes.
+#
+# The OTLP receiver is defined in otel-gateway-base-config.yaml.
+#
+# transform/drop-empty-labels removes data point attributes whose value is an
+# empty string before PRW export. cAdvisor uses empty-valued labels
+# (container="", pod="", namespace="", image="", name="", id="") on
+# node-level infrastructure metrics; the OTel prometheus receiver preserves
+# them as OTLP attributes, but Thanos rejects any PRW batch that contains a
+# label with an empty value (HTTP 409). Deleting them here is semantically
+# correct: the Prometheus data model treats an empty label value as absent.
+
+processors:
+  transform/drop-empty-labels:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - delete_key(attributes, "container") where attributes["container"] == ""
+          - delete_key(attributes, "pod") where attributes["pod"] == ""
+          - delete_key(attributes, "namespace") where attributes["namespace"] == ""
+          - delete_key(attributes, "image") where attributes["image"] == ""
+          - delete_key(attributes, "name") where attributes["name"] == ""
+          - delete_key(attributes, "id") where attributes["id"] == ""
+      # Strip empty-valued resource attributes before resource_to_telemetry_conversion
+      # copies them into data point attributes during PRW export.
+      # CreateResource() in the prometheus receiver unconditionally calls PutStr() for
+      # server.port and url.scheme even when the values are empty strings (no port in
+      # the instance URL, or __scheme__ absent from target discovered labels). Those
+      # empty resource attributes survive into PRW labels and trigger Thanos 409s.
+      - context: resource
+        statements:
+          - delete_key(attributes, "server.port") where attributes["server.port"] == ""
+          - delete_key(attributes, "url.scheme") where attributes["url.scheme"] == ""
+          - delete_key(attributes, "server.address") where attributes["server.address"] == ""
+          - delete_key(attributes, "container.id") where attributes["container.id"] == ""
+          - delete_key(attributes, "k8s.volume.type") where attributes["k8s.volume.type"] == ""
+
+  batch/forwarded-metrics:
+    send_batch_size: 4096
+    send_batch_max_size: 8192
+    timeout: 10s
+
+exporters:
+  prometheusremotewrite/thanos:
+    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
+    tls:
+      insecure: true
+    external_labels:
+      cluster: homelab
+    resource_to_telemetry_conversion:
+      enabled: true
+    target_info:
+      enabled: false
+    retry_on_failure:
+      enabled: false
+
+service:
+  pipelines:
+    metrics/forwarded:
+      receivers: [otlp]
+      processors: [transform/drop-empty-labels, batch/forwarded-metrics]
+      exporters: [prometheusremotewrite/thanos]

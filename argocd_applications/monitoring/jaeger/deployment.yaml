@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: monitoring
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      tolerations:
+      - key: role
+        operator: Equal
+        value: platform
+        effect: NoSchedule
+      securityContext:
+        fsGroup: 10001
+      containers:
+      - name: jaeger
+        image: harbor.k8s.local/dockerhub-cache/jaegertracing/jaeger:2.16.0
+        args:
+          - '--config=/etc/jaeger/jaeger-config.yaml'
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        - containerPort: 16686
+          name: query
+        - containerPort: 8888
+          name: metrics
+        volumeMounts:
+        - name: jaeger-config
+          mountPath: /etc/jaeger/
+        - name: jaeger-data
+          mountPath: /var/jaeger/badger
+        resources:
+          requests:
+            cpu: 10m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 13133
+          initialDelaySeconds: 15
+          periodSeconds: 15
+      volumes:
+      - name: jaeger-config
+        configMap:
+          name: jaeger-config
+      - name: jaeger-data
+        persistentVolumeClaim:
+          claimName: jaeger-data

@@ -16,7 +16,7 @@ The SVG is the single source of truth.
 
 Full technical rules for creating/editing diagrams (XML format, style guide, edge routing, waypoints, layout rules) are in the skill file:
 
-**`.github/skills/render-drawio-diagram/SKILL.md`**
+**`.agents/skills/render-drawio-diagram/SKILL.md`**
 
 Always read that file before creating or editing any diagram. This document covers only the high-level workflow and directory-level context.
 

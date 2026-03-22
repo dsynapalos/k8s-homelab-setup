@@ -7,48 +7,76 @@ resources:
   - serviceaccount.yaml
   - clusterrole.yaml
   - clusterrolebinding.yaml
-  - daemonset.yaml
-  - deployment.yaml
-  - service.yaml
+  - node-daemonset.yaml
+  - gateway-daemonset.yaml
+  - otel-collector-local-service.yaml
+  - otel-collector-cluster-service.yaml
 
 configMapGenerator:
-  - name: otel-base-config
+  # ── Node agent (all nodes) ──────────────────────────────────
+  - name: otel-node-base-config
     files:
-      - otel-base-config.yaml
+      - configs/otel-node-base-config.yaml
     options:
       immutable: true
-  - name: otel-metrics-pipeline
+  - name: otel-node-metrics-pipeline
     files:
-      - otel-metrics-pipeline.yaml
+      - configs/otel-node-metrics-pipeline.yaml
     options:
       immutable: true
-  - name: otel-apiserver-pipeline
+  - name: otel-node-kubeletstats-pipeline
     files:
-      - otel-apiserver-pipeline.yaml
+      - configs/otel-node-kubeletstats-pipeline.yaml
     options:
       immutable: true
-  - name: otel-k8s-cluster-pipeline
+  - name: otel-node-logs-pipeline
     files:
-      - otel-k8s-cluster-pipeline.yaml
+      - configs/otel-node-logs-pipeline.yaml
     options:
       immutable: true
-  - name: otel-kubeletstats-pipeline
+  - name: otel-node-traces-pipeline
     files:
-      - otel-kubeletstats-pipeline.yaml
+      - configs/otel-node-traces-pipeline.yaml
     options:
       immutable: true
-  - name: otel-logs-pipeline
+  # ── Platform gateway (platform nodes) ───────────────────────
+  - name: otel-gateway-base-config
     files:
-      - otel-logs-pipeline.yaml
+      - configs/otel-gateway-base-config.yaml
     options:
       immutable: true
-  - name: otel-k8s-events-pipeline
+  - name: otel-gateway-metrics-pipeline
     files:
-      - otel-k8s-events-pipeline.yaml
+      - configs/otel-gateway-metrics-pipeline.yaml
     options:
       immutable: true
-  - name: otel-k8s-objects-pipeline
+  - name: otel-gateway-logs-pipeline
     files:
-      - otel-k8s-objects-pipeline.yaml
+      - configs/otel-gateway-logs-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-gateway-traces-pipeline
+    files:
+      - configs/otel-gateway-traces-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-gateway-apiserver-pipeline
+    files:
+      - configs/otel-gateway-apiserver-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-gateway-k8s-cluster-pipeline
+    files:
+      - configs/otel-gateway-k8s-cluster-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-gateway-k8s-events-pipeline
+    files:
+      - configs/otel-gateway-k8s-events-pipeline.yaml
+    options:
+      immutable: true
+  - name: otel-gateway-k8s-objects-pipeline
+    files:
+      - configs/otel-gateway-k8s-objects-pipeline.yaml
     options:
       immutable: true

@@ -258,8 +258,9 @@ Deploys [Dragonfly](https://d7y.io/) as a peer-to-peer layer between CRI-O and H
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `ENABLE_DRAGONFLY` | Feature flag | `true` |
+| `DRAGONFLY_VERSION` | Dragonfly client image tag | `v1.2.11` |
 
-No version variable — the Helm chart version (`1.6.14`) and image tags (`v2.4.2` for manager/scheduler, `v1.2.11` for client) are pinned in the ArgoCD Application CR.
+No Helm chart version variable — the Helm chart version (`1.6.14`) and manager/scheduler image tags (`v2.4.2`) are pinned in the ArgoCD Application CR.
 
 ### What Changes
 
@@ -341,14 +342,14 @@ argocd_applications/cluster-apps/
 │   ├── rook-ceph-operator.yaml
 │   └── rook-ceph-cluster.yaml
 ├── platform.yaml                 ← Parent CR for platform tier (wave 4)
-└── platform/                     ← Platform-node apps (10 CRs, tolerate role=platform)
+└── platform/                     ← Platform-node apps (12 CRs, tolerate role=platform)
     ├── alertmanager.yaml
     ├── grafana.yaml
     ├── thanos.yaml
-    └── ... (7 more monitoring apps)
+    └── ... (9 more monitoring apps)
 ```
 
-ClusterProfile manifests live in `sveltos_profiles/` (one per Application CR, 18 total).
+ClusterProfile manifests live in `sveltos_profiles/` (one per Application CR, 21 total).
 
 ---
 
@@ -459,7 +460,7 @@ Every application manifest includes a toleration matching its target node role:
 | Tier | Toleration | Applications |
 |------|-----------|-------------|
 | **Infra** | `role=infra:NoSchedule` | ArgoCD, cert-manager, trust-manager, CloudNativePG, Harbor, Keycloak, Rook (operator + cluster), istiod, Sveltos, CephFS CSI provisioner |
-| **Platform** | `role=platform:NoSchedule` | Prometheus, Grafana, Thanos, Alertmanager, Matrix, matrix-bridge, OTel Collector, kube-state-metrics, metrics-server, dcgm-exporter |
+| **Platform** | `role=platform:NoSchedule` | Prometheus, Grafana, Thanos, Alertmanager, Loki, Jaeger, Matrix, matrix-bridge, OTel Collector, kube-state-metrics, metrics-server, dcgm-exporter |
 | **All nodes** | `operator: Exists` | node-exporter, istio-cni, ztunnel, CephFS CSI nodeplugin, NVIDIA device plugin (DaemonSets on every node including control-plane) |
 
 **Upstream application patching**: Applications installed from upstream manifests (not authored in this repo) receive tolerations via Kustomize strategic-merge patches or Helm values:

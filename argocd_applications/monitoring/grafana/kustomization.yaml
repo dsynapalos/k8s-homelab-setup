@@ -36,6 +36,9 @@ configMapGenerator:
   - name: grafana-loki-datasource
     files:
       - loki-datasource.yaml
+  - name: grafana-jaeger-datasource
+    files:
+      - jaeger-datasource.yaml
 
 generatorOptions:
   disableNameSuffixHash: false

@@ -44,15 +44,15 @@ Version pinned via `LOKI_VERSION` in `.env`.
 ## Integration Points
 
 - **Grafana**: Loki datasource provisioned automatically via ConfigMap (`loki-datasource.yaml`). Accessible at `http://loki.monitoring.svc.cluster.local:3100`.
-- **OTel Collector**: Receives logs from three dedicated pipelines via `/loki/api/v1/push` on port 3100:
+- **OTel Collector**: Receives logs from three dedicated pipelines via OTLP HTTP on port 3100:
 
   | Pipeline | Receiver | Scope | Log Source | Loki Labels |
   |----------|----------|-------|------------|-------------|
   | `logs` | `filelog` | Node-local | Container log files from `/var/log/pods` | `k8s.namespace.name`, `k8s.pod.name`, `k8s.container.name` |
   | `logs/k8s-events` | `k8s_events` | Leader-elected | Kubernetes Events API (scheduling, OOM, scaling) | `k8s.namespace.name`, `k8s.object.kind`, `k8s.object.name` |
-  | `logs/k8s-objects` | `k8s_objects` | Leader-elected | Kubernetes resource changes (pods, deployments, events) | `k8s.namespace.name`, `k8s.resource.name` |
+  | `logs/k8s-objects` | `k8sobjects` | Leader-elected | Kubernetes resource changes (pods, deployments, events) | `k8s.namespace.name`, `k8s.resource.name` |
 
-  Each pipeline uses a `resource/loki` processor to set `loki.format: raw` and map OTel resource attributes to Loki labels via `loki.resource.labels`.
+  All pipelines export via `otlp_http` to Loki’s native OTLP endpoint (`/otlp`). Loki automatically maps OTel resource attributes to index labels — no `resource/loki` processor is needed.
 
 - **Ingress**: Available at `https://loki.k8s.local` via Cilium ingress with TLS from cert-manager.
 - **Prometheus scraping**: Service annotated with `prometheus.io/scrape: "true"` for Loki's own metrics.

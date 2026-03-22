@@ -1,0 +1,26 @@
+# Gateway logs pipeline: forwarded node logs → Loki.
+#
+# Receives container logs forwarded from node-local OTel agents via OTLP
+# and writes them to Loki using OTLP HTTP. Heavy batching amortises
+# backend write cost across all nodes.
+#
+# The OTLP receiver is defined in otel-gateway-base-config.yaml.
+
+processors:
+  batch/forwarded-logs:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+exporters:
+  otlp_http/loki:
+    endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs/forwarded:
+      receivers: [otlp]
+      processors: [batch/forwarded-logs]
+      exporters: [otlp_http/loki]

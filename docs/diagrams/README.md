@@ -51,7 +51,7 @@ There are **no separate `.drawio` files** — the SVG is the single source of tr
 
 ### Creating a new diagram
 
-1. Create an SVG with the skeleton template (see [SKILL.md](../../.github/skills/render-drawio-diagram/SKILL.md) for the template).
+1. Create an SVG with the skeleton template (see [SKILL.md](../../.agents/skills/render-drawio-diagram/SKILL.md) for the template).
 2. Add your mxGraph XML inside the CDATA block.
 3. Run `--rebuild` to generate the visual layer.
 4. Link the diagram from the relevant documentation page using `![alt](../diagrams/<name>.svg)`.

@@ -1,0 +1,26 @@
+# Gateway traces pipeline: forwarded node traces → Jaeger.
+#
+# Receives traces forwarded from node-local OTel agents via OTLP and
+# writes them to Jaeger using OTLP gRPC. Heavy batching amortises
+# backend write cost across all nodes.
+#
+# The OTLP receiver is defined in otel-gateway-base-config.yaml.
+
+processors:
+  batch/forwarded-traces:
+    send_batch_size: 2000
+    send_batch_max_size: 4000
+    timeout: 10s
+
+exporters:
+  otlp/jaeger:
+    endpoint: "jaeger.monitoring.svc.cluster.local:4317"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch/forwarded-traces]
+      exporters: [otlp/jaeger]

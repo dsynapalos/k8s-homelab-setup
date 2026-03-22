@@ -1,10 +1,11 @@
-# Logs pipeline: filelog receiver → Loki.
+# Logs pipeline: filelog receiver → OTLP forward to gateway.
 #
-# Merged into the base config at startup. Collects container logs from the
-# node-local /var/log/pods directory and ships them to Loki via OTLP.
-# Kubernetes metadata (namespace, pod, container) is extracted from the
-# file path. Loki 3.x natively ingests OTLP logs and auto-promotes
-# k8s resource attributes to stream labels.
+# Merged into the node-agent base config at startup. Collects container
+# logs from the node-local /var/log/pods directory. Kubernetes metadata
+# (namespace, pod, container) is extracted from the file path.
+#
+# Logs are forwarded via OTLP to the platform gateway
+# (otel-collector-cluster) which writes them to Loki.
 
 receivers:
   filelog:
@@ -57,19 +58,13 @@ receivers:
 
 processors:
   batch/logs:
-    send_batch_size: 1000
-    send_batch_max_size: 2000
+    send_batch_size: 1024
+    send_batch_max_size: 2048
     timeout: 5s
-
-exporters:
-  otlp_http/loki:
-    endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
-    tls:
-      insecure: true
 
 service:
   pipelines:
     logs:
       receivers: [filelog]
       processors: [batch/logs]
-      exporters: [otlp_http/loki]
+      exporters: [otlp/gateway]

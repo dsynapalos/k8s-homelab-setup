@@ -1,0 +1,21 @@
+# Node-local traces pipeline: OTLP receiver → gateway.
+#
+# Accepts traces from application instrumentation via OTLP gRPC/HTTP
+# on the node-local DaemonSet, light-batches them, and forwards to the
+# platform gateway for aggregation and backend export.
+#
+# The OTLP receiver and otlp/gateway exporter are defined in
+# otel-node-base-config.yaml and shared across all node pipelines.
+
+processors:
+  batch/traces:
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch/traces]
+      exporters: [otlp/gateway]

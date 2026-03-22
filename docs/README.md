@@ -46,9 +46,10 @@ docs/
     │   ├── dcgm-exporter.md         ← NVIDIA GPU metrics exporter
     │   ├── kube-state-metrics.md    ← Kubernetes object state metrics
     │   ├── node-exporter.md         ← Host-level CPU/memory/disk metrics
-    │   ├── otel-collector.md        ← Metrics pipeline (Prometheus receiver → Thanos)
+    │   ├── otel-collector.md        ← Unified telemetry pipeline (metrics, logs, traces)
     │   ├── metrics-server.md        ← kubectl top / HPA metrics aggregator
-    │   └── loki.md                  ← Log aggregation backend (monolithic mode)
+    │   ├── loki.md                  ← Log aggregation backend (monolithic mode)
+    │   └── jaeger.md                ← Distributed tracing backend (Jaeger v2 + Badger)
     ├── storage/
     │   ├── cloudnative-pg.md        ← PostgreSQL operator (CNPG) lifecycle & CRDs
     │   ├── rook-operator.md         ← Rook operator lifecycle & CRDs
@@ -69,6 +70,7 @@ The folder layout under `docs/applications/` matches the manifest directory `arg
 | Manifest directory | Documentation |
 |---|---|
 | `argocd_applications/monitoring/prometheus/` | `docs/applications/monitoring/prometheus.md` |
+| `argocd_applications/monitoring/jaeger/` | `docs/applications/monitoring/jaeger.md` |
 | `argocd_applications/storage/cloudnative-pg/` | `docs/applications/storage/cloudnative-pg.md` |
 | `argocd_applications/storage/rook-cluster/` | `docs/applications/storage/rook-cluster.md` |
 | `argocd_applications/security/cert-manager/` | `docs/applications/security/cert-manager.md` |
@@ -172,6 +174,7 @@ One doc per deployed application. Each follows the same internal structure (see 
 | [otel-collector.md](applications/monitoring/otel-collector.md) | Metrics collection pipeline. Prometheus receiver, remote write to Thanos, expandable for traces/logs. |
 | [metrics-server.md](applications/monitoring/metrics-server.md) | Kubernetes Metrics API aggregator. Enables `kubectl top`, HPA, and VPA via kubelet metric collection. |
 | [loki.md](applications/monitoring/loki.md) | Log aggregation backend. Monolithic mode, filesystem storage, LogQL queries, Grafana datasource integration. |
+| [jaeger.md](applications/monitoring/jaeger.md) | Distributed tracing backend. Jaeger v2 with Badger storage, OTLP ingestion from OTel Collector, Grafana datasource integration. |
 
 #### Storage (`applications/storage/`)
 
@@ -270,6 +273,7 @@ If you are an AI agent navigating this repository:
 5. **Configuration is centralized**: All environment variables are documented in [configuration.md](infrastructure/configuration.md). The `.env` file is the single source of truth at runtime; the doc is the reference for what each variable does.
 6. **Deprecated docs** (`prometheus.md`) are marked with a banner and kept for reference.
 7. **The project does not use `ansible` CLI** — only `ansible_runner.run()` from Python. Never suggest `ansible-playbook`, `ansible-inventory`, or `ansible -m ping` commands.
-8. **Agent skills** live in `.github/skills/`. Each skill has a `SKILL.md` with YAML frontmatter (`name`, `description`) and Markdown instructions. Copilot loads a skill automatically when the task matches its `description`. Available skills:
+8. **Agent skills** live in `.agents/skills/`. Each skill has a `SKILL.md` with YAML frontmatter (`name`, `description`) and Markdown instructions. Copilot loads a skill automatically when the task matches its `description`. Available skills:
+   - `onboard-project` — research and onboard an external project before implementing (fetches docs, GitHub source, reviews local patterns).
    - `render-drawio-diagram` — generates valid draw.io/mxGraph XML from architecture descriptions (layout rules, style guide, structural conventions).
 9. **Architecture diagrams** live in `docs/diagrams/`. See [`docs/diagrams/AGENTS.md`](diagrams/AGENTS.md) for the editing workflow, renderer script, and diagram inventory.

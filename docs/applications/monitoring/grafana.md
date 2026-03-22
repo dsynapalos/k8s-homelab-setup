@@ -12,10 +12,11 @@ Prometheus stores metrics and Thanos provides long-term queryability, but neithe
 
 **Deployment**: Single replica (`grafana/grafana:12.3.3`) in the `monitoring` namespace.
 
-**Datasource**: Two datasources are provisioned:
+**Datasource**: Three datasources are provisioned:
 
-- **Thanos Query** at `http://thanos-query.monitoring.svc.cluster.local:9090` — the default Prometheus-compatible datasource with `uid: prometheus`. Named "Thanos" in the Grafana UI but uses the `prometheus` type and UID — all metric dashboards reference `uid: prometheus` even though they're querying Thanos.
+- **Thanos Query** at `http://thanos-query.monitoring.svc.cluster.local:9090` — the default Prometheus-compatible datasource with `uid: prometheus`. Named “Thanos” in the Grafana UI but uses the `prometheus` type and UID — all metric dashboards reference `uid: prometheus` even though they’re querying Thanos.
 - **Loki** at `http://loki.monitoring.svc.cluster.local:3100` — log aggregation datasource provisioned via `loki-datasource.yaml`. Used for container logs, K8s events, and object change tracking in Grafana Explore.
+- **Jaeger** at `http://jaeger.monitoring.svc.cluster.local:16686` — distributed tracing datasource provisioned via `jaeger-datasource.yaml` with `uid: jaeger`. Used for trace search and detail views in Grafana Explore.
 
 > **If Thanos has no data**: Grafana will show empty dashboards because its datasource points to Thanos Query, not Prometheus directly. See the [Thanos doc](thanos.md) for the `remote_write` prerequisite.
 
@@ -58,6 +59,7 @@ The default local admin (`admin`/`admin`) no longer works as a fallback — the 
 |-----------|-------------|
 | [Thanos](thanos.md) | Default datasource — Grafana queries Thanos Query for all metrics |
 | [Loki](loki.md) | Log datasource — Grafana queries Loki for container logs, K8s events, and object changes |
+| [Jaeger](jaeger.md) | Trace datasource — Grafana queries Jaeger for distributed trace search and detail views |
 | [Prometheus](prometheus.md) | Indirect — metrics flow through Thanos |
 | [DCGM Exporter](dcgm-exporter.md) | GPU metrics rendered in NVIDIA GPU Dashboard |
 | [Node Exporter](node-exporter.md) | Host metrics rendered in K8s Cluster Dashboard |

@@ -1,0 +1,61 @@
+# Jaeger v2 all-in-one configuration with Badger backend.
+#
+# Jaeger v2 is built on the OpenTelemetry Collector framework. This config
+# defines extensions (query UI, storage, health), an OTLP receiver for
+# ingesting traces from the OTel Collector DaemonSet, and a Badger-backed
+# storage exporter for on-disk persistence.
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: "0.0.0.0:13133"
+
+  jaeger_query:
+    storage:
+      traces: badger_main
+
+  jaeger_storage:
+    backends:
+      badger_main:
+        badger:
+          directories:
+            keys: /var/jaeger/badger/keys
+            values: /var/jaeger/badger/values
+          ephemeral: false
+          ttl:
+            spans: 168h
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    send_batch_size: 1000
+    send_batch_max_size: 2000
+    timeout: 5s
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: badger_main
+
+service:
+  extensions: [healthcheckv2, jaeger_query, jaeger_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

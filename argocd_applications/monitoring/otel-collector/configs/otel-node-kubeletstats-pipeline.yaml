@@ -1,9 +1,12 @@
-# Kubelet stats pipeline: kubeletstats receiver → Thanos remote write.
+# Kubelet stats pipeline: kubeletstats receiver → OTLP forward to gateway.
 #
 # Queries the local kubelet's /stats/summary endpoint for container, pod,
 # node, and volume resource metrics (CPU, memory, filesystem, network).
 # Node-local — no leader election needed. Each DaemonSet pod scrapes only
-# its own kubelet via the K8S_NODE_NAME environment variable.
+# its own kubelet via the K8S_HOST_IP environment variable.
+#
+# Metrics are forwarded via OTLP to the platform gateway
+# (otel-collector-cluster) which writes them to Thanos.
 
 receivers:
   kubeletstats:
@@ -24,25 +27,13 @@ receivers:
 
 processors:
   batch/kubeletstats:
-    send_batch_size: 2000
-    send_batch_max_size: 4000
-    timeout: 10s
-
-exporters:
-  prometheusremotewrite/kubeletstats:
-    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
-    tls:
-      insecure: true
-    external_labels:
-      cluster: homelab
-    resource_to_telemetry_conversion:
-      enabled: true
-    retry_on_failure:
-      enabled: false
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
 
 service:
   pipelines:
     metrics/kubeletstats:
       receivers: [kubeletstats]
       processors: [batch/kubeletstats]
-      exporters: [prometheusremotewrite/kubeletstats]
+      exporters: [otlp/gateway]

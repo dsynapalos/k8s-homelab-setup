@@ -1,0 +1,41 @@
+# Node-agent base configuration — shared across all node-local pipelines.
+#
+# Loaded by the otel-collector-local DaemonSet (all nodes). Defines:
+#   - health_check extension
+#   - OTLP receiver for local app instrumentation (traces, metrics, logs)
+#   - OTLP gateway exporter for forwarding all signals to the platform
+#     gateway (otel-collector-cluster)
+#   - Collector internal telemetry (Prometheus pull on port 8888)
+#
+# Pipeline-specific receivers, processors, and service.pipelines entries
+# are contributed by the per-pipeline config files loaded alongside this
+# base.
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+exporters:
+  otlp/gateway:
+    endpoint: "otel-collector-cluster.monitoring.svc.cluster.local:4317"
+    tls:
+      insecure: true
+
+service:
+  extensions: [health_check]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

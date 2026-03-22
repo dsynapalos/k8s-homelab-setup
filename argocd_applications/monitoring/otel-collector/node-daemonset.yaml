@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: otel-collector
+  name: otel-collector-local
   namespace: monitoring
   labels:
-    app: otel-collector
+    app: otel-collector-local
 spec:
   selector:
     matchLabels:
-      app: otel-collector
+      app: otel-collector-local
   template:
     metadata:
       labels:
-        app: otel-collector
+        app: otel-collector-local
       annotations:
-        prometheus.io/scrape: "false"
+        prometheus.io/scrape: "true"
         prometheus.io/port: "8888"
     spec:
       serviceAccountName: otel-collector
@@ -24,10 +24,11 @@ spec:
       - name: otel-collector
         image: harbor.k8s.local/dockerhub-cache/otel/opentelemetry-collector-contrib:0.145.0
         args:
-          - '--config=file:/etc/otelcol/otel-base-config.yaml'
-          - '--config=file:/etc/otelcol/otel-metrics-pipeline.yaml'
-          - '--config=file:/etc/otelcol/otel-kubeletstats-pipeline.yaml'
-          - '--config=file:/etc/otelcol/otel-logs-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-node-base-config.yaml'
+          - '--config=file:/etc/otelcol/otel-node-metrics-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-node-kubeletstats-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-node-logs-pipeline.yaml'
+          - '--config=file:/etc/otelcol/otel-node-traces-pipeline.yaml'
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -38,14 +39,12 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         ports:
-        - containerPort: 8888
-          name: metrics
-        - containerPort: 8889
-          name: prom-exporter
         - containerPort: 4317
           name: otlp-grpc
         - containerPort: 4318
           name: otlp-http
+        - containerPort: 8888
+          name: metrics
         volumeMounts:
         - name: otel-collector-config
           mountPath: /etc/otelcol/
@@ -76,13 +75,15 @@ spec:
         projected:
           sources:
           - configMap:
-              name: otel-base-config
+              name: otel-node-base-config
           - configMap:
-              name: otel-metrics-pipeline
+              name: otel-node-metrics-pipeline
           - configMap:
-              name: otel-kubeletstats-pipeline
+              name: otel-node-kubeletstats-pipeline
           - configMap:
-              name: otel-logs-pipeline
+              name: otel-node-logs-pipeline
+          - configMap:
+              name: otel-node-traces-pipeline
       - name: varlogpods
         hostPath:
           path: /var/log/pods

@@ -2,12 +2,13 @@
 #
 # Watches Kubernetes resources and emits the full object as a structured log
 # record on every change. Useful for audit trails and change tracking of
-# cluster state. Cluster-global — runs in the single-replica
-# otel-cluster-collector Deployment.
+# cluster state. Runs on the platform gateway DaemonSet with leader
+# election — only the elected pod actively watches.
 
 receivers:
   k8sobjects:
     auth_type: serviceAccount
+    k8s_leader_elector: k8s_leader_elector/k8s_objects
     objects:
       - name: events
         mode: watch

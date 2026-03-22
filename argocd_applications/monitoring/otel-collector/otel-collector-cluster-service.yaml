@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-cluster
+  namespace: monitoring
+  labels:
+    app: otel-collector-cluster
+spec:
+  selector:
+    app: otel-collector-cluster
+  type: ClusterIP
+  # Default internalTrafficPolicy: Cluster — node agents load-balance
+  # across all gateway pods via Cilium socket-LB (random selection at
+  # connect() time, effectively sticky per gRPC connection).
+  #
+  # For true round-robin across gateway pods at scale, switch to a
+  # Headless Service (clusterIP: None) and configure the OTel OTLP
+  # exporter with balancer_name: round_robin for client-side gRPC
+  # load balancing.
+  ports:
+  - name: otlp-grpc
+    protocol: TCP
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    protocol: TCP
+    port: 4318
+    targetPort: 4318
+  - name: metrics
+    protocol: TCP
+    port: 8888
+    targetPort: 8888

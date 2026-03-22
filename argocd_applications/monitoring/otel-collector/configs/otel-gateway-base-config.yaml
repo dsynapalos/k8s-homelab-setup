@@ -1,0 +1,49 @@
+# Platform gateway base configuration — shared across all gateway pipelines.
+#
+# Loaded by the otel-collector-cluster DaemonSet (platform nodes only).
+# Defines:
+#   - health_check extension
+#   - OTLP receiver for ingesting forwarded signals from node agents
+#   - Collector internal telemetry (Prometheus pull on port 8888)
+#
+# Cluster-scoped receivers (apiserver, k8s_cluster, k8s_events,
+# k8s_objects) and the forwarded-signal backend exporters are defined
+# in their own pipeline config files.
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+  k8s_leader_elector/k8s_cluster:
+    auth_type: serviceAccount
+    lease_name: otel-gateway-k8s-cluster
+    lease_namespace: monitoring
+
+  k8s_leader_elector/k8s_events:
+    auth_type: serviceAccount
+    lease_name: otel-gateway-k8s-events
+    lease_namespace: monitoring
+
+  k8s_leader_elector/k8s_objects:
+    auth_type: serviceAccount
+    lease_name: otel-gateway-k8s-objects
+    lease_namespace: monitoring
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+service:
+  extensions: [health_check, k8s_leader_elector/k8s_cluster, k8s_leader_elector/k8s_events, k8s_leader_elector/k8s_objects]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

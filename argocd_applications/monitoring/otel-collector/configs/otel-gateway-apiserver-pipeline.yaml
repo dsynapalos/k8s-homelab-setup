@@ -1,8 +1,9 @@
 # API server metrics pipeline: Prometheus scrape → Thanos remote write.
 #
-# Cluster-global — runs in the single-replica otel-cluster-collector
-# Deployment, not the DaemonSet, so the API server is scraped exactly
-# once.
+# Runs on the platform gateway DaemonSet. Each gateway pod independently
+# scrapes the API server. With multiple gateway pods, this produces
+# duplicate metrics — Thanos deduplicates at query time using the
+# replica external label.
 #
 # Uses a named Prometheus receiver instance (prometheus/apiserver) so
 # it merges cleanly alongside any other prometheus receivers.

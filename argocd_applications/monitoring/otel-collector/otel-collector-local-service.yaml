@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-local
+  namespace: monitoring
+  labels:
+    app: otel-collector-local
+spec:
+  selector:
+    app: otel-collector-local
+  type: ClusterIP
+  # Node-local routing: Cilium only routes to the DaemonSet pod on the
+  # same node. Safe for a DaemonSet where every node has exactly one pod.
+  # Applications send OTLP telemetry to this Service and always hit the
+  # local agent without cross-node hops.
+  internalTrafficPolicy: Local
+  ports:
+  - name: otlp-grpc
+    protocol: TCP
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    protocol: TCP
+    port: 4318
+    targetPort: 4318
+  - name: metrics
+    protocol: TCP
+    port: 8888
+    targetPort: 8888

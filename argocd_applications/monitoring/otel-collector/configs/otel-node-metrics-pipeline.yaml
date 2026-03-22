@@ -1,15 +1,16 @@
-# Metrics pipeline: Prometheus scrape → Thanos remote write.
+# Metrics pipeline: Prometheus scrape → OTLP forward to gateway.
 #
-# Merged into the base config at startup. Defines all receivers, processors,
-# and exporters needed for the metrics pipeline, plus the pipeline wiring.
+# Merged into the node-agent base config at startup. Defines the
+# Prometheus receiver, filter processor, and pipeline wiring.
 #
 # Node-local scraping: Each DaemonSet pod only scrapes targets on its own
 # node. The kubernetes-nodes, kubernetes-pods, and kubernetes-nodes-cadvisor
 # jobs filter targets using the K8S_NODE_NAME environment variable injected
-# from the downward API. This avoids duplicate metrics at Thanos Receive.
+# from the downward API. This avoids duplicate metrics.
 #
-# The kubernetes-apiservers job lives in otel-apiserver-pipeline.yaml and is
-# gated by the k8s_leader_elector extension so only one pod scrapes it.
+# Scraped metrics are forwarded via OTLP to the platform gateway
+# (otel-collector-cluster) which writes them to Thanos. The otlp/gateway
+# exporter is defined in otel-node-base-config.yaml.
 
 receivers:
   prometheus:
@@ -24,20 +25,9 @@ receivers:
           static_configs:
             - targets: ['localhost:8888']
 
-        # Trigger metric_expiration cleanup on the prometheus exporter.
-        # The exporter only purges stale metrics during Collect() (scrape),
-        # so without this job its internal map grows unboundedly.
-        # See: https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/41123
-        - job_name: 'otel-prom-exporter-gc'
-          scrape_interval: 60s
-          static_configs:
-            - targets: ['localhost:8889']
-          metric_relabel_configs:
-            - source_labels: [__name__]
-              regex: '.*'
-              action: drop
-
-        # Scrape the local node's kubelet metrics
+        # Scrape the local node's kubelet metrics via the API server proxy.
+        # Uses kubernetes_sd_configs to discover the node, then relabel to
+        # proxy through kubernetes.default.svc:443/api/v1/nodes/<node>/proxy/metrics.
         - job_name: 'kubernetes-nodes'
           kubernetes_sd_configs:
             - role: node
@@ -140,6 +130,7 @@ receivers:
               target_label: node
 
         # Scrape cAdvisor on the local node (container resource metrics)
+        # via the API server proxy, same pattern as kubernetes-nodes.
         - job_name: 'kubernetes-nodes-cadvisor'
           scrape_interval: 10s
           scrape_timeout: 10s
@@ -182,9 +173,9 @@ receivers:
 
 processors:
   batch:
-    send_batch_size: 2000
-    send_batch_max_size: 4000
-    timeout: 10s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
 
   filter:
     error_mode: ignore
@@ -194,26 +185,9 @@ processors:
         - 'name == "container_memory_failures_total"'
         - 'name == "container_blkio_device_usage_total"'
 
-exporters:
-  prometheus:
-    endpoint: "0.0.0.0:8889"
-    resource_to_telemetry_conversion:
-      enabled: true
-
-  prometheusremotewrite:
-    endpoint: "http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive"
-    tls:
-      insecure: true
-    external_labels:
-      cluster: homelab
-    target_info:
-      enabled: false
-    retry_on_failure:
-      enabled: false
-
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       processors: [batch, filter]
-      exporters: [prometheusremotewrite, prometheus]
+      exporters: [otlp/gateway]

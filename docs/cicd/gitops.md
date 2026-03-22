@@ -155,6 +155,7 @@ argocd_applications/
 │   │   ├── cloudnative-pg.yaml            (wave 1)
 │   │   ├── rook-ceph-operator.yaml        (wave 1, conditional: ENABLE_ROOK)
 │   │   ├── rook-ceph-cluster.yaml         (wave 1, conditional: ENABLE_ROOK)
+│   │   ├── dragonfly.yaml                 (wave 2, conditional: ENABLE_DRAGONFLY)
 │   │   ├── harbor.yaml                    (wave 2)
 │   │   ├── keycloak.yaml                  (wave 3)
 │   │   └── argocd-oidc.yaml               (wave 3)
@@ -163,6 +164,7 @@ argocd_applications/
 │       ├── alertmanager.yaml
 │       ├── dcgm-exporter.yaml
 │       ├── grafana.yaml
+│       ├── jaeger.yaml
 │       ├── kube-state-metrics.yaml
 │       ├── loki.yaml
 │       ├── matrix.yaml
@@ -187,6 +189,7 @@ argocd_applications/
 │   ├── keycloak/
 │   └── argocd-oidc/
 └── infrastructure/
+    ├── dragonfly/
     └── harbor/
 
 roles/bootstrap_applications/files/

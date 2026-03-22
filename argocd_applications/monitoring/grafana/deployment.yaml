@@ -115,6 +115,9 @@ spec:
             - name: grafana-loki-datasource-config
               mountPath: /etc/grafana/provisioning/datasources/loki-datasource.yaml
               subPath: loki-datasource.yaml
+            - name: grafana-jaeger-datasource-config
+              mountPath: /etc/grafana/provisioning/datasources/jaeger-datasource.yaml
+              subPath: jaeger-datasource.yaml
             - name: homelab-ca
               mountPath: /etc/ssl/certs/homelab
               readOnly: true
@@ -146,6 +149,9 @@ spec:
         - name: grafana-loki-datasource-config
           configMap:
             name: grafana-loki-datasource
+        - name: grafana-jaeger-datasource-config
+          configMap:
+            name: grafana-jaeger-datasource
         - name: homelab-ca
           configMap:
             name: homelab-ca-bundle

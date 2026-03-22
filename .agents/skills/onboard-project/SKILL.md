@@ -48,7 +48,6 @@ Gather authoritative information about the project before touching any local fil
 Study existing patterns and conventions in the workspace to ensure the new work fits.
 
 1. **Read the project instructions** — load workspace instructions:
-   - `.github/copilot-instructions.md` (if not already in context)
    - `AGENTS.md` (if not already in context)
    - `docs/README.md` for the documentation index
 

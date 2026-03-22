@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-ingress
+  namespace: monitoring
+  labels:
+    app: jaeger
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer
+    ingress.cilium.io/force-https: "enabled"
+spec:
+  ingressClassName: cilium
+  tls:
+  - hosts:
+    - jaeger.k8s.local
+    secretName: jaeger-tls
+  rules:
+  - host: jaeger.k8s.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jaeger
+            port:
+              number: 16686
